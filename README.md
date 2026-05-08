@@ -25,7 +25,7 @@ cp .env.example .env
 
 ```env
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon-key>
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 VITE_API_URL=
 VITE_APP_NAME=Skye Apps
 VITE_APP_VERSION=1.0.0
@@ -65,7 +65,7 @@ From repo root SQL files:
 Set Vercel environment variables:
 
 - `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `VITE_API_URL` (empty)
 - `VITE_APP_NAME`
 - `VITE_APP_VERSION`
