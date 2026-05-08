@@ -8,20 +8,30 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [submitNotice, setSubmitNotice] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form] = Form.useForm();
 
   async function onSubmit(values) {
     setSubmitError("");
+    setSubmitNotice("");
 
     setIsSubmitting(true);
     try {
-      await register({
+      const result = await register({
         name: values.name,
+        phone: values.phone,
         email: values.email,
         password: values.password,
       });
-      navigate("/", { replace: true });
+      if (result.requiresEmailVerification) {
+        setSubmitNotice(
+          "Account created. Verify your email first, then sign in.",
+        );
+        navigate("/login", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     } catch (err) {
       setSubmitError(err.message || "Registration failed. Please try again.");
     } finally {
@@ -50,6 +60,15 @@ export default function RegisterPage() {
           />
         ) : null}
 
+        {submitNotice ? (
+          <Alert
+            type="success"
+            message={submitNotice}
+            showIcon
+            style={{ marginBottom: 12 }}
+          />
+        ) : null}
+
         <Form
           form={form}
           layout="vertical"
@@ -73,6 +92,14 @@ export default function RegisterPage() {
             ]}
           >
             <Input autoComplete="email" />
+          </Form.Item>
+
+          <Form.Item
+            label="Phone"
+            name="phone"
+            rules={[{ max: 40, message: "Phone is too long." }]}
+          >
+            <Input autoComplete="tel" />
           </Form.Item>
 
           <Form.Item

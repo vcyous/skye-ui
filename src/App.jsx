@@ -23,17 +23,37 @@ import PublicOnlyRoute from "./components/auth/PublicOnlyRoute.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
+const CartPage = lazy(() => import("./pages/CartPage.jsx"));
+const CheckoutPage = lazy(() => import("./pages/CheckoutPage.jsx"));
+const DiscountsPage = lazy(() => import("./pages/DiscountsPage.jsx"));
+const CollectionsPage = lazy(() => import("./pages/CollectionsPage.jsx"));
+const InventoryPage = lazy(() => import("./pages/InventoryPage.jsx"));
 const LoginPage = lazy(() => import("./pages/LoginPage.jsx"));
+const PaymentsPage = lazy(() => import("./pages/PaymentsPage.jsx"));
 const OrdersPage = lazy(() => import("./pages/OrdersPage.jsx"));
+const OrderDetailPage = lazy(() => import("./pages/OrderDetailPage.jsx"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage.jsx"));
 const ProductsPage = lazy(() => import("./pages/ProductsPage.jsx"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage.jsx"));
+const ReturnsPage = lazy(() => import("./pages/ReturnsPage.jsx"));
+const ShippingPage = lazy(() => import("./pages/ShippingPage.jsx"));
 const StorePage = lazy(() => import("./pages/StorePage.jsx"));
+const TaxPage = lazy(() => import("./pages/TaxPage.jsx"));
 
 const links = [
   { to: "/", label: "Homepage/Dashboard" },
   { to: "/products", label: "Product" },
+  { to: "/collections", label: "Collections" },
+  { to: "/inventory", label: "Inventory" },
+  { to: "/discounts", label: "Discounts" },
+  { to: "/cart", label: "Cart" },
   { to: "/orders", label: "Orders" },
+  { to: "/payments", label: "Payments" },
+  { to: "/shipping", label: "Shipping" },
+  { to: "/tax", label: "Tax and Invoices" },
+  { to: "/returns", label: "Returns and Refunds" },
   { to: "/store", label: "Store Management" },
+  { to: "/profile", label: "Profile" },
 ];
 
 function AppLayout() {
@@ -146,8 +166,19 @@ function AppLayout() {
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/products" element={<ProductsPage />} />
+                <Route path="/collections" element={<CollectionsPage />} />
+                <Route path="/inventory" element={<InventoryPage />} />
+                <Route path="/discounts" element={<DiscountsPage />} />
+                <Route path="/cart" element={<CartPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
                 <Route path="/orders" element={<OrdersPage />} />
+                <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+                <Route path="/payments" element={<PaymentsPage />} />
+                <Route path="/shipping" element={<ShippingPage />} />
+                <Route path="/tax" element={<TaxPage />} />
+                <Route path="/returns" element={<ReturnsPage />} />
                 <Route path="/store" element={<StorePage />} />
+                <Route path="/profile" element={<ProfilePage />} />
               </Routes>
             </Suspense>
           </Layout.Content>

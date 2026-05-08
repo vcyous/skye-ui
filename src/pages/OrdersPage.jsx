@@ -1,5 +1,6 @@
 import { Button, Card, Col, Row, Select, Space, Tag, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { getOrders, updateOrderStatus } from "../services/api.js";
 
 const statuses = [
@@ -98,7 +99,11 @@ export default function OrdersPage() {
                 {formatCurrency(order.total ?? order.total_price)}
               </Typography.Title>
               <Tag color="blue">{order.status}</Tag>
+              <Tag>{order.paymentStatus || "pending"}</Tag>
               <Space wrap style={{ marginTop: 12 }}>
+                <Button type="link">
+                  <Link to={`/orders/${order.id}`}>View Detail</Link>
+                </Button>
                 <Button onClick={() => markAs(order.id, "need_ship")}>
                   Need Ship
                 </Button>
@@ -107,6 +112,9 @@ export default function OrdersPage() {
                 </Button>
                 <Button onClick={() => markAs(order.id, "receive")}>
                   Receive
+                </Button>
+                <Button danger onClick={() => markAs(order.id, "cancelled")}>
+                  Cancel
                 </Button>
               </Space>
             </Card>

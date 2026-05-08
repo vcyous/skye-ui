@@ -12,14 +12,17 @@ import {
   logoutRequest,
   refreshAccessToken,
   registerRequest,
+  resetPasswordRequest,
   setAccessToken,
   setAuthFailureHandler,
+  updateProfile,
 } from "../services/api.js";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [store, setStore] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const restoreSession = useCallback(async () => {
@@ -27,9 +30,11 @@ export function AuthProvider({ children }) {
       const refreshed = await refreshAccessToken();
       setAccessToken(refreshed.accessToken);
       setUser(refreshed.user);
+      setStore(refreshed.store || null);
     } catch (err) {
       setAccessToken(null);
       setUser(null);
+      setStore(null);
     } finally {
       setIsLoading(false);
     }
@@ -43,6 +48,7 @@ export function AuthProvider({ children }) {
     setAuthFailureHandler(() => {
       setAccessToken(null);
       setUser(null);
+      setStore(null);
     });
 
     return () => {
@@ -54,14 +60,16 @@ export function AuthProvider({ children }) {
     const data = await loginRequest(payload);
     setAccessToken(data.accessToken);
     setUser(data.user);
-    return data.user;
+    setStore(data.store || null);
+    return data;
   }, []);
 
   const register = useCallback(async (payload) => {
     const data = await registerRequest(payload);
-    setAccessToken(data.accessToken);
-    setUser(data.user);
-    return data.user;
+    setAccessToken(data.accessToken || null);
+    setUser(data.user || null);
+    setStore(data.store || null);
+    return data;
   }, []);
 
   const logout = useCallback(async () => {
@@ -70,6 +78,7 @@ export function AuthProvider({ children }) {
     } finally {
       setAccessToken(null);
       setUser(null);
+      setStore(null);
     }
   }, []);
 
@@ -79,17 +88,40 @@ export function AuthProvider({ children }) {
     return profile;
   }, []);
 
+  const saveProfile = useCallback(async (payload) => {
+    const profile = await updateProfile(payload);
+    setUser(profile);
+    return profile;
+  }, []);
+
+  const requestPasswordReset = useCallback(async (email) => {
+    return resetPasswordRequest(email);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
+      store,
       isAuthenticated: Boolean(user),
       isLoading,
       login,
       register,
       logout,
       syncProfile,
+      saveProfile,
+      requestPasswordReset,
     }),
-    [user, isLoading, login, register, logout, syncProfile],
+    [
+      user,
+      store,
+      isLoading,
+      login,
+      register,
+      logout,
+      syncProfile,
+      saveProfile,
+      requestPasswordReset,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
