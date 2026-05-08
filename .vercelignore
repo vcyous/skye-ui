@@ -1,7 +1,4 @@
 node_modules
 dist
-Dockerfile
-docker-compose.yml
-nginx.conf
 coverage
 .vscode
