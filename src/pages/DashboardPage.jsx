@@ -1,18 +1,13 @@
 import { Card, Col, List, Row, Spin, Typography } from "antd";
 import { lazy, Suspense, useEffect, useState } from "react";
 import KpiCard from "../components/KpiCard.jsx";
+import { useLocalization } from "../context/LocalizationContext.jsx";
 import { getDashboardSummary } from "../services/api.js";
 
 const DashboardCharts = lazy(() => import("../components/DashboardCharts.jsx"));
 
-function formatCurrency(value) {
-  return `$${Number(value || 0).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
 export default function DashboardPage() {
+  const { formatCurrency, formatNumber } = useLocalization();
   const [state, setState] = useState({ loading: true, data: null, error: "" });
 
   useEffect(() => {
@@ -113,7 +108,7 @@ export default function DashboardPage() {
         <Col xs={24} md={12} xl={6}>
           <KpiCard
             title="Visitors"
-            value={Number(data.visitors || 0).toLocaleString("en-US")}
+            value={formatNumber(data.visitors || 0)}
             delta="+4.6%"
             icon="VS"
           />
@@ -121,7 +116,7 @@ export default function DashboardPage() {
         <Col xs={24} md={12} xl={6}>
           <KpiCard
             title="Total Products"
-            value={Number(data.products || 0).toLocaleString("en-US")}
+            value={formatNumber(data.products || 0)}
             delta="+2.0%"
             icon="PD"
           />

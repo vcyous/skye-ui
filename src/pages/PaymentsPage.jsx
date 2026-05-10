@@ -2,23 +2,30 @@ import {
   Alert,
   Button,
   Card,
+  Col,
+  Empty,
   Form,
   Input,
+  InputNumber,
+  List,
   Modal,
   Popconfirm,
+  Row,
   Select,
   Space,
+  Spin,
   Switch,
   Table,
   Tag,
   Typography,
 } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createPaymentMethod,
   deletePaymentMethod,
   getPaymentMethods,
   getTransactions,
+  getTransactionStatusOptions,
   updatePaymentMethod,
   updateTransactionStatus,
 } from "../services/api.js";
@@ -32,28 +39,51 @@ const providerOptions = [
 export default function PaymentsPage() {
   const [methods, setMethods] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [updatingTransactionId, setUpdatingTransactionId] = useState("");
   const [notice, setNotice] = useState({ type: "", message: "" });
   const [editingMethod, setEditingMethod] = useState(null);
+  const [transactionModal, setTransactionModal] = useState({
+    open: false,
+    transaction: null,
+  });
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
+  const [transactionForm] = Form.useForm();
 
   async function loadData() {
-    const [methodRows, transactionRows] = await Promise.all([
-      getPaymentMethods(),
-      getTransactions(),
-    ]);
-    setMethods(methodRows);
-    setTransactions(transactionRows);
+    setLoading(true);
+    setLoadError("");
+    try {
+      const [methodRows, transactionRows] = await Promise.all([
+        getPaymentMethods(),
+        getTransactions(),
+      ]);
+      setMethods(methodRows);
+      setTransactions(transactionRows);
+    } catch (err) {
+      setLoadError(err.message || "Failed to load payments.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    loadData().catch((err) => {
-      setNotice({
-        type: "error",
-        message: err.message || "Failed to load payments.",
-      });
-    });
+    loadData();
   }, []);
+
+  const metrics = useMemo(
+    () => ({
+      methods: methods.length,
+      transactions: transactions.length,
+      failed: transactions.filter((item) => item.status === "failed").length,
+      unresolved: transactions.filter((item) =>
+        ["pending", "authorized", "partially_captured"].includes(item.status),
+      ).length,
+    }),
+    [methods, transactions],
+  );
 
   async function onCreate(values) {
     setNotice({ type: "", message: "" });
@@ -110,9 +140,12 @@ export default function PaymentsPage() {
   }
 
   async function onTransactionStatus(record, status) {
+    setUpdatingTransactionId(record.id);
     setNotice({ type: "", message: "" });
     try {
-      await updateTransactionStatus(record.id, status);
+      await updateTransactionStatus(record.id, status, {
+        note: `Transaction moved to ${status}`,
+      });
       await loadData();
       setNotice({ type: "success", message: `Transaction marked ${status}.` });
     } catch (err) {
@@ -120,6 +153,48 @@ export default function PaymentsPage() {
         type: "error",
         message: err.message || "Failed to update transaction.",
       });
+    } finally {
+      setUpdatingTransactionId("");
+    }
+  }
+
+  function openTransactionModal(record) {
+    setTransactionModal({ open: true, transaction: record });
+    transactionForm.setFieldsValue({
+      status: record.status,
+      captureAmount: undefined,
+      referenceId: "",
+      providerStatus: record.providerStatus || record.status,
+      failureCode: record.failureCode || "",
+      failureMessage: "",
+      note: "",
+    });
+  }
+
+  async function onSubmitTransactionUpdate(values) {
+    const record = transactionModal.transaction;
+    if (!record) {
+      return;
+    }
+
+    setUpdatingTransactionId(record.id);
+    setNotice({ type: "", message: "" });
+    try {
+      await updateTransactionStatus(record.id, values.status, values);
+      setTransactionModal({ open: false, transaction: null });
+      transactionForm.resetFields();
+      await loadData();
+      setNotice({
+        type: "success",
+        message: `Transaction updated to ${values.status}.`,
+      });
+    } catch (err) {
+      setNotice({
+        type: "error",
+        message: err.message || "Failed to update transaction.",
+      });
+    } finally {
+      setUpdatingTransactionId("");
     }
   }
 
@@ -165,42 +240,74 @@ export default function PaymentsPage() {
       dataIndex: "paymentMethodName",
       key: "paymentMethodName",
     },
-    { title: "Amount", dataIndex: "amount", key: "amount" },
+    {
+      title: "Amount",
+      key: "amount",
+      render: (_, record) => (
+        <Space direction="vertical" size={0}>
+          <Typography.Text>{record.amount}</Typography.Text>
+          <Typography.Text type="secondary">
+            Captured: {record.capturedAmount}
+          </Typography.Text>
+        </Space>
+      ),
+    },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      render: (value) => <Tag color="blue">{value}</Tag>,
+      render: (value, record) => (
+        <Space>
+          <Tag color="blue">{value}</Tag>
+          {record.failureCode ? (
+            <Tag color="red">{record.failureCode}</Tag>
+          ) : null}
+        </Space>
+      ),
+    },
+    {
+      title: "References",
+      key: "references",
+      render: (_, record) => (
+        <Space direction="vertical" size={0}>
+          <Typography.Text>
+            {record.gatewayTransactionId || "-"}
+          </Typography.Text>
+          <Typography.Text type="secondary">
+            Attempts: {record.attemptCount || 0}
+          </Typography.Text>
+        </Space>
+      ),
     },
     {
       title: "Actions",
       key: "actions",
       render: (_, record) => (
-        <Space>
-          <Button
-            size="small"
-            onClick={() => onTransactionStatus(record, "authorized")}
-          >
-            Authorize
+        <Space wrap>
+          <Button size="small" onClick={() => openTransactionModal(record)}>
+            Update
           </Button>
-          <Button
-            size="small"
-            type="primary"
-            onClick={() => onTransactionStatus(record, "captured")}
-          >
-            Capture
-          </Button>
-          <Button
-            size="small"
-            danger
-            onClick={() => onTransactionStatus(record, "failed")}
-          >
-            Fail
-          </Button>
+          {record.status === "failed" || record.status === "voided" ? (
+            <Button
+              size="small"
+              loading={updatingTransactionId === record.id}
+              onClick={() => onTransactionStatus(record, "pending")}
+            >
+              Retry
+            </Button>
+          ) : null}
         </Space>
       ),
     },
   ];
+
+  if (loading) {
+    return (
+      <Card>
+        <Spin />
+      </Card>
+    );
+  }
 
   return (
     <section style={{ display: "grid", gap: 16 }}>
@@ -216,6 +323,46 @@ export default function PaymentsPage() {
       {notice.message ? (
         <Alert type={notice.type || "info"} message={notice.message} showIcon />
       ) : null}
+
+      {loadError ? (
+        <Alert
+          type="error"
+          showIcon
+          message={loadError}
+          action={<Button onClick={loadData}>Retry</Button>}
+        />
+      ) : null}
+
+      <Row gutter={[12, 12]}>
+        <Col xs={12} md={6}>
+          <Card size="small" title="Methods">
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              {metrics.methods}
+            </Typography.Title>
+          </Card>
+        </Col>
+        <Col xs={12} md={6}>
+          <Card size="small" title="Transactions">
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              {metrics.transactions}
+            </Typography.Title>
+          </Card>
+        </Col>
+        <Col xs={12} md={6}>
+          <Card size="small" title="Failed">
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              {metrics.failed}
+            </Typography.Title>
+          </Card>
+        </Col>
+        <Col xs={12} md={6}>
+          <Card size="small" title="Unresolved">
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              {metrics.unresolved}
+            </Typography.Title>
+          </Card>
+        </Col>
+      </Row>
 
       <Card title="Add Payment Method">
         <Form
@@ -260,21 +407,50 @@ export default function PaymentsPage() {
       </Card>
 
       <Card title="Payment Methods">
-        <Table
-          rowKey="id"
-          columns={methodColumns}
-          dataSource={methods}
-          pagination={{ pageSize: 6 }}
-        />
+        {methods.length ? (
+          <Table
+            rowKey="id"
+            columns={methodColumns}
+            dataSource={methods}
+            pagination={{ pageSize: 6 }}
+          />
+        ) : (
+          <Empty description="No payment methods yet. Add one to start capturing transactions." />
+        )}
       </Card>
 
       <Card title="Transactions">
-        <Table
-          rowKey="id"
-          columns={transactionColumns}
-          dataSource={transactions}
-          pagination={{ pageSize: 6 }}
-        />
+        {transactions.length ? (
+          <Table
+            rowKey="id"
+            columns={transactionColumns}
+            dataSource={transactions}
+            expandable={{
+              expandedRowRender: (record) =>
+                record.attempts?.length ? (
+                  <List
+                    size="small"
+                    dataSource={record.attempts}
+                    renderItem={(attempt) => (
+                      <List.Item key={attempt.id}>
+                        <List.Item.Meta
+                          title={`${attempt.eventType} · ${attempt.status}`}
+                          description={`${attempt.referenceId || "-"} · ${new Date(attempt.createdAt).toLocaleString()}`}
+                        />
+                      </List.Item>
+                    )}
+                  />
+                ) : (
+                  <Typography.Text type="secondary">
+                    No attempt history yet.
+                  </Typography.Text>
+                ),
+            }}
+            pagination={{ pageSize: 6 }}
+          />
+        ) : (
+          <Empty description="No transactions recorded yet." />
+        )}
       </Card>
 
       <Modal
@@ -301,6 +477,54 @@ export default function PaymentsPage() {
           </Form.Item>
           <Form.Item name="isActive" label="Active" valuePropName="checked">
             <Switch />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Update Transaction"
+        open={transactionModal.open}
+        onCancel={() => setTransactionModal({ open: false, transaction: null })}
+        onOk={() => transactionForm.submit()}
+        confirmLoading={Boolean(updatingTransactionId)}
+        destroyOnClose
+      >
+        <Form
+          form={transactionForm}
+          layout="vertical"
+          onFinish={onSubmitTransactionUpdate}
+        >
+          <Form.Item
+            name="status"
+            label="Target Status"
+            rules={[{ required: true }]}
+          >
+            <Select
+              options={getTransactionStatusOptions(
+                transactionModal.transaction?.status || "pending",
+              )}
+            />
+          </Form.Item>
+          <Form.Item name="providerStatus" label="Provider Status">
+            <Input placeholder="e.g. succeeded, requires_capture" />
+          </Form.Item>
+          <Form.Item
+            name="captureAmount"
+            label="Capture Amount (for partial/full capture)"
+          >
+            <InputNumber min={0} style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item name="referenceId" label="Reference ID">
+            <Input placeholder="Gateway reference" />
+          </Form.Item>
+          <Form.Item name="failureCode" label="Failure Code">
+            <Input placeholder="DECLINED / TIMEOUT" />
+          </Form.Item>
+          <Form.Item name="failureMessage" label="Failure Message">
+            <Input placeholder="Additional failure detail" />
+          </Form.Item>
+          <Form.Item name="note" label="Note">
+            <Input placeholder="Operator note" />
           </Form.Item>
         </Form>
       </Modal>

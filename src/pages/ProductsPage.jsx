@@ -3,6 +3,8 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
+  Empty,
   Form,
   Input,
   InputNumber,
@@ -15,9 +17,12 @@ import {
   Tag,
   Typography,
 } from "antd";
+import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useCart } from "../context/CartContext.jsx";
 import {
+  bulkDeleteProducts,
+  bulkUpdateProductStatus,
   createProduct,
   deleteProduct,
   getProducts,
@@ -34,33 +39,72 @@ function formatCurrency(value) {
 export default function ProductsPage() {
   const { addItem } = useCart();
   const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [submitError, setSubmitError] = useState("");
+  const [notice, setNotice] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isBulkBusy, setIsBulkBusy] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  const loadProducts = () => getProducts(status).then(setProducts);
+  const loadProducts = async () => {
+    setLoadError("");
+    setIsLoading(true);
+    try {
+      const list = await getProducts(status);
+      setProducts(list);
+    } catch (err) {
+      setLoadError(err.message || "Failed to load products.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadProducts();
   }, [status]);
 
+  function parseListString(value) {
+    return String(value || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
   async function onSubmit(values) {
     setSubmitError("");
+    setNotice("");
     setIsSubmitting(true);
     try {
       await createProduct({
         ...values,
         price: Number(values.price),
+        compareAtPrice:
+          values.compareAtPrice === undefined || values.compareAtPrice === null
+            ? null
+            : Number(values.compareAtPrice),
+        costPrice:
+          values.costPrice === undefined || values.costPrice === null
+            ? null
+            : Number(values.costPrice),
+        priceStartAt: values.priceStartAt
+          ? values.priceStartAt.toISOString()
+          : null,
+        priceEndAt: values.priceEndAt ? values.priceEndAt.toISOString() : null,
         stock: Number(values.stock),
+        tags: parseListString(values.tags),
+        mediaUrls: parseListString(values.mediaUrls),
       });
       form.resetFields();
       await loadProducts();
+      setNotice("Product created successfully.");
     } catch (err) {
       setSubmitError(err.message || "Failed to create product.");
     } finally {
@@ -70,9 +114,11 @@ export default function ProductsPage() {
 
   async function onDelete(product) {
     setSubmitError("");
+    setNotice("");
     try {
       await deleteProduct(product.id);
       await loadProducts();
+      setNotice("Product deleted.");
     } catch (err) {
       setSubmitError(err.message || "Failed to delete product.");
     }
@@ -80,8 +126,10 @@ export default function ProductsPage() {
 
   async function onAddToCart(product) {
     setSubmitError("");
+    setNotice("");
     try {
       await addItem({ variantId: product.variantId, quantity: 1 });
+      setNotice(`Added ${product.name} to cart.`);
     } catch (err) {
       setSubmitError(err.message || "Failed to add product to cart.");
     }
@@ -91,11 +139,27 @@ export default function ProductsPage() {
     setEditingProduct(product);
     editForm.setFieldsValue({
       name: product.name,
+      urlHandle: product.urlHandle || "",
+      vendor: product.vendor || "",
+      productType: product.productType || "",
       sku: product.sku,
       description: product.description || "",
       tags: (product.tags || []).join(", "),
+      mediaUrls: (product.mediaUrls || []).join(", "),
+      seoTitle: product.seoTitle || "",
+      seoDescription: product.seoDescription || "",
       status: product.status,
       price: Number(product.price || 0),
+      compareAtPrice:
+        product.compareAtPrice === undefined || product.compareAtPrice === null
+          ? null
+          : Number(product.compareAtPrice),
+      costPrice:
+        product.costPrice === undefined || product.costPrice === null
+          ? null
+          : Number(product.costPrice),
+      priceStartAt: product.priceStartAt ? dayjs(product.priceStartAt) : null,
+      priceEndAt: product.priceEndAt ? dayjs(product.priceEndAt) : null,
       stock: Number(product.stock || 0),
     });
   }
@@ -107,18 +171,74 @@ export default function ProductsPage() {
 
     setIsUpdating(true);
     setSubmitError("");
+    setNotice("");
     try {
       await updateProduct(editingProduct.id, {
         ...values,
         price: Number(values.price),
+        compareAtPrice:
+          values.compareAtPrice === undefined || values.compareAtPrice === null
+            ? null
+            : Number(values.compareAtPrice),
+        costPrice:
+          values.costPrice === undefined || values.costPrice === null
+            ? null
+            : Number(values.costPrice),
+        priceStartAt: values.priceStartAt
+          ? values.priceStartAt.toISOString()
+          : null,
+        priceEndAt: values.priceEndAt ? values.priceEndAt.toISOString() : null,
         stock: Number(values.stock),
+        tags: parseListString(values.tags),
+        mediaUrls: parseListString(values.mediaUrls),
       });
       setEditingProduct(null);
       await loadProducts();
+      setNotice("Product updated.");
     } catch (err) {
       setSubmitError(err.message || "Failed to update product.");
     } finally {
       setIsUpdating(false);
+    }
+  }
+
+  async function onBulkStatusChange(nextStatus) {
+    if (!selectedRowKeys.length) {
+      return;
+    }
+
+    setSubmitError("");
+    setNotice("");
+    setIsBulkBusy(true);
+    try {
+      const result = await bulkUpdateProductStatus(selectedRowKeys, nextStatus);
+      await loadProducts();
+      setSelectedRowKeys([]);
+      setNotice(`${result.updatedCount} products updated to ${nextStatus}.`);
+    } catch (err) {
+      setSubmitError(err.message || "Failed bulk status update.");
+    } finally {
+      setIsBulkBusy(false);
+    }
+  }
+
+  async function onBulkDelete() {
+    if (!selectedRowKeys.length) {
+      return;
+    }
+
+    setSubmitError("");
+    setNotice("");
+    setIsBulkBusy(true);
+    try {
+      const result = await bulkDeleteProducts(selectedRowKeys);
+      await loadProducts();
+      setSelectedRowKeys([]);
+      setNotice(`${result.deletedCount} products deleted.`);
+    } catch (err) {
+      setSubmitError(err.message || "Failed bulk delete.");
+    } finally {
+      setIsBulkBusy(false);
     }
   }
 
@@ -173,6 +293,12 @@ export default function ProductsPage() {
       render: (value) => formatCurrency(value),
     },
     {
+      title: "Compare At",
+      key: "compareAtPrice",
+      render: (_, record) =>
+        record.compareAtPrice ? formatCurrency(record.compareAtPrice) : "-",
+    },
+    {
       title: "Stock",
       key: "stock",
       render: (_, record) => record.quantity_in_stock ?? record.stock,
@@ -182,6 +308,11 @@ export default function ProductsPage() {
       key: "tags",
       render: (_, record) =>
         (record.tags || []).length ? (record.tags || []).join(", ") : "-",
+    },
+    {
+      title: "Vendor",
+      key: "vendor",
+      render: (_, record) => record.vendor || "-",
     },
     {
       title: "Status",
@@ -235,6 +366,26 @@ export default function ProductsPage() {
         </Typography.Text>
       </header>
 
+      {submitError ? (
+        <Alert type="error" message={submitError} showIcon />
+      ) : null}
+
+      {notice ? <Alert type="success" message={notice} showIcon /> : null}
+
+      {loadError ? (
+        <Alert
+          type="error"
+          message="Failed to load products"
+          description={
+            <Space direction="vertical">
+              <Typography.Text>{loadError}</Typography.Text>
+              <Button onClick={loadProducts}>Retry</Button>
+            </Space>
+          }
+          showIcon
+        />
+      ) : null}
+
       <Row gutter={[12, 12]}>
         <Col xs={24} md={8}>
           <Card title="Total Products">{visibleProducts.length}</Card>
@@ -287,19 +438,42 @@ export default function ProductsPage() {
             ]}
             style={{ width: 180 }}
           />
+          <Typography.Text type="secondary">
+            Selected: {selectedRowKeys.length}
+          </Typography.Text>
+          <Button
+            disabled={!selectedRowKeys.length}
+            loading={isBulkBusy}
+            onClick={() => onBulkStatusChange("active")}
+          >
+            Mark Active
+          </Button>
+          <Button
+            disabled={!selectedRowKeys.length}
+            loading={isBulkBusy}
+            onClick={() => onBulkStatusChange("draft")}
+          >
+            Mark Draft
+          </Button>
+          <Popconfirm
+            title={`Delete ${selectedRowKeys.length} selected products?`}
+            onConfirm={onBulkDelete}
+            okText="Delete"
+            cancelText="Cancel"
+            disabled={!selectedRowKeys.length}
+          >
+            <Button
+              danger
+              disabled={!selectedRowKeys.length}
+              loading={isBulkBusy}
+            >
+              Bulk Delete
+            </Button>
+          </Popconfirm>
         </Space>
       </Card>
 
       <Card title="Add Product">
-        {submitError ? (
-          <Alert
-            type="error"
-            message={submitError}
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-        ) : null}
-
         <Form form={form} layout="vertical" onFinish={onSubmit}>
           <Row gutter={[12, 12]}>
             <Col xs={24} md={8}>
@@ -309,6 +483,16 @@ export default function ProductsPage() {
                 rules={[{ required: true }]}
               >
                 <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="vendor" label="Vendor">
+                <Input placeholder="Acme" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="productType" label="Product Type">
+                <Input placeholder="Apparel" />
               </Form.Item>
             </Col>
             <Col xs={24} md={10}>
@@ -332,6 +516,16 @@ export default function ProductsPage() {
                 label="Price"
                 rules={[{ required: true }]}
               >
+                <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={5}>
+              <Form.Item name="compareAtPrice" label="Compare-at Price">
+                <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={5}>
+              <Form.Item name="costPrice" label="Cost Price">
                 <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
               </Form.Item>
             </Col>
@@ -361,6 +555,36 @@ export default function ProductsPage() {
                 />
               </Form.Item>
             </Col>
+            <Col xs={24} md={6}>
+              <Form.Item name="priceStartAt" label="Price Start At">
+                <DatePicker showTime style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item name="priceEndAt" label="Price End At">
+                <DatePicker showTime style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="urlHandle" label="URL Handle">
+                <Input placeholder="summer-shirt" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="seoTitle" label="SEO Title">
+                <Input placeholder="Optimized title" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="seoDescription" label="SEO Description">
+                <Input placeholder="Search snippet" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item name="mediaUrls" label="Media URLs (comma separated)">
+                <Input placeholder="https://..." />
+              </Form.Item>
+            </Col>
             <Col xs={24} md={2}>
               <Form.Item label=" ">
                 <Button
@@ -378,12 +602,25 @@ export default function ProductsPage() {
       </Card>
 
       <Card title="Catalog">
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={visibleProducts}
-          pagination={{ pageSize: 8 }}
-        />
+        {isLoading ? (
+          <Typography.Text>Loading products...</Typography.Text>
+        ) : visibleProducts.length ? (
+          <Table
+            rowKey="id"
+            rowSelection={{
+              selectedRowKeys,
+              onChange: setSelectedRowKeys,
+            }}
+            columns={columns}
+            dataSource={visibleProducts}
+            pagination={{ pageSize: 8 }}
+          />
+        ) : (
+          <Empty
+            description="No products found. Create your first product to start publishing."
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
+        )}
       </Card>
 
       <Modal
@@ -403,11 +640,35 @@ export default function ProductsPage() {
           >
             <Input />
           </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="vendor" label="Vendor">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="productType" label="Product Type">
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item name="description" label="Description">
             <Input.TextArea rows={2} />
           </Form.Item>
           <Form.Item name="tags" label="Tags (comma separated)">
             <Input />
+          </Form.Item>
+          <Form.Item name="mediaUrls" label="Media URLs (comma separated)">
+            <Input />
+          </Form.Item>
+          <Form.Item name="seoTitle" label="SEO Title">
+            <Input />
+          </Form.Item>
+          <Form.Item name="seoDescription" label="SEO Description">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          <Form.Item name="urlHandle" label="URL Handle">
+            <Input placeholder="summer-shirt" />
           </Form.Item>
           <Row gutter={12}>
             <Col span={12}>
@@ -441,12 +702,32 @@ export default function ProductsPage() {
               </Form.Item>
             </Col>
             <Col span={12}>
+              <Form.Item name="compareAtPrice" label="Compare-at Price">
+                <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="costPrice" label="Cost Price">
+                <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
               <Form.Item
                 name="stock"
                 label="Stock"
                 rules={[{ required: true }]}
               >
                 <InputNumber min={0} style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="priceStartAt" label="Price Start At">
+                <DatePicker showTime style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="priceEndAt" label="Price End At">
+                <DatePicker showTime style={{ width: "100%" }} />
               </Form.Item>
             </Col>
           </Row>

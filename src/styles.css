@@ -24,6 +24,8 @@
   --destructive-foreground: #ffffff;
   --input: #ccd7df;
   --ring: #8fc3d8;
+  --surface-soft: rgba(255, 255, 255, 0.78);
+  --shadow-elevated: 0 18px 45px rgba(16, 52, 71, 0.12);
 }
 
 :root[data-theme="dark"] {
@@ -40,6 +42,8 @@
   --danger: #d04b4b;
   --input: #344654;
   --ring: #1f5168;
+  --surface-soft: rgba(23, 34, 43, 0.76);
+  --shadow-elevated: 0 18px 45px rgba(0, 0, 0, 0.34);
 }
 
 * {
@@ -91,8 +95,13 @@ h3 {
 
 .app-sider {
   border-right: 1px solid var(--border);
-  background: var(--card) !important;
-  padding: 18px 14px;
+  background: var(--surface-soft) !important;
+  backdrop-filter: blur(12px);
+  padding: 22px 14px;
+  position: sticky !important;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
 }
 
 .app-logo {
@@ -100,15 +109,16 @@ h3 {
 }
 
 .app-logo-mark {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: #006c9c;
+  background: linear-gradient(135deg, #006c9c, #00a7b7);
   color: #fff;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 800;
+  box-shadow: 0 8px 18px rgba(0, 108, 156, 0.33);
 }
 
 .app-logo-title {
@@ -125,6 +135,43 @@ h3 {
   background: transparent !important;
 }
 
+.app-menu .ant-menu-item {
+  margin-inline: 4px;
+  border-radius: 10px;
+  height: 42px;
+  line-height: 42px;
+}
+
+.app-menu .ant-menu-submenu {
+  margin-inline: 4px;
+  border-radius: 10px;
+}
+
+.app-menu .ant-menu-submenu-title {
+  height: 42px !important;
+  line-height: 42px !important;
+  border-radius: 10px;
+  font-weight: 700;
+  color: var(--secondary-text);
+}
+
+.app-menu .ant-menu-submenu-open > .ant-menu-submenu-title {
+  background: var(--secondary);
+}
+
+.app-menu .ant-menu-sub {
+  background: transparent !important;
+}
+
+.app-menu .ant-menu-sub .ant-menu-item {
+  margin-left: 8px;
+  font-size: 0.92rem;
+}
+
+.app-menu .ant-menu-item-selected {
+  background: var(--secondary) !important;
+}
+
 .app-sider-footer {
   margin-top: 18px;
   padding-top: 14px;
@@ -138,11 +185,27 @@ h3 {
 }
 
 .app-content {
-  padding: 16px;
+  padding: 18px;
 }
 
 .app-topbar {
   margin-bottom: 16px;
+  border-radius: 16px !important;
+  border: 1px solid var(--border);
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.88),
+    rgba(235, 246, 250, 0.66)
+  );
+  box-shadow: var(--shadow-elevated);
+}
+
+:root[data-theme="dark"] .app-topbar {
+  background: linear-gradient(
+    155deg,
+    rgba(29, 43, 54, 0.92),
+    rgba(19, 33, 44, 0.82)
+  );
 }
 
 .app-kicker {
@@ -154,7 +217,39 @@ h3 {
 }
 
 .app-topbar-title {
-  margin: 3px 0 0 !important;
+  margin: 3px 0 2px !important;
+}
+
+.app-topbar-subtitle {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.app-user-avatar {
+  background: linear-gradient(135deg, #0f8aac, #025c85) !important;
+}
+
+.app-content-scroll {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.app-content-scroll .ant-card {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+.app-content-scroll .ant-table-wrapper,
+.app-content-scroll .ant-list,
+.app-content-scroll .ant-descriptions {
+  overflow-x: auto;
+}
+
+.app-mobile-drawer .ant-drawer-body {
+  padding-top: 8px;
 }
 
 .page-fallback {
@@ -208,7 +303,27 @@ h3 {
 }
 
 @media (max-width: 768px) {
+  .app-sider {
+    display: none;
+  }
+
   .app-content {
+    padding: 10px;
+  }
+
+  .app-topbar {
+    margin-bottom: 12px;
+  }
+
+  .app-topbar .ant-card-body {
     padding: 12px;
+  }
+
+  .app-topbar-title {
+    font-size: 1.1rem !important;
+  }
+
+  .app-content-scroll {
+    gap: 12px;
   }
 }

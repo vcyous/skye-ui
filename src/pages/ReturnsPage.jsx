@@ -2,12 +2,14 @@ import {
   Alert,
   Button,
   Card,
+  Empty,
   Form,
   Input,
   InputNumber,
   Modal,
   Select,
   Space,
+  Spin,
   Table,
   Tag,
   Typography,
@@ -22,10 +24,29 @@ import {
   updateReturnStatus,
 } from "../services/api.js";
 
+const RETURN_REASON_OPTIONS = [
+  { value: "wrong_size", label: "Wrong Size" },
+  { value: "wrong_item", label: "Wrong Item" },
+  { value: "damaged", label: "Damaged" },
+  { value: "defective", label: "Defective" },
+  { value: "not_as_described", label: "Not As Described" },
+  { value: "changed_mind", label: "Changed Mind" },
+  { value: "late_delivery", label: "Late Delivery" },
+  { value: "other", label: "Other" },
+];
+
+function formatCurrency(value) {
+  return `$${Number(value || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 export default function ReturnsPage() {
   const [returns, setReturns] = useState([]);
   const [refunds, setRefunds] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [notice, setNotice] = useState({ type: "", message: "" });
   const [requestOpen, setRequestOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
@@ -33,6 +54,7 @@ export default function ReturnsPage() {
   const [refundForm] = Form.useForm();
 
   async function loadData() {
+    setIsLoading(true);
     const [returnRows, refundRows, orderRows] = await Promise.all([
       getReturns(),
       getRefunds(),
@@ -41,15 +63,17 @@ export default function ReturnsPage() {
     setReturns(returnRows);
     setRefunds(refundRows);
     setOrders(orderRows);
+    setIsLoading(false);
   }
 
   useEffect(() => {
-    loadData().catch((err) =>
+    loadData().catch((err) => {
       setNotice({
         type: "error",
         message: err.message || "Failed to load returns.",
-      }),
-    );
+      });
+      setIsLoading(false);
+    });
   }, []);
 
   async function onCreateReturn(values) {
@@ -98,48 +122,96 @@ export default function ReturnsPage() {
     }
   }
 
+  function openRefundModal() {
+    setRefundOpen(true);
+    if (returns.length) {
+      refundForm.setFieldValue("returnId", returns[0].id);
+    }
+    refundForm.setFieldValue("reasonCode", "other");
+  }
+
+  const returnStatusColor = {
+    pending: "gold",
+    approved: "blue",
+    received: "cyan",
+    rejected: "red",
+    refunded: "green",
+  };
+
   const returnColumns = [
     { title: "RMA", dataIndex: "rmaNumber", key: "rmaNumber" },
     { title: "Order", dataIndex: "orderNumber", key: "orderNumber" },
+    {
+      title: "Reason Code",
+      dataIndex: "reasonCode",
+      key: "reasonCode",
+      render: (value) => (
+        <Tag>{String(value || "other").replaceAll("_", " ")}</Tag>
+      ),
+    },
     { title: "Reason", dataIndex: "reason", key: "reason" },
+    {
+      title: "Refunded",
+      dataIndex: "refundedAmount",
+      key: "refundedAmount",
+      render: (value) => formatCurrency(value),
+    },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      render: (value) => <Tag color="blue">{value}</Tag>,
+      render: (value) => (
+        <Tag color={returnStatusColor[value] || "blue"}>{value}</Tag>
+      ),
+    },
+    {
+      title: "Requested",
+      dataIndex: "requestedAt",
+      key: "requestedAt",
+      render: (value) => (value ? new Date(value).toLocaleString() : "-"),
     },
     {
       title: "Actions",
       key: "actions",
       render: (_, record) => (
-        <Space>
-          <Button
-            size="small"
-            onClick={() => onUpdateReturn(record, "approved")}
-          >
-            Approve
-          </Button>
-          <Button
-            size="small"
-            onClick={() => onUpdateReturn(record, "received")}
-          >
-            Receive
-          </Button>
-          <Button
-            size="small"
-            danger
-            onClick={() => onUpdateReturn(record, "rejected")}
-          >
-            Reject
-          </Button>
-        </Space>
+        <Select
+          size="small"
+          style={{ width: 170 }}
+          placeholder="Change status"
+          options={(record.availableStatuses || [])
+            .filter((status) => status !== record.status)
+            .map((status) => ({
+              value: status,
+              label: status,
+            }))}
+          onChange={(value) => onUpdateReturn(record, value)}
+        />
       ),
     },
   ];
 
   const refundColumns = [
     { title: "RMA", dataIndex: "rmaNumber", key: "rmaNumber" },
-    { title: "Amount", dataIndex: "amount", key: "amount" },
+    {
+      title: "Type",
+      dataIndex: "refundType",
+      key: "refundType",
+      render: (value) => (
+        <Tag color={value === "full" ? "green" : "gold"}>{value}</Tag>
+      ),
+    },
+    {
+      title: "Amount",
+      dataIndex: "amount",
+      key: "amount",
+      render: (value) => formatCurrency(value),
+    },
+    {
+      title: "Reason",
+      dataIndex: "reasonCode",
+      key: "reasonCode",
+      render: (value) => String(value || "other").replaceAll("_", " "),
+    },
     {
       title: "Status",
       dataIndex: "status",
@@ -153,6 +225,14 @@ export default function ReturnsPage() {
       render: (value) => new Date(value).toLocaleString(),
     },
   ];
+
+  if (isLoading) {
+    return (
+      <Card>
+        <Spin />
+      </Card>
+    );
+  }
 
   return (
     <section style={{ display: "grid", gap: 16 }}>
@@ -174,7 +254,7 @@ export default function ReturnsPage() {
         extra={
           <Space>
             <Button onClick={() => setRequestOpen(true)}>Create Return</Button>
-            <Button type="primary" onClick={() => setRefundOpen(true)}>
+            <Button type="primary" onClick={openRefundModal}>
               Process Refund
             </Button>
           </Space>
@@ -187,20 +267,34 @@ export default function ReturnsPage() {
       </Card>
 
       <Card title="Return Requests">
-        <Table
-          rowKey="id"
-          columns={returnColumns}
-          dataSource={returns}
-          pagination={{ pageSize: 6 }}
-        />
+        {returns.length ? (
+          <Table
+            rowKey="id"
+            columns={returnColumns}
+            dataSource={returns}
+            pagination={{ pageSize: 6 }}
+          />
+        ) : (
+          <Empty
+            description="No return requests yet."
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
+        )}
       </Card>
       <Card title="Refunds">
-        <Table
-          rowKey="id"
-          columns={refundColumns}
-          dataSource={refunds}
-          pagination={{ pageSize: 6 }}
-        />
+        {refunds.length ? (
+          <Table
+            rowKey="id"
+            columns={refundColumns}
+            dataSource={refunds}
+            pagination={{ pageSize: 6 }}
+          />
+        ) : (
+          <Empty
+            description="No refunds processed yet."
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
+        )}
       </Card>
 
       <Modal
@@ -221,6 +315,14 @@ export default function ReturnsPage() {
           </Form.Item>
           <Form.Item name="reason" label="Reason">
             <Input.TextArea rows={3} />
+          </Form.Item>
+          <Form.Item
+            name="reasonCode"
+            label="Reason Code"
+            initialValue="other"
+            rules={[{ required: true }]}
+          >
+            <Select options={RETURN_REASON_OPTIONS} />
           </Form.Item>
         </Form>
       </Modal>
@@ -246,7 +348,18 @@ export default function ReturnsPage() {
             />
           </Form.Item>
           <Form.Item name="amount" label="Amount" rules={[{ required: true }]}>
-            <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
+            <InputNumber min={0.01} step={0.01} style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item
+            name="reasonCode"
+            label="Reason Code"
+            initialValue="other"
+            rules={[{ required: true }]}
+          >
+            <Select options={RETURN_REASON_OPTIONS} />
+          </Form.Item>
+          <Form.Item name="note" label="Refund Note">
+            <Input.TextArea rows={3} />
           </Form.Item>
         </Form>
       </Modal>
