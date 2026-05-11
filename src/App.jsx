@@ -1,54 +1,56 @@
 import {
-  AppstoreOutlined,
-  AuditOutlined,
-  BarChartOutlined,
-  CreditCardOutlined,
-  DashboardOutlined,
-  DatabaseOutlined,
-  DollarCircleOutlined,
-  DropboxOutlined,
-  FileTextOutlined,
-  GiftOutlined,
-  GlobalOutlined,
-  MailOutlined,
-  NotificationOutlined,
-  ProfileOutlined,
-  ReloadOutlined,
-  SettingOutlined,
-  ShopOutlined,
-  ShoppingCartOutlined,
-  ShoppingOutlined,
-  SolutionOutlined,
-  TagsOutlined,
-  TeamOutlined,
-  TruckOutlined,
-  UserOutlined,
+    AppstoreOutlined,
+    AuditOutlined,
+    BarChartOutlined,
+    CreditCardOutlined,
+    DashboardOutlined,
+    DatabaseOutlined,
+    DollarCircleOutlined,
+    DropboxOutlined,
+    FileTextOutlined,
+    GiftOutlined,
+    GlobalOutlined,
+    MailOutlined,
+    NotificationOutlined,
+    ProfileOutlined,
+    ReloadOutlined,
+    RobotOutlined,
+    SettingOutlined,
+    ShieldOutlined,
+    ShopOutlined,
+    ShoppingCartOutlined,
+    ShoppingOutlined,
+    SolutionOutlined,
+    TagsOutlined,
+    TeamOutlined,
+    TruckOutlined,
+    UserOutlined,
 } from "@ant-design/icons";
 import {
-  App as AntApp,
-  theme as antdTheme,
-  Avatar,
-  Badge,
-  Button,
-  Card,
-  ConfigProvider,
-  Drawer,
-  Flex,
-  Grid,
-  Layout,
-  Menu,
-  Select,
-  Space,
-  Tag,
-  Typography,
+    App as AntApp,
+    theme as antdTheme,
+    Avatar,
+    Badge,
+    Button,
+    Card,
+    ConfigProvider,
+    Drawer,
+    Flex,
+    Grid,
+    Layout,
+    Menu,
+    Select,
+    Space,
+    Tag,
+    Typography,
 } from "antd";
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
-  NavLink,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
+    NavLink,
+    Route,
+    Routes,
+    useLocation,
+    useNavigate,
 } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
 import PublicOnlyRoute from "./components/auth/PublicOnlyRoute.jsx";
@@ -80,6 +82,13 @@ const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage.jsx"));
 const LocalizationPage = lazy(() => import("./pages/LocalizationPage.jsx"));
 const MultiCurrencyPage = lazy(() => import("./pages/MultiCurrencyPage.jsx"));
 const SubscriptionsPage = lazy(() => import("./pages/SubscriptionsPage.jsx"));
+const B2bCompaniesPage = lazy(() => import("./pages/B2bCompaniesPage.jsx"));
+const WholesalePriceListsPage = lazy(() => import("./pages/WholesalePriceListsPage.jsx"));
+const IntegrationsPage = lazy(() => import("./pages/IntegrationsPage.jsx"));
+const WebhooksPage = lazy(() => import("./pages/WebhooksPage.jsx"));
+const AutomationsPage = lazy(() => import("./pages/AutomationsPage.jsx"));
+const AuditPage = lazy(() => import("./pages/AuditPage.jsx"));
+const SecurityPage = lazy(() => import("./pages/SecurityPage.jsx"));
 
 const menuSections = [
   {
@@ -141,6 +150,34 @@ const menuSections = [
     children: [
       { to: "/shipping", label: "Shipping", icon: <TruckOutlined /> },
       { to: "/tax", label: "Tax & Invoices", icon: <AuditOutlined /> },
+    ],
+  },
+  {
+    key: "wholesale",
+    label: "B2B & Wholesale",
+    icon: <ShoppingCartOutlined />,
+    children: [
+      { to: "/b2b-companies", label: "Companies", icon: <TeamOutlined /> },
+      { to: "/wholesale-price-lists", label: "Price Lists", icon: <TagsOutlined /> },
+      { to: "/integrations", label: "Integrations", icon: <AppstoreOutlined /> },
+      { to: "/webhooks", label: "APIs & Webhooks", icon: <FileTextOutlined /> },
+    ],
+  },
+  {
+    key: "automation",
+    label: "Automation",
+    icon: <RobotOutlined />,
+    children: [
+      { to: "/automations", label: "Workflows", icon: <RobotOutlined /> },
+    ],
+  },
+  {
+    key: "security",
+    label: "Security & Compliance",
+    icon: <ShieldOutlined />,
+    children: [
+      { to: "/security", label: "Security Settings", icon: <ShieldOutlined /> },
+      { to: "/audit", label: "Audit Logs", icon: <AuditOutlined /> },
     ],
   },
   {
@@ -395,6 +432,13 @@ function AppLayout() {
                   <Route path="/tax" element={<TaxPage />} />
                   <Route path="/returns" element={<ReturnsPage />} />
                   <Route path="/store" element={<StorePage />} />
+                  <Route path="/b2b-companies" element={<B2bCompaniesPage />} />
+                  <Route path="/wholesale-price-lists" element={<WholesalePriceListsPage />} />
+                  <Route path="/integrations" element={<IntegrationsPage />} />
+                  <Route path="/webhooks" element={<WebhooksPage />} />
+                  <Route path="/automations" element={<AutomationsPage />} />
+                  <Route path="/security" element={<SecurityPage />} />
+                  <Route path="/audit" element={<AuditPage />} />
                   <Route path="/localization" element={<LocalizationPage />} />
                   <Route
                     path="/multi-currency"
@@ -447,3 +491,6 @@ export default function App() {
     </Suspense>
   );
 }
+
+
+
