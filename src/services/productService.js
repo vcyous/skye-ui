@@ -6,11 +6,14 @@
  * Depends on: supabaseClient, utils/errorUtils, utils/slugUtils, utils/dbUtils, storeService
  */
 
-import { supabase } from "./supabaseClient.js";
-import { normalizeError, isMissingColumnError } from "./utils/errorUtils.js";
-import { normalizeSeoHandle, validateSeoMetadataFields } from "./utils/slugUtils.js";
-import { assertUniqueHandle } from "./utils/dbUtils.js";
 import { getStoreContext } from "./storeService.js";
+import { supabase } from "./supabaseClient.js";
+import { assertUniqueHandle } from "./utils/dbUtils.js";
+import { normalizeError } from "./utils/errorUtils.js";
+import {
+  normalizeSeoHandle,
+  validateSeoMetadataFields,
+} from "./utils/slugUtils.js";
 
 export async function getProducts(status = "all") {
   const { store } = await getStoreContext();
@@ -27,43 +30,7 @@ export async function getProducts(status = "all") {
     query = query.eq("status", status);
   }
 
-  let { data, error } = await query;
-
-  if (error && isMissingColumnError(error, "vendor")) {
-    let fallbackQuery = supabase
-      .from("products")
-      .select(
-        "id, title, handle, description, tags, status, created_at, updated_at, product_variants(id, sku, price, compare_at_price, cost_price, price_start_at, price_end_at, quantity_in_stock, created_at)",
-      )
-      .eq("store_id", store.id)
-      .order("created_at", { ascending: false });
-
-    if (status && status !== "all") {
-      fallbackQuery = fallbackQuery.eq("status", status);
-    }
-
-    const fallbackResult = await fallbackQuery;
-    data = fallbackResult.data;
-    error = fallbackResult.error;
-  }
-
-  if (error && isMissingColumnError(error, "price_start_at")) {
-    let fallbackQuery = supabase
-      .from("products")
-      .select(
-        "id, title, handle, description, tags, vendor, product_type, seo_title, seo_description, media_urls, status, created_at, updated_at, product_variants(id, sku, price, compare_at_price, cost_price, quantity_in_stock, created_at)",
-      )
-      .eq("store_id", store.id)
-      .order("created_at", { ascending: false });
-
-    if (status && status !== "all") {
-      fallbackQuery = fallbackQuery.eq("status", status);
-    }
-
-    const fallbackResult = await fallbackQuery;
-    data = fallbackResult.data;
-    error = fallbackResult.error;
-  }
+  const { data, error } = await query;
 
   if (error) {
     throw normalizeError(error);
@@ -165,77 +132,6 @@ export async function createProduct(payload) {
     .select("id, title, description, tags, status, created_at, updated_at")
     .single();
 
-  if (productError && isMissingColumnError(productError, "vendor")) {
-    const { data: fallbackProduct, error: fallbackProductError } =
-      await supabase
-        .from("products")
-        .insert({
-          store_id: store.id,
-          title: payload.name,
-          handle: productHandle,
-          description: payload.description || null,
-          status: payload.status || "draft",
-          tags,
-        })
-        .select("id, title, description, tags, status, created_at, updated_at")
-        .single();
-
-    if (fallbackProductError) {
-      throw normalizeError(fallbackProductError);
-    }
-
-    const { data: variant, error: variantError } = await supabase
-      .from("product_variants")
-      .insert({
-        product_id: fallbackProduct.id,
-        sku: normalizedSku,
-        title: `${payload.name} Default`,
-        price: Number(payload.price),
-        compare_at_price:
-          payload.compareAtPrice === undefined ||
-          payload.compareAtPrice === null
-            ? null
-            : Number(payload.compareAtPrice),
-        cost_price:
-          payload.costPrice === undefined || payload.costPrice === null
-            ? null
-            : Number(payload.costPrice),
-        quantity_in_stock: Number(payload.stock),
-      })
-      .select("id, sku, price, compare_at_price, cost_price, quantity_in_stock")
-      .single();
-
-    if (variantError) {
-      throw normalizeError(variantError);
-    }
-
-    return {
-      id: fallbackProduct.id,
-      name: fallbackProduct.title,
-      urlHandle: productHandle,
-      description: fallbackProduct.description || "",
-      tags,
-      variantId: variant.id,
-      sku: variant.sku,
-      price: Number(variant.price),
-      compareAtPrice: variant.compare_at_price,
-      costPrice: variant.cost_price,
-      priceStartAt: null,
-      priceEndAt: null,
-      quantity_in_stock: Number(variant.quantity_in_stock),
-      stock: Number(variant.quantity_in_stock),
-      status: fallbackProduct.status,
-      vendor: payload.vendor || null,
-      productType: payload.productType || null,
-      seoTitle: payload.seoTitle || "",
-      seoDescription: payload.seoDescription || "",
-      mediaUrls: Array.isArray(payload.mediaUrls) ? payload.mediaUrls : [],
-      rating: null,
-      created_at: fallbackProduct.created_at,
-      updated_at: fallbackProduct.updated_at,
-    };
-  }
-
   if (productError) {
     throw normalizeError(productError);
   }
@@ -263,56 +159,6 @@ export async function createProduct(payload) {
       "id, sku, price, compare_at_price, cost_price, price_start_at, price_end_at, quantity_in_stock",
     )
     .single();
-
-  if (variantError && isMissingColumnError(variantError, "price_start_at")) {
-    const { data: fallbackVariant, error: fallbackVariantError } =
-      await supabase
-        .from("product_variants")
-        .insert({
-          product_id: product.id,
-          sku: payload.sku,
-          title: `${payload.name} Default`,
-          price: Number(payload.price),
-          compare_at_price:
-            payload.compareAtPrice === undefined ||
-            payload.compareAtPrice === null
-              ? null
-              : Number(payload.compareAtPrice),
-          cost_price:
-            payload.costPrice === undefined || payload.costPrice === null
-              ? null
-              : Number(payload.costPrice),
-          quantity_in_stock: Number(payload.stock),
-        })
-        .select(
-          "id, sku, price, compare_at_price, cost_price, quantity_in_stock",
-        )
-        .single();
-
-    if (fallbackVariantError) {
-      throw normalizeError(fallbackVariantError);
-    }
-
-    return {
-      id: product.id,
-      name: product.title,
-      description: product.description || "",
-      tags,
-      variantId: fallbackVariant.id,
-      sku: fallbackVariant.sku,
-      price: Number(fallbackVariant.price),
-      compareAtPrice: fallbackVariant.compare_at_price,
-      costPrice: fallbackVariant.cost_price,
-      priceStartAt: null,
-      priceEndAt: null,
-      quantity_in_stock: Number(fallbackVariant.quantity_in_stock),
-      stock: Number(fallbackVariant.quantity_in_stock),
-      status: product.status,
-      rating: null,
-      created_at: product.created_at,
-      updated_at: product.updated_at,
-    };
-  }
 
   if (variantError) {
     throw normalizeError(variantError);
@@ -397,81 +243,6 @@ export async function updateProduct(productId, payload) {
     .select("id, title, description, status, tags, created_at, updated_at")
     .single();
 
-  if (productError && isMissingColumnError(productError, "vendor")) {
-    const { data: fallbackProduct, error: fallbackProductError } =
-      await supabase
-        .from("products")
-        .update({
-          title: payload.name,
-          handle: productHandle,
-          description: payload.description || null,
-          status: payload.status || "draft",
-          tags,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", productId)
-        .eq("store_id", store.id)
-        .select("id, title, description, status, tags, created_at, updated_at")
-        .single();
-
-    if (fallbackProductError) {
-      throw normalizeError(fallbackProductError);
-    }
-
-    const { data: variant, error: variantError } = await supabase
-      .from("product_variants")
-      .update({
-        sku: normalizedSku,
-        price: Number(payload.price),
-        compare_at_price:
-          payload.compareAtPrice === undefined ||
-          payload.compareAtPrice === null
-            ? null
-            : Number(payload.compareAtPrice),
-        cost_price:
-          payload.costPrice === undefined || payload.costPrice === null
-            ? null
-            : Number(payload.costPrice),
-        quantity_in_stock: Number(payload.stock),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("product_id", fallbackProduct.id)
-      .select("id, sku, price, compare_at_price, cost_price, quantity_in_stock")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .single();
-
-    if (variantError) {
-      throw normalizeError(variantError);
-    }
-
-    return {
-      id: fallbackProduct.id,
-      name: fallbackProduct.title,
-      urlHandle: productHandle,
-      description: fallbackProduct.description || "",
-      tags: Array.isArray(fallbackProduct.tags) ? fallbackProduct.tags : [],
-      variantId: variant.id,
-      sku: variant.sku,
-      price: Number(variant.price),
-      compareAtPrice: variant.compare_at_price,
-      costPrice: variant.cost_price,
-      priceStartAt: null,
-      priceEndAt: null,
-      quantity_in_stock: Number(variant.quantity_in_stock),
-      stock: Number(variant.quantity_in_stock),
-      status: fallbackProduct.status,
-      vendor: payload.vendor || null,
-      productType: payload.productType || null,
-      seoTitle: payload.seoTitle || "",
-      seoDescription: payload.seoDescription || "",
-      mediaUrls: Array.isArray(payload.mediaUrls) ? payload.mediaUrls : [],
-      rating: null,
-      created_at: fallbackProduct.created_at,
-      updated_at: fallbackProduct.updated_at,
-    };
-  }
-
   if (productError) {
     throw normalizeError(productError);
   }
@@ -501,63 +272,6 @@ export async function updateProduct(productId, payload) {
     .order("created_at", { ascending: true })
     .limit(1)
     .single();
-
-  if (variantError && isMissingColumnError(variantError, "price_start_at")) {
-    const { data: fallbackVariant, error: fallbackVariantError } =
-      await supabase
-        .from("product_variants")
-        .update({
-          sku: normalizedSku,
-          price: Number(payload.price),
-          compare_at_price:
-            payload.compareAtPrice === undefined ||
-            payload.compareAtPrice === null
-              ? null
-              : Number(payload.compareAtPrice),
-          cost_price:
-            payload.costPrice === undefined || payload.costPrice === null
-              ? null
-              : Number(payload.costPrice),
-          quantity_in_stock: Number(payload.stock),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("product_id", product.id)
-        .select(
-          "id, sku, price, compare_at_price, cost_price, quantity_in_stock",
-        )
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .single();
-
-    if (fallbackVariantError) {
-      throw normalizeError(fallbackVariantError);
-    }
-
-    return {
-      id: product.id,
-      name: product.title,
-      description: product.description || "",
-      tags: Array.isArray(product.tags) ? product.tags : [],
-      variantId: fallbackVariant.id,
-      sku: fallbackVariant.sku,
-      price: Number(fallbackVariant.price),
-      compareAtPrice: fallbackVariant.compare_at_price,
-      costPrice: fallbackVariant.cost_price,
-      priceStartAt: null,
-      priceEndAt: null,
-      quantity_in_stock: Number(fallbackVariant.quantity_in_stock),
-      stock: Number(fallbackVariant.quantity_in_stock),
-      status: product.status,
-      vendor: payload.vendor || null,
-      productType: payload.productType || null,
-      seoTitle: payload.seoTitle || "",
-      seoDescription: payload.seoDescription || "",
-      mediaUrls: Array.isArray(payload.mediaUrls) ? payload.mediaUrls : [],
-      rating: null,
-      created_at: product.created_at,
-      updated_at: product.updated_at,
-    };
-  }
 
   if (variantError) {
     throw normalizeError(variantError);
