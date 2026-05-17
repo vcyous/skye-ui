@@ -397,6 +397,74 @@ async function getAppUserById(userId) {
   return data;
 }
 
+function resolveProfileName(authUser, payload = {}) {
+  return (
+    payload.name ||
+    payload.full_name ||
+    authUser.user_metadata?.name ||
+    authUser.user_metadata?.full_name ||
+    authUser.email?.split("@")[0] ||
+    "Store Owner"
+  );
+}
+
+function resolveProfilePhone(authUser, payload = {}) {
+  return (
+    payload.phone ||
+    payload.phone_number ||
+    authUser.user_metadata?.phone ||
+    null
+  );
+}
+
+async function insertAppUser(insertPayload) {
+  const { error } = await supabase.from("users").insert(insertPayload);
+  if (!error || error.code === "23505") {
+    return;
+  }
+
+  throw normalizeError(error);
+}
+
+async function findPrimaryStoreByOwner(userId) {
+  const { data, error } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  if (error) {
+    throw normalizeError(error);
+  }
+
+  return data?.[0] || null;
+}
+
+async function insertPrimaryStore(userId, displayName) {
+  const insertPayload = {
+    user_id: userId,
+    name: `${displayName || "Skye"} Store`,
+    slug: buildUniqueHandle(displayName || "skye-store"),
+    description: "Default store profile",
+    status: "active",
+    currency: "IDR",
+    timezone: "Asia/Jakarta",
+  };
+
+  const { data, error } = await supabase
+    .from("stores")
+    .insert(insertPayload)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw normalizeError(error);
+  }
+
+  return data;
+}
+
 export async function ensureAppUser(authUser, payload = {}) {
   const existing = await getAppUserById(authUser.id);
   if (existing) {
@@ -405,29 +473,13 @@ export async function ensureAppUser(authUser, payload = {}) {
 
   const insertPayload = {
     id: authUser.id,
-    full_name:
-      payload.name ||
-      payload.full_name ||
-      authUser.user_metadata?.name ||
-      authUser.user_metadata?.full_name ||
-      authUser.email?.split("@")[0] ||
-      "Store Owner",
+    full_name: resolveProfileName(authUser, payload),
     email: authUser.email,
-    phone_number:
-      payload.phone ||
-      payload.phone_number ||
-      authUser.user_metadata?.phone ||
-      null,
+    phone_number: resolveProfilePhone(authUser, payload),
     status: "active",
   };
 
-  const { error: insertError } = await supabase
-    .from("users")
-    .insert(insertPayload);
-
-  if (insertError && insertError.code !== "23505") {
-    throw normalizeError(insertError);
-  }
+  await insertAppUser(insertPayload);
 
   return getAppUserById(authUser.id);
 }
@@ -470,18 +522,7 @@ async function ensureThemes(storeId) {
 }
 
 export async function ensurePrimaryStore(authUser, profile) {
-  const { data, error } = await supabase
-    .from("stores")
-    .select("*")
-    .eq("user_id", authUser.id)
-    .order("created_at", { ascending: true })
-    .limit(1);
-
-  if (error) {
-    throw normalizeError(error);
-  }
-
-  let store = data[0] || null;
+  let store = await findPrimaryStoreByOwner(authUser.id);
 
   if (!store) {
     const displayName =
@@ -491,25 +532,7 @@ export async function ensurePrimaryStore(authUser, profile) {
       authUser.user_metadata?.name ||
       authUser.email;
 
-    const { data: inserted, error: insertError } = await supabase
-      .from("stores")
-      .insert({
-        user_id: authUser.id,
-        name: `${displayName || "Skye"} Store`,
-        slug: buildUniqueHandle(displayName || "skye-store"),
-        description: "Default store profile",
-        status: "active",
-        currency: "IDR",
-        timezone: "Asia/Jakarta",
-      })
-      .select("*")
-      .single();
-
-    if (insertError) {
-      throw normalizeError(insertError);
-    }
-
-    store = inserted;
+    store = await insertPrimaryStore(authUser.id, displayName);
   }
 
   await ensureThemes(store.id);
