@@ -1,27 +1,23 @@
+import { EyeOutlined, FilterOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
-    EyeOutlined,
-    FilterOutlined,
-    ReloadOutlined
-} from '@ant-design/icons';
-import {
-    Alert,
-    Button,
-    Card,
-    Col,
-    DatePicker,
-    Drawer,
-    Empty,
-    Row,
-    Select,
-    Space,
-    Spin,
-    Statistic,
-    Table,
-    Tag
-} from 'antd';
-import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
-import * as auditService from '../services/auditService';
+  Alert,
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Drawer,
+  Empty,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Statistic,
+  Table,
+  Tag,
+} from "antd";
+import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+import * as auditService from "../services/api.js";
 
 const AuditPage = () => {
   const [auditLogs, setAuditLogs] = useState([]);
@@ -51,7 +47,7 @@ const AuditPage = () => {
     setError(null);
     try {
       // Get current store from auth context (assuming it's available)
-      const storeId = localStorage.getItem('storeId') || 'demo-store';
+      const storeId = localStorage.getItem("storeId") || "demo-store";
 
       const logsPromise = auditService.getAuditLogs(storeId, filters);
       const statsPromise = auditService.getAuditStatistics(storeId, 30);
@@ -61,8 +57,8 @@ const AuditPage = () => {
       setAuditLogs(logs);
       setStats(statistics);
     } catch (err) {
-      console.error('Error loading audit data:', err);
-      setError('Failed to load audit logs. Please try again.');
+      console.error("Error loading audit data:", err);
+      setError("Failed to load audit logs. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -70,23 +66,23 @@ const AuditPage = () => {
 
   const getSeverityColor = (severity) => {
     const colors = {
-      critical: 'red',
-      warning: 'orange',
-      info: 'blue',
-      debug: 'default',
+      critical: "red",
+      warning: "orange",
+      info: "blue",
+      debug: "default",
     };
-    return colors[severity] || 'default';
+    return colors[severity] || "default";
   };
 
   const getCategoryColor = (category) => {
     const colors = {
-      authentication: 'blue',
-      data_change: 'orange',
-      financial: 'green',
-      settings: 'purple',
-      security: 'red',
+      authentication: "blue",
+      data_change: "orange",
+      financial: "green",
+      settings: "purple",
+      security: "red",
     };
-    return colors[category] || 'default';
+    return colors[category] || "default";
   };
 
   const handleFilterChange = (field, value) => {
@@ -118,69 +114,71 @@ const AuditPage = () => {
   };
 
   const eventTypeOptions = [
-    { value: 'user.login', label: 'User Login' },
-    { value: 'user.login_failed', label: 'Login Failed' },
-    { value: 'user.logout', label: 'User Logout' },
-    { value: 'user.password_changed', label: 'Password Changed' },
-    { value: 'data.created', label: 'Data Created' },
-    { value: 'data.updated', label: 'Data Updated' },
-    { value: 'data.deleted', label: 'Data Deleted' },
-    { value: 'payment.processed', label: 'Payment Processed' },
-    { value: 'payment.failed', label: 'Payment Failed' },
-    { value: 'access.denied', label: 'Access Denied' },
-    { value: 'settings.changed', label: 'Settings Changed' },
+    { value: "user.login", label: "User Login" },
+    { value: "user.login_failed", label: "Login Failed" },
+    { value: "user.logout", label: "User Logout" },
+    { value: "user.password_changed", label: "Password Changed" },
+    { value: "data.created", label: "Data Created" },
+    { value: "data.updated", label: "Data Updated" },
+    { value: "data.deleted", label: "Data Deleted" },
+    { value: "payment.processed", label: "Payment Processed" },
+    { value: "payment.failed", label: "Payment Failed" },
+    { value: "access.denied", label: "Access Denied" },
+    { value: "settings.changed", label: "Settings Changed" },
   ];
 
   const eventCategoryOptions = [
-    { value: 'authentication', label: 'Authentication' },
-    { value: 'data_change', label: 'Data Change' },
-    { value: 'financial', label: 'Financial' },
-    { value: 'settings', label: 'Settings' },
-    { value: 'security', label: 'Security' },
+    { value: "authentication", label: "Authentication" },
+    { value: "data_change", label: "Data Change" },
+    { value: "financial", label: "Financial" },
+    { value: "settings", label: "Settings" },
+    { value: "security", label: "Security" },
   ];
 
   const columns = [
     {
-      title: 'Timestamp',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "Timestamp",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 180,
-      render: (date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss'),
+      render: (date) => dayjs(date).format("YYYY-MM-DD HH:mm:ss"),
       sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
-      title: 'Event Type',
-      dataIndex: 'eventType',
-      key: 'eventType',
+      title: "Event Type",
+      dataIndex: "eventType",
+      key: "eventType",
       width: 150,
       render: (eventType) => <Tag>{eventType}</Tag>,
     },
     {
-      title: 'Category',
-      dataIndex: 'eventCategory',
-      key: 'eventCategory',
+      title: "Category",
+      dataIndex: "eventCategory",
+      key: "eventCategory",
       width: 120,
-      render: (category) => <Tag color={getCategoryColor(category)}>{category}</Tag>,
+      render: (category) => (
+        <Tag color={getCategoryColor(category)}>{category}</Tag>
+      ),
     },
     {
-      title: 'Severity',
-      dataIndex: 'severity',
-      key: 'severity',
+      title: "Severity",
+      dataIndex: "severity",
+      key: "severity",
       width: 100,
       render: (severity) => (
         <Tag color={getSeverityColor(severity)}>{severity.toUpperCase()}</Tag>
       ),
     },
     {
-      title: 'Entity',
-      dataIndex: 'entityType',
-      key: 'entityType',
+      title: "Entity",
+      dataIndex: "entityType",
+      key: "entityType",
       width: 120,
-      render: (type, record) => (type ? `${type}/${record.entityId}` : '—'),
+      render: (type, record) => (type ? `${type}/${record.entityId}` : "—"),
     },
     {
-      title: 'Action',
-      key: 'action',
+      title: "Action",
+      key: "action",
       width: 80,
       render: (_, record) => (
         <Button
@@ -194,18 +192,19 @@ const AuditPage = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: "24px" }}>
       {/* Page Header */}
-      <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: "24px" }}>
         <h1>Audit Logs</h1>
-        <p style={{ color: '#666' }}>
-          View and analyze all system events, security activities, and data changes.
+        <p style={{ color: "#666" }}>
+          View and analyze all system events, security activities, and data
+          changes.
         </p>
       </div>
 
       {/* Statistics Cards */}
       {stats && (
-        <Row gutter={16} style={{ marginBottom: '24px' }}>
+        <Row gutter={16} style={{ marginBottom: "24px" }}>
           <Col xs={24} sm={12} md={6}>
             <Card>
               <Statistic
@@ -220,7 +219,7 @@ const AuditPage = () => {
               <Statistic
                 title="Critical"
                 value={stats.criticalCount}
-                valueStyle={{ color: '#ff4d4f' }}
+                valueStyle={{ color: "#ff4d4f" }}
               />
             </Card>
           </Col>
@@ -229,7 +228,7 @@ const AuditPage = () => {
               <Statistic
                 title="Warnings"
                 value={stats.warningCount}
-                valueStyle={{ color: '#faad14' }}
+                valueStyle={{ color: "#faad14" }}
               />
             </Card>
           </Col>
@@ -252,15 +251,15 @@ const AuditPage = () => {
           description={error}
           type="error"
           closable
-          style={{ marginBottom: '16px' }}
+          style={{ marginBottom: "16px" }}
           onClose={() => setError(null)}
         />
       )}
 
       {/* Filters Card */}
-      <Card style={{ marginBottom: '24px' }}>
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>
+      <Card style={{ marginBottom: "24px" }}>
+        <Space direction="vertical" style={{ width: "100%" }} size="large">
+          <div style={{ fontSize: "14px", fontWeight: "600", color: "#333" }}>
             <FilterOutlined /> Filters
           </div>
 
@@ -270,9 +269,9 @@ const AuditPage = () => {
                 placeholder="Event Type"
                 allowClear
                 value={filters.eventType}
-                onChange={(value) => handleFilterChange('eventType', value)}
+                onChange={(value) => handleFilterChange("eventType", value)}
                 options={eventTypeOptions}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               />
             </Col>
             <Col xs={24} sm={12} md={6}>
@@ -280,9 +279,9 @@ const AuditPage = () => {
                 placeholder="Category"
                 allowClear
                 value={filters.eventCategory}
-                onChange={(value) => handleFilterChange('eventCategory', value)}
+                onChange={(value) => handleFilterChange("eventCategory", value)}
                 options={eventCategoryOptions}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               />
             </Col>
             <Col xs={24} sm={12} md={6}>
@@ -290,21 +289,21 @@ const AuditPage = () => {
                 placeholder="Severity"
                 allowClear
                 value={filters.severity}
-                onChange={(value) => handleFilterChange('severity', value)}
+                onChange={(value) => handleFilterChange("severity", value)}
                 options={[
-                  { value: 'debug', label: 'Debug' },
-                  { value: 'info', label: 'Info' },
-                  { value: 'warning', label: 'Warning' },
-                  { value: 'critical', label: 'Critical' },
+                  { value: "debug", label: "Debug" },
+                  { value: "info", label: "Info" },
+                  { value: "warning", label: "Warning" },
+                  { value: "critical", label: "Critical" },
                 ]}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               />
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Button
                 icon={<ReloadOutlined />}
                 onClick={loadAuditData}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               >
                 Refresh
               </Button>
@@ -320,7 +319,7 @@ const AuditPage = () => {
                     : null
                 }
                 onChange={handleDateRangeChange}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 format="YYYY-MM-DD"
               />
             </Col>
@@ -328,14 +327,14 @@ const AuditPage = () => {
               <Select
                 placeholder="Results per page"
                 value={filters.limit}
-                onChange={(value) => handleFilterChange('limit', value)}
+                onChange={(value) => handleFilterChange("limit", value)}
                 options={[
-                  { value: 50, label: '50' },
-                  { value: 100, label: '100' },
-                  { value: 250, label: '250' },
-                  { value: 500, label: '500' },
+                  { value: 50, label: "50" },
+                  { value: 100, label: "100" },
+                  { value: 250, label: "250" },
+                  { value: 500, label: "500" },
                 ]}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               />
             </Col>
           </Row>
@@ -345,13 +344,13 @@ const AuditPage = () => {
       {/* Audit Logs Table */}
       <Card>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div style={{ textAlign: "center", padding: "40px" }}>
             <Spin size="large" />
           </div>
         ) : auditLogs.length === 0 ? (
           <Empty
             description="No audit logs found"
-            style={{ marginTop: '40px', marginBottom: '40px' }}
+            style={{ marginTop: "40px", marginBottom: "40px" }}
           >
             <Button type="primary" onClick={loadAuditData}>
               Refresh
@@ -377,18 +376,22 @@ const AuditPage = () => {
         open={drawerVisible}
       >
         {selectedLog && (
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <Space direction="vertical" style={{ width: "100%" }} size="large">
             <div>
-              <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+              <div
+                style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}
+              >
                 Event Type
               </div>
-              <div style={{ fontSize: '14px', fontWeight: '600' }}>
+              <div style={{ fontSize: "14px", fontWeight: "600" }}>
                 {selectedLog.eventType}
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+              <div
+                style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}
+              >
                 Category
               </div>
               <Tag color={getCategoryColor(selectedLog.eventCategory)}>
@@ -397,7 +400,9 @@ const AuditPage = () => {
             </div>
 
             <div>
-              <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+              <div
+                style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}
+              >
                 Severity
               </div>
               <Tag color={getSeverityColor(selectedLog.severity)}>
@@ -406,29 +411,39 @@ const AuditPage = () => {
             </div>
 
             <div>
-              <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+              <div
+                style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}
+              >
                 Timestamp
               </div>
-              <div style={{ fontSize: '14px' }}>
-                {dayjs(selectedLog.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+              <div style={{ fontSize: "14px" }}>
+                {dayjs(selectedLog.createdAt).format("YYYY-MM-DD HH:mm:ss")}
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+              <div
+                style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}
+              >
                 User ID
               </div>
-              <div style={{ fontSize: '14px', fontFamily: 'monospace' }}>
-                {selectedLog.userId || '—'}
+              <div style={{ fontSize: "14px", fontFamily: "monospace" }}>
+                {selectedLog.userId || "—"}
               </div>
             </div>
 
             {selectedLog.entityType && (
               <div>
-                <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#999",
+                    marginBottom: "4px",
+                  }}
+                >
                   Entity
                 </div>
-                <div style={{ fontSize: '14px' }}>
+                <div style={{ fontSize: "14px" }}>
                   {selectedLog.entityType} / {selectedLog.entityId}
                 </div>
               </div>
@@ -436,10 +451,16 @@ const AuditPage = () => {
 
             {selectedLog.sourceIp && (
               <div>
-                <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#999",
+                    marginBottom: "4px",
+                  }}
+                >
                   Source IP
                 </div>
-                <div style={{ fontSize: '14px', fontFamily: 'monospace' }}>
+                <div style={{ fontSize: "14px", fontFamily: "monospace" }}>
                   {selectedLog.sourceIp}
                 </div>
               </div>
@@ -447,16 +468,22 @@ const AuditPage = () => {
 
             {selectedLog.newValues && (
               <div>
-                <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#999",
+                    marginBottom: "4px",
+                  }}
+                >
                   New Values
                 </div>
                 <pre
                   style={{
-                    background: '#f5f5f5',
-                    padding: '8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    overflow: 'auto',
+                    background: "#f5f5f5",
+                    padding: "8px",
+                    borderRadius: "4px",
+                    fontSize: "12px",
+                    overflow: "auto",
                   }}
                 >
                   {JSON.stringify(selectedLog.newValues, null, 2)}
@@ -466,16 +493,22 @@ const AuditPage = () => {
 
             {selectedLog.oldValues && (
               <div>
-                <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#999",
+                    marginBottom: "4px",
+                  }}
+                >
                   Old Values
                 </div>
                 <pre
                   style={{
-                    background: '#f5f5f5',
-                    padding: '8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    overflow: 'auto',
+                    background: "#f5f5f5",
+                    padding: "8px",
+                    borderRadius: "4px",
+                    fontSize: "12px",
+                    overflow: "auto",
                   }}
                 >
                   {JSON.stringify(selectedLog.oldValues, null, 2)}
@@ -487,24 +520,31 @@ const AuditPage = () => {
               <Alert type="error" message={selectedLog.errorMessage} />
             )}
 
-            {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
-              <div>
-                <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
-                  Metadata
+            {selectedLog.metadata &&
+              Object.keys(selectedLog.metadata).length > 0 && (
+                <div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#999",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Metadata
+                  </div>
+                  <pre
+                    style={{
+                      background: "#f5f5f5",
+                      padding: "8px",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                      overflow: "auto",
+                    }}
+                  >
+                    {JSON.stringify(selectedLog.metadata, null, 2)}
+                  </pre>
                 </div>
-                <pre
-                  style={{
-                    background: '#f5f5f5',
-                    padding: '8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    overflow: 'auto',
-                  }}
-                >
-                  {JSON.stringify(selectedLog.metadata, null, 2)}
-                </pre>
-              </div>
-            )}
+              )}
           </Space>
         )}
       </Drawer>

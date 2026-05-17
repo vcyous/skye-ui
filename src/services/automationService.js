@@ -1,7 +1,7 @@
 // Feature 24: Automation Workflows Service
 // Manages automation workflow lifecycle, execution, and monitoring
 
-import { supabase } from '../api';
+import { supabase } from "./supabaseClient.js";
 
 // ============================================================================
 // WORKFLOW MANAGEMENT
@@ -11,7 +11,7 @@ export const createAutomationWorkflow = async (storeId, payload) => {
   try {
     // Start transaction: create workflow, conditions, and actions
     const { data: workflow, error: workflowError } = await supabase
-      .from('automation_workflows')
+      .from("automation_workflows")
       .insert([
         {
           store_id: storeId,
@@ -20,7 +20,7 @@ export const createAutomationWorkflow = async (storeId, payload) => {
           trigger_type: payload.triggerType,
           trigger_config: payload.triggerConfig || {},
           is_enabled: true,
-          execution_mode: payload.executionMode || 'auto',
+          execution_mode: payload.executionMode || "auto",
           max_retries: payload.maxRetries || 3,
           retry_delay_seconds: payload.retryDelaySeconds || 300,
           timeout_seconds: payload.timeoutSeconds || 1800,
@@ -43,11 +43,11 @@ export const createAutomationWorkflow = async (storeId, payload) => {
         field_name: cond.fieldName,
         operator: cond.operator,
         value: cond.value,
-        logic_operator: cond.logicOperator || 'AND',
+        logic_operator: cond.logicOperator || "AND",
       }));
 
       const { error: condError } = await supabase
-        .from('automation_conditions')
+        .from("automation_conditions")
         .insert(conditionsData);
 
       if (condError) throw condError;
@@ -64,7 +64,7 @@ export const createAutomationWorkflow = async (storeId, payload) => {
       }));
 
       const { error: actionError } = await supabase
-        .from('automation_actions')
+        .from("automation_actions")
         .insert(actionsData);
 
       if (actionError) throw actionError;
@@ -72,7 +72,7 @@ export const createAutomationWorkflow = async (storeId, payload) => {
 
     return mapWorkflowRecord(workflow);
   } catch (err) {
-    console.error('Error creating automation workflow:', err);
+    console.error("Error creating automation workflow:", err);
     throw err;
   }
 };
@@ -80,21 +80,21 @@ export const createAutomationWorkflow = async (storeId, payload) => {
 export const getAutomationWorkflows = async (storeId, filters = {}) => {
   try {
     let query = supabase
-      .from('automation_workflows')
-      .select('*')
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false });
+      .from("automation_workflows")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false });
 
     if (filters.isEnabled !== undefined) {
-      query = query.eq('is_enabled', filters.isEnabled);
+      query = query.eq("is_enabled", filters.isEnabled);
     }
 
     if (filters.triggerType) {
-      query = query.eq('trigger_type', filters.triggerType);
+      query = query.eq("trigger_type", filters.triggerType);
     }
 
     if (filters.tags && filters.tags.length > 0) {
-      query = query.overlaps('tags', filters.tags);
+      query = query.overlaps("tags", filters.tags);
     }
 
     const { data, error } = await query;
@@ -103,7 +103,7 @@ export const getAutomationWorkflows = async (storeId, filters = {}) => {
 
     return data.map(mapWorkflowRecord);
   } catch (err) {
-    console.error('Error fetching automation workflows:', err);
+    console.error("Error fetching automation workflows:", err);
     throw err;
   }
 };
@@ -111,29 +111,29 @@ export const getAutomationWorkflows = async (storeId, filters = {}) => {
 export const getAutomationWorkflowById = async (storeId, workflowId) => {
   try {
     const { data: workflow, error: workflowError } = await supabase
-      .from('automation_workflows')
-      .select('*')
-      .eq('id', workflowId)
-      .eq('store_id', storeId)
+      .from("automation_workflows")
+      .select("*")
+      .eq("id", workflowId)
+      .eq("store_id", storeId)
       .single();
 
     if (workflowError) throw workflowError;
 
     // Fetch conditions
     const { data: conditions, error: condError } = await supabase
-      .from('automation_conditions')
-      .select('*')
-      .eq('workflow_id', workflowId)
-      .order('condition_order', { ascending: true });
+      .from("automation_conditions")
+      .select("*")
+      .eq("workflow_id", workflowId)
+      .order("condition_order", { ascending: true });
 
     if (condError) throw condError;
 
     // Fetch actions
     const { data: actions, error: actionError } = await supabase
-      .from('automation_actions')
-      .select('*')
-      .eq('workflow_id', workflowId)
-      .order('action_order', { ascending: true });
+      .from("automation_actions")
+      .select("*")
+      .eq("workflow_id", workflowId)
+      .order("action_order", { ascending: true });
 
     if (actionError) throw actionError;
 
@@ -143,15 +143,19 @@ export const getAutomationWorkflowById = async (storeId, workflowId) => {
       actions: actions.map(mapActionRecord),
     };
   } catch (err) {
-    console.error('Error fetching automation workflow:', err);
+    console.error("Error fetching automation workflow:", err);
     throw err;
   }
 };
 
-export const updateAutomationWorkflow = async (storeId, workflowId, payload) => {
+export const updateAutomationWorkflow = async (
+  storeId,
+  workflowId,
+  payload,
+) => {
   try {
     const { data, error } = await supabase
-      .from('automation_workflows')
+      .from("automation_workflows")
       .update({
         name: payload.name,
         description: payload.description,
@@ -165,8 +169,8 @@ export const updateAutomationWorkflow = async (storeId, workflowId, payload) => 
         tags: payload.tags || [],
         metadata: payload.metadata || {},
       })
-      .eq('id', workflowId)
-      .eq('store_id', storeId)
+      .eq("id", workflowId)
+      .eq("store_id", storeId)
       .select()
       .single();
 
@@ -174,7 +178,7 @@ export const updateAutomationWorkflow = async (storeId, workflowId, payload) => 
 
     return mapWorkflowRecord(data);
   } catch (err) {
-    console.error('Error updating automation workflow:', err);
+    console.error("Error updating automation workflow:", err);
     throw err;
   }
 };
@@ -182,10 +186,10 @@ export const updateAutomationWorkflow = async (storeId, workflowId, payload) => 
 export const toggleWorkflowEnabled = async (storeId, workflowId, isEnabled) => {
   try {
     const { data, error } = await supabase
-      .from('automation_workflows')
+      .from("automation_workflows")
       .update({ is_enabled: isEnabled })
-      .eq('id', workflowId)
-      .eq('store_id', storeId)
+      .eq("id", workflowId)
+      .eq("store_id", storeId)
       .select()
       .single();
 
@@ -193,7 +197,7 @@ export const toggleWorkflowEnabled = async (storeId, workflowId, isEnabled) => {
 
     return mapWorkflowRecord(data);
   } catch (err) {
-    console.error('Error toggling workflow:', err);
+    console.error("Error toggling workflow:", err);
     throw err;
   }
 };
@@ -201,10 +205,10 @@ export const toggleWorkflowEnabled = async (storeId, workflowId, isEnabled) => {
 export const pauseWorkflow = async (storeId, workflowId, isPaused) => {
   try {
     const { data, error } = await supabase
-      .from('automation_workflows')
+      .from("automation_workflows")
       .update({ is_paused: isPaused })
-      .eq('id', workflowId)
-      .eq('store_id', storeId)
+      .eq("id", workflowId)
+      .eq("store_id", storeId)
       .select()
       .single();
 
@@ -212,7 +216,7 @@ export const pauseWorkflow = async (storeId, workflowId, isPaused) => {
 
     return mapWorkflowRecord(data);
   } catch (err) {
-    console.error('Error pausing workflow:', err);
+    console.error("Error pausing workflow:", err);
     throw err;
   }
 };
@@ -220,16 +224,16 @@ export const pauseWorkflow = async (storeId, workflowId, isPaused) => {
 export const deleteAutomationWorkflow = async (storeId, workflowId) => {
   try {
     const { error } = await supabase
-      .from('automation_workflows')
+      .from("automation_workflows")
       .delete()
-      .eq('id', workflowId)
-      .eq('store_id', storeId);
+      .eq("id", workflowId)
+      .eq("store_id", storeId);
 
     if (error) throw error;
 
     return { success: true };
   } catch (err) {
-    console.error('Error deleting automation workflow:', err);
+    console.error("Error deleting automation workflow:", err);
     throw err;
   }
 };
@@ -238,13 +242,17 @@ export const deleteAutomationWorkflow = async (storeId, workflowId) => {
 // CONDITIONS MANAGEMENT
 // ============================================================================
 
-export const updateWorkflowConditions = async (storeId, workflowId, conditions) => {
+export const updateWorkflowConditions = async (
+  storeId,
+  workflowId,
+  conditions,
+) => {
   try {
     // Delete existing conditions
     const { error: deleteError } = await supabase
-      .from('automation_conditions')
+      .from("automation_conditions")
       .delete()
-      .eq('workflow_id', workflowId);
+      .eq("workflow_id", workflowId);
 
     if (deleteError) throw deleteError;
 
@@ -257,11 +265,11 @@ export const updateWorkflowConditions = async (storeId, workflowId, conditions) 
         field_name: cond.fieldName,
         operator: cond.operator,
         value: cond.value,
-        logic_operator: cond.logicOperator || 'AND',
+        logic_operator: cond.logicOperator || "AND",
       }));
 
       const { error: insertError } = await supabase
-        .from('automation_conditions')
+        .from("automation_conditions")
         .insert(conditionsData);
 
       if (insertError) throw insertError;
@@ -269,7 +277,7 @@ export const updateWorkflowConditions = async (storeId, workflowId, conditions) 
 
     return { success: true };
   } catch (err) {
-    console.error('Error updating conditions:', err);
+    console.error("Error updating conditions:", err);
     throw err;
   }
 };
@@ -277,16 +285,16 @@ export const updateWorkflowConditions = async (storeId, workflowId, conditions) 
 export const getWorkflowConditions = async (workflowId) => {
   try {
     const { data, error } = await supabase
-      .from('automation_conditions')
-      .select('*')
-      .eq('workflow_id', workflowId)
-      .order('condition_order', { ascending: true });
+      .from("automation_conditions")
+      .select("*")
+      .eq("workflow_id", workflowId)
+      .order("condition_order", { ascending: true });
 
     if (error) throw error;
 
     return data.map(mapConditionRecord);
   } catch (err) {
-    console.error('Error fetching conditions:', err);
+    console.error("Error fetching conditions:", err);
     throw err;
   }
 };
@@ -299,9 +307,9 @@ export const updateWorkflowActions = async (storeId, workflowId, actions) => {
   try {
     // Delete existing actions
     const { error: deleteError } = await supabase
-      .from('automation_actions')
+      .from("automation_actions")
       .delete()
-      .eq('workflow_id', workflowId);
+      .eq("workflow_id", workflowId);
 
     if (deleteError) throw deleteError;
 
@@ -316,7 +324,7 @@ export const updateWorkflowActions = async (storeId, workflowId, actions) => {
       }));
 
       const { error: insertError } = await supabase
-        .from('automation_actions')
+        .from("automation_actions")
         .insert(actionsData);
 
       if (insertError) throw insertError;
@@ -324,7 +332,7 @@ export const updateWorkflowActions = async (storeId, workflowId, actions) => {
 
     return { success: true };
   } catch (err) {
-    console.error('Error updating actions:', err);
+    console.error("Error updating actions:", err);
     throw err;
   }
 };
@@ -332,16 +340,16 @@ export const updateWorkflowActions = async (storeId, workflowId, actions) => {
 export const getWorkflowActions = async (workflowId) => {
   try {
     const { data, error } = await supabase
-      .from('automation_actions')
-      .select('*')
-      .eq('workflow_id', workflowId)
-      .order('action_order', { ascending: true });
+      .from("automation_actions")
+      .select("*")
+      .eq("workflow_id", workflowId)
+      .order("action_order", { ascending: true });
 
     if (error) throw error;
 
     return data.map(mapActionRecord);
   } catch (err) {
-    console.error('Error fetching actions:', err);
+    console.error("Error fetching actions:", err);
     throw err;
   }
 };
@@ -350,17 +358,21 @@ export const getWorkflowActions = async (workflowId) => {
 // EXECUTION HISTORY
 // ============================================================================
 
-export const getAutomationExecutions = async (storeId, workflowId = null, limit = 50) => {
+export const getAutomationExecutions = async (
+  storeId,
+  workflowId = null,
+  limit = 50,
+) => {
   try {
     let query = supabase
-      .from('automation_executions')
-      .select('*')
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false })
+      .from("automation_executions")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false })
       .limit(limit);
 
     if (workflowId) {
-      query = query.eq('workflow_id', workflowId);
+      query = query.eq("workflow_id", workflowId);
     }
 
     const { data, error } = await query;
@@ -369,7 +381,7 @@ export const getAutomationExecutions = async (storeId, workflowId = null, limit 
 
     return data.map(mapExecutionRecord);
   } catch (err) {
-    console.error('Error fetching executions:', err);
+    console.error("Error fetching executions:", err);
     throw err;
   }
 };
@@ -377,20 +389,20 @@ export const getAutomationExecutions = async (storeId, workflowId = null, limit 
 export const getExecutionById = async (storeId, executionId) => {
   try {
     const { data: execution, error: execError } = await supabase
-      .from('automation_executions')
-      .select('*')
-      .eq('id', executionId)
-      .eq('store_id', storeId)
+      .from("automation_executions")
+      .select("*")
+      .eq("id", executionId)
+      .eq("store_id", storeId)
       .single();
 
     if (execError) throw execError;
 
     // Fetch step logs
     const { data: stepLogs, error: stepError } = await supabase
-      .from('automation_step_logs')
-      .select('*')
-      .eq('execution_id', executionId)
-      .order('step_order', { ascending: true });
+      .from("automation_step_logs")
+      .select("*")
+      .eq("execution_id", executionId)
+      .order("step_order", { ascending: true });
 
     if (stepError) throw stepError;
 
@@ -399,25 +411,31 @@ export const getExecutionById = async (storeId, executionId) => {
       stepLogs: stepLogs.map(mapStepLogRecord),
     };
   } catch (err) {
-    console.error('Error fetching execution:', err);
+    console.error("Error fetching execution:", err);
     throw err;
   }
 };
 
-export const triggerWorkflowExecution = async (storeId, workflowId, triggerData) => {
+export const triggerWorkflowExecution = async (
+  storeId,
+  workflowId,
+  triggerData,
+) => {
   try {
     // Simulate workflow execution with conditions check
     const conditionsMet = Math.random() > 0.1; // 90% success rate
-    const actionsExecuted = conditionsMet ? Math.floor(Math.random() * 3) + 1 : 0;
+    const actionsExecuted = conditionsMet
+      ? Math.floor(Math.random() * 3) + 1
+      : 0;
     const willFail = Math.random() < 0.05; // 5% failure rate
 
     const { data, error } = await supabase
-      .from('automation_executions')
+      .from("automation_executions")
       .insert([
         {
           store_id: storeId,
           workflow_id: workflowId,
-          execution_status: willFail ? 'failed' : 'succeeded',
+          execution_status: willFail ? "failed" : "succeeded",
           trigger_event_type: triggerData.eventType,
           trigger_event_id: triggerData.eventId,
           attempt_no: 1,
@@ -426,9 +444,11 @@ export const triggerWorkflowExecution = async (storeId, workflowId, triggerData)
           duration_ms: Math.floor(Math.random() * 5000) + 100,
           conditions_met: conditionsMet,
           actions_executed: actionsExecuted,
-          error_message: willFail ? 'Execution timeout' : null,
+          error_message: willFail ? "Execution timeout" : null,
           error_context: willFail ? { timeout: true } : {},
-          execution_logs: conditionsMet ? ['Conditions matched', `Executed ${actionsExecuted} actions`] : ['Conditions not met'],
+          execution_logs: conditionsMet
+            ? ["Conditions matched", `Executed ${actionsExecuted} actions`]
+            : ["Conditions not met"],
         },
       ])
       .select()
@@ -438,7 +458,7 @@ export const triggerWorkflowExecution = async (storeId, workflowId, triggerData)
 
     return mapExecutionRecord(data);
   } catch (err) {
-    console.error('Error triggering workflow:', err);
+    console.error("Error triggering workflow:", err);
     throw err;
   }
 };
@@ -448,22 +468,24 @@ export const retryExecution = async (storeId, executionId) => {
     const execution = await getExecutionById(storeId, executionId);
 
     if (execution.attemptNo >= execution.maxRetries) {
-      throw new Error('Max retries exceeded');
+      throw new Error("Max retries exceeded");
     }
 
     const willFail = Math.random() < 0.05;
 
     const { data, error } = await supabase
-      .from('automation_executions')
+      .from("automation_executions")
       .update({
-        execution_status: willFail ? 'failed' : 'succeeded',
+        execution_status: willFail ? "failed" : "succeeded",
         attempt_no: execution.attemptNo + 1,
         completed_at: new Date().toISOString(),
-        error_message: willFail ? 'Retry failed' : null,
-        next_retry_at: willFail ? new Date(Date.now() + 600000).toISOString() : null,
+        error_message: willFail ? "Retry failed" : null,
+        next_retry_at: willFail
+          ? new Date(Date.now() + 600000).toISOString()
+          : null,
       })
-      .eq('id', executionId)
-      .eq('store_id', storeId)
+      .eq("id", executionId)
+      .eq("store_id", storeId)
       .select()
       .single();
 
@@ -471,7 +493,7 @@ export const retryExecution = async (storeId, executionId) => {
 
     return mapExecutionRecord(data);
   } catch (err) {
-    console.error('Error retrying execution:', err);
+    console.error("Error retrying execution:", err);
     throw err;
   }
 };
@@ -483,16 +505,16 @@ export const retryExecution = async (storeId, executionId) => {
 export const getTriggerTemplates = async () => {
   try {
     const { data, error } = await supabase
-      .from('automation_trigger_templates')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_name', { ascending: true });
+      .from("automation_trigger_templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("display_name", { ascending: true });
 
     if (error) throw error;
 
     return data.map(mapTriggerTemplateRecord);
   } catch (err) {
-    console.error('Error fetching trigger templates:', err);
+    console.error("Error fetching trigger templates:", err);
     throw err;
   }
 };
@@ -500,16 +522,16 @@ export const getTriggerTemplates = async () => {
 export const getActionTemplates = async () => {
   try {
     const { data, error } = await supabase
-      .from('automation_action_templates')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_name', { ascending: true });
+      .from("automation_action_templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("display_name", { ascending: true });
 
     if (error) throw error;
 
     return data.map(mapActionTemplateRecord);
   } catch (err) {
-    console.error('Error fetching action templates:', err);
+    console.error("Error fetching action templates:", err);
     throw err;
   }
 };
@@ -521,17 +543,20 @@ export const getActionTemplates = async () => {
 export const getWorkflowStats = async (storeId, workflowId) => {
   try {
     const { data, error } = await supabase
-      .from('automation_workflows')
-      .select('*')
-      .eq('id', workflowId)
-      .eq('store_id', storeId)
+      .from("automation_workflows")
+      .select("*")
+      .eq("id", workflowId)
+      .eq("store_id", storeId)
       .single();
 
     if (error) throw error;
 
-    const successRate = data.total_executions > 0
-      ? ((data.successful_executions / data.total_executions) * 100).toFixed(2)
-      : 0;
+    const successRate =
+      data.total_executions > 0
+        ? ((data.successful_executions / data.total_executions) * 100).toFixed(
+            2,
+          )
+        : 0;
 
     return {
       totalExecutions: data.total_executions,
@@ -544,7 +569,7 @@ export const getWorkflowStats = async (storeId, workflowId) => {
       lastErrorMessage: data.last_error_message,
     };
   } catch (err) {
-    console.error('Error fetching workflow stats:', err);
+    console.error("Error fetching workflow stats:", err);
     throw err;
   }
 };

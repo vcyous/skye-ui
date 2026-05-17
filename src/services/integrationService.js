@@ -1,4 +1,6 @@
-import { getStoreContext, normalizeError, supabase } from "./api.js";
+import { supabase } from "./supabaseClient.js";
+import { normalizeError } from "./utils/errorUtils.js";
+import { getStoreContext } from "./storeService.js";
 
 function mapIntegration(row) {
   return {

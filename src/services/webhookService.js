@@ -1,19 +1,19 @@
 // Feature 23: Webhook and API Key Management Service
 // Handles API credentials, webhook subscriptions, and delivery tracking
 
-import { supabase } from '../api';
+import { supabase } from "./supabaseClient.js";
 
 const API_SCOPES = [
-  'read_products',
-  'write_products',
-  'read_orders',
-  'write_orders',
-  'read_customers',
-  'write_customers',
-  'read_inventory',
-  'write_inventory',
-  'read_webhooks',
-  'write_webhooks',
+  "read_products",
+  "write_products",
+  "read_orders",
+  "write_orders",
+  "read_customers",
+  "write_customers",
+  "read_inventory",
+  "write_inventory",
+  "read_webhooks",
+  "write_webhooks",
 ];
 
 // ============================================================================
@@ -26,7 +26,7 @@ export const createApiKey = async (storeId, payload) => {
     const keyHash = btoa(`${keyPrefix}${Date.now()}`);
 
     const { data, error } = await supabase
-      .from('api_keys')
+      .from("api_keys")
       .insert([
         {
           store_id: storeId,
@@ -50,7 +50,7 @@ export const createApiKey = async (storeId, payload) => {
       fullKey: `${keyPrefix}...${keyHash.substring(keyHash.length - 4)}`,
     };
   } catch (err) {
-    console.error('Error creating API key:', err);
+    console.error("Error creating API key:", err);
     throw err;
   }
 };
@@ -58,13 +58,13 @@ export const createApiKey = async (storeId, payload) => {
 export const getApiKeys = async (storeId, filters = {}) => {
   try {
     let query = supabase
-      .from('api_keys')
-      .select('*')
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false });
+      .from("api_keys")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false });
 
     if (filters.isActive !== undefined) {
-      query = query.eq('is_active', filters.isActive);
+      query = query.eq("is_active", filters.isActive);
     }
 
     const { data, error } = await query;
@@ -73,7 +73,7 @@ export const getApiKeys = async (storeId, filters = {}) => {
 
     return data.map(mapApiKeyRecord);
   } catch (err) {
-    console.error('Error fetching API keys:', err);
+    console.error("Error fetching API keys:", err);
     throw err;
   }
 };
@@ -81,17 +81,17 @@ export const getApiKeys = async (storeId, filters = {}) => {
 export const getApiKeyById = async (storeId, keyId) => {
   try {
     const { data, error } = await supabase
-      .from('api_keys')
-      .select('*')
-      .eq('id', keyId)
-      .eq('store_id', storeId)
+      .from("api_keys")
+      .select("*")
+      .eq("id", keyId)
+      .eq("store_id", storeId)
       .single();
 
     if (error) throw error;
 
     return mapApiKeyRecord(data);
   } catch (err) {
-    console.error('Error fetching API key:', err);
+    console.error("Error fetching API key:", err);
     throw err;
   }
 };
@@ -107,10 +107,10 @@ export const updateApiKey = async (storeId, keyId, payload) => {
     };
 
     const { data, error } = await supabase
-      .from('api_keys')
+      .from("api_keys")
       .update(updateData)
-      .eq('id', keyId)
-      .eq('store_id', storeId)
+      .eq("id", keyId)
+      .eq("store_id", storeId)
       .select()
       .single();
 
@@ -118,7 +118,7 @@ export const updateApiKey = async (storeId, keyId, payload) => {
 
     return mapApiKeyRecord(data);
   } catch (err) {
-    console.error('Error updating API key:', err);
+    console.error("Error updating API key:", err);
     throw err;
   }
 };
@@ -129,14 +129,14 @@ export const rotateApiKey = async (storeId, keyId) => {
     const keyHash = btoa(`${keyPrefix}${Date.now()}`);
 
     const { data, error } = await supabase
-      .from('api_keys')
+      .from("api_keys")
       .update({
         key_prefix: keyPrefix,
         key_hash: keyHash,
         rotated_at: new Date().toISOString(),
       })
-      .eq('id', keyId)
-      .eq('store_id', storeId)
+      .eq("id", keyId)
+      .eq("store_id", storeId)
       .select()
       .single();
 
@@ -147,7 +147,7 @@ export const rotateApiKey = async (storeId, keyId) => {
       fullKey: `${keyPrefix}...${keyHash.substring(keyHash.length - 4)}`,
     };
   } catch (err) {
-    console.error('Error rotating API key:', err);
+    console.error("Error rotating API key:", err);
     throw err;
   }
 };
@@ -155,16 +155,16 @@ export const rotateApiKey = async (storeId, keyId) => {
 export const deleteApiKey = async (storeId, keyId) => {
   try {
     const { error } = await supabase
-      .from('api_keys')
+      .from("api_keys")
       .delete()
-      .eq('id', keyId)
-      .eq('store_id', storeId);
+      .eq("id", keyId)
+      .eq("store_id", storeId);
 
     if (error) throw error;
 
     return { success: true };
   } catch (err) {
-    console.error('Error deleting API key:', err);
+    console.error("Error deleting API key:", err);
     throw err;
   }
 };
@@ -178,7 +178,7 @@ export const createWebhookEndpoint = async (storeId, payload) => {
     const secretKey = `whsec_${Math.random().toString(36).substring(2, 20)}`;
 
     const { data, error } = await supabase
-      .from('webhook_endpoints')
+      .from("webhook_endpoints")
       .insert([
         {
           store_id: storeId,
@@ -186,7 +186,7 @@ export const createWebhookEndpoint = async (storeId, payload) => {
           url: payload.url,
           is_active: true,
           secret_key: secretKey,
-          api_version: payload.apiVersion || '2024-01',
+          api_version: payload.apiVersion || "2024-01",
           max_retries: payload.maxRetries || 5,
           timeout_seconds: payload.timeoutSeconds || 30,
           metadata: payload.metadata || {},
@@ -199,7 +199,7 @@ export const createWebhookEndpoint = async (storeId, payload) => {
 
     return mapWebhookEndpointRecord(data);
   } catch (err) {
-    console.error('Error creating webhook endpoint:', err);
+    console.error("Error creating webhook endpoint:", err);
     throw err;
   }
 };
@@ -207,13 +207,13 @@ export const createWebhookEndpoint = async (storeId, payload) => {
 export const getWebhookEndpoints = async (storeId, filters = {}) => {
   try {
     let query = supabase
-      .from('webhook_endpoints')
-      .select('*')
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false });
+      .from("webhook_endpoints")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false });
 
     if (filters.isActive !== undefined) {
-      query = query.eq('is_active', filters.isActive);
+      query = query.eq("is_active", filters.isActive);
     }
 
     const { data, error } = await query;
@@ -222,7 +222,7 @@ export const getWebhookEndpoints = async (storeId, filters = {}) => {
 
     return data.map(mapWebhookEndpointRecord);
   } catch (err) {
-    console.error('Error fetching webhook endpoints:', err);
+    console.error("Error fetching webhook endpoints:", err);
     throw err;
   }
 };
@@ -230,17 +230,17 @@ export const getWebhookEndpoints = async (storeId, filters = {}) => {
 export const getWebhookEndpointById = async (storeId, endpointId) => {
   try {
     const { data, error } = await supabase
-      .from('webhook_endpoints')
-      .select('*')
-      .eq('id', endpointId)
-      .eq('store_id', storeId)
+      .from("webhook_endpoints")
+      .select("*")
+      .eq("id", endpointId)
+      .eq("store_id", storeId)
       .single();
 
     if (error) throw error;
 
     return mapWebhookEndpointRecord(data);
   } catch (err) {
-    console.error('Error fetching webhook endpoint:', err);
+    console.error("Error fetching webhook endpoint:", err);
     throw err;
   }
 };
@@ -248,18 +248,18 @@ export const getWebhookEndpointById = async (storeId, endpointId) => {
 export const updateWebhookEndpoint = async (storeId, endpointId, payload) => {
   try {
     const { data, error } = await supabase
-      .from('webhook_endpoints')
+      .from("webhook_endpoints")
       .update({
         name: payload.name,
         url: payload.url,
         is_active: payload.isActive !== undefined ? payload.isActive : true,
-        api_version: payload.apiVersion || '2024-01',
+        api_version: payload.apiVersion || "2024-01",
         max_retries: payload.maxRetries || 5,
         timeout_seconds: payload.timeoutSeconds || 30,
         metadata: payload.metadata || {},
       })
-      .eq('id', endpointId)
-      .eq('store_id', storeId)
+      .eq("id", endpointId)
+      .eq("store_id", storeId)
       .select()
       .single();
 
@@ -267,7 +267,7 @@ export const updateWebhookEndpoint = async (storeId, endpointId, payload) => {
 
     return mapWebhookEndpointRecord(data);
   } catch (err) {
-    console.error('Error updating webhook endpoint:', err);
+    console.error("Error updating webhook endpoint:", err);
     throw err;
   }
 };
@@ -278,19 +278,19 @@ export const testWebhookEndpoint = async (storeId, endpointId) => {
 
     // Simulate sending test webhook
     const testPayload = {
-      event: 'webhook.test',
+      event: "webhook.test",
       timestamp: new Date().toISOString(),
-      data: { message: 'Test webhook delivery' },
+      data: { message: "Test webhook delivery" },
     };
 
     const signature = btoa(JSON.stringify(testPayload) + endpoint.secretKey);
 
     const response = await fetch(endpoint.url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Hmac-SHA256': signature,
-        'X-Shopify-Webhook-Id': `test_${Date.now()}`,
+        "Content-Type": "application/json",
+        "X-Shopify-Hmac-SHA256": signature,
+        "X-Shopify-Webhook-Id": `test_${Date.now()}`,
       },
       body: JSON.stringify(testPayload),
       timeout: endpoint.timeoutSeconds * 1000,
@@ -299,14 +299,14 @@ export const testWebhookEndpoint = async (storeId, endpointId) => {
     return {
       success: response.status >= 200 && response.status < 300,
       statusCode: response.status || 0,
-      message: response.status === 0 ? 'Connection failed' : 'Test sent',
+      message: response.status === 0 ? "Connection failed" : "Test sent",
     };
   } catch (err) {
-    console.error('Error testing webhook endpoint:', err);
+    console.error("Error testing webhook endpoint:", err);
     return {
       success: false,
       statusCode: 0,
-      message: err.message || 'Test failed',
+      message: err.message || "Test failed",
     };
   }
 };
@@ -314,16 +314,16 @@ export const testWebhookEndpoint = async (storeId, endpointId) => {
 export const deleteWebhookEndpoint = async (storeId, endpointId) => {
   try {
     const { error } = await supabase
-      .from('webhook_endpoints')
+      .from("webhook_endpoints")
       .delete()
-      .eq('id', endpointId)
-      .eq('store_id', storeId);
+      .eq("id", endpointId)
+      .eq("store_id", storeId);
 
     if (error) throw error;
 
     return { success: true };
   } catch (err) {
-    console.error('Error deleting webhook endpoint:', err);
+    console.error("Error deleting webhook endpoint:", err);
     throw err;
   }
 };
@@ -335,13 +335,13 @@ export const deleteWebhookEndpoint = async (storeId, endpointId) => {
 export const createWebhookSubscription = async (storeId, payload) => {
   try {
     const { data, error } = await supabase
-      .from('webhook_subscriptions')
+      .from("webhook_subscriptions")
       .insert([
         {
           store_id: storeId,
           endpoint_id: payload.endpointId,
           event_type: payload.eventType,
-          topic: payload.topic || 'all',
+          topic: payload.topic || "all",
           is_active: true,
           filters: payload.filters || {},
         },
@@ -353,7 +353,7 @@ export const createWebhookSubscription = async (storeId, payload) => {
 
     return mapWebhookSubscriptionRecord(data);
   } catch (err) {
-    console.error('Error creating webhook subscription:', err);
+    console.error("Error creating webhook subscription:", err);
     throw err;
   }
 };
@@ -361,17 +361,17 @@ export const createWebhookSubscription = async (storeId, payload) => {
 export const getWebhookSubscriptions = async (storeId, endpointId) => {
   try {
     const { data, error } = await supabase
-      .from('webhook_subscriptions')
-      .select('*')
-      .eq('store_id', storeId)
-      .eq('endpoint_id', endpointId)
-      .order('created_at', { ascending: false });
+      .from("webhook_subscriptions")
+      .select("*")
+      .eq("store_id", storeId)
+      .eq("endpoint_id", endpointId)
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
 
     return data.map(mapWebhookSubscriptionRecord);
   } catch (err) {
-    console.error('Error fetching webhook subscriptions:', err);
+    console.error("Error fetching webhook subscriptions:", err);
     throw err;
   }
 };
@@ -379,16 +379,16 @@ export const getWebhookSubscriptions = async (storeId, endpointId) => {
 export const deleteWebhookSubscription = async (storeId, subscriptionId) => {
   try {
     const { error } = await supabase
-      .from('webhook_subscriptions')
+      .from("webhook_subscriptions")
       .delete()
-      .eq('id', subscriptionId)
-      .eq('store_id', storeId);
+      .eq("id", subscriptionId)
+      .eq("store_id", storeId);
 
     if (error) throw error;
 
     return { success: true };
   } catch (err) {
-    console.error('Error deleting webhook subscription:', err);
+    console.error("Error deleting webhook subscription:", err);
     throw err;
   }
 };
@@ -397,30 +397,38 @@ export const deleteWebhookSubscription = async (storeId, subscriptionId) => {
 // WEBHOOK DELIVERY AND LOGS
 // ============================================================================
 
-export const triggerWebhookEvent = async (storeId, subscriptionId, eventData) => {
+export const triggerWebhookEvent = async (
+  storeId,
+  subscriptionId,
+  eventData,
+) => {
   try {
     // Simulate triggering webhook with 10% failure rate for demo
     const willFail = Math.random() < 0.1;
 
     const { data, error } = await supabase
-      .from('webhook_deliveries')
+      .from("webhook_deliveries")
       .insert([
         {
           store_id: storeId,
           subscription_id: subscriptionId,
           endpoint_id: eventData.endpointId,
           event_type: eventData.eventType,
-          status: willFail ? 'failed' : 'succeeded',
+          status: willFail ? "failed" : "succeeded",
           attempt_no: 1,
           max_retries: eventData.maxRetries || 5,
           http_status_code: willFail ? 500 : 200,
-          response_body: willFail ? '{"error": "Internal server error"}' : '{"success": true}',
-          error_message: willFail ? 'Endpoint returned error' : null,
+          response_body: willFail
+            ? '{"error": "Internal server error"}'
+            : '{"success": true}',
+          error_message: willFail ? "Endpoint returned error" : null,
           payload_signature: btoa(JSON.stringify(eventData) + Date.now()),
           payload_hash: btoa(JSON.stringify(eventData)),
           triggered_at: new Date().toISOString(),
           delivered_at: willFail ? null : new Date().toISOString(),
-          next_retry_at: willFail ? new Date(Date.now() + 60000).toISOString() : null,
+          next_retry_at: willFail
+            ? new Date(Date.now() + 60000).toISOString()
+            : null,
           metadata: eventData.metadata || {},
         },
       ])
@@ -431,26 +439,30 @@ export const triggerWebhookEvent = async (storeId, subscriptionId, eventData) =>
 
     return mapWebhookDeliveryRecord(data);
   } catch (err) {
-    console.error('Error triggering webhook event:', err);
+    console.error("Error triggering webhook event:", err);
     throw err;
   }
 };
 
-export const getWebhookDeliveries = async (storeId, subscriptionId, limit = 50) => {
+export const getWebhookDeliveries = async (
+  storeId,
+  subscriptionId,
+  limit = 50,
+) => {
   try {
     const { data, error } = await supabase
-      .from('webhook_deliveries')
-      .select('*')
-      .eq('store_id', storeId)
-      .eq('subscription_id', subscriptionId)
-      .order('created_at', { ascending: false })
+      .from("webhook_deliveries")
+      .select("*")
+      .eq("store_id", storeId)
+      .eq("subscription_id", subscriptionId)
+      .order("created_at", { ascending: false })
       .limit(limit);
 
     if (error) throw error;
 
     return data.map(mapWebhookDeliveryRecord);
   } catch (err) {
-    console.error('Error fetching webhook deliveries:', err);
+    console.error("Error fetching webhook deliveries:", err);
     throw err;
   }
 };
@@ -458,17 +470,17 @@ export const getWebhookDeliveries = async (storeId, subscriptionId, limit = 50) 
 export const getWebhookDeliveryById = async (storeId, deliveryId) => {
   try {
     const { data, error } = await supabase
-      .from('webhook_deliveries')
-      .select('*')
-      .eq('id', deliveryId)
-      .eq('store_id', storeId)
+      .from("webhook_deliveries")
+      .select("*")
+      .eq("id", deliveryId)
+      .eq("store_id", storeId)
       .single();
 
     if (error) throw error;
 
     return mapWebhookDeliveryRecord(data);
   } catch (err) {
-    console.error('Error fetching webhook delivery:', err);
+    console.error("Error fetching webhook delivery:", err);
     throw err;
   }
 };
@@ -478,7 +490,7 @@ export const retryWebhookDelivery = async (storeId, deliveryId) => {
     const delivery = await getWebhookDeliveryById(storeId, deliveryId);
 
     if (delivery.attemptNo >= delivery.maxRetries) {
-      throw new Error('Max retries exceeded');
+      throw new Error("Max retries exceeded");
     }
 
     // Simulate retry with exponential backoff
@@ -486,18 +498,22 @@ export const retryWebhookDelivery = async (storeId, deliveryId) => {
     const backoffMs = Math.pow(2, delivery.attemptNo) * 30000;
 
     const { data, error } = await supabase
-      .from('webhook_deliveries')
+      .from("webhook_deliveries")
       .update({
-        status: willFail ? 'failed' : 'succeeded',
+        status: willFail ? "failed" : "succeeded",
         attempt_no: delivery.attemptNo + 1,
         http_status_code: willFail ? 500 : 200,
-        response_body: willFail ? '{"error": "Retry failed"}' : '{"success": true}',
-        error_message: willFail ? 'Retry attempt failed' : null,
+        response_body: willFail
+          ? '{"error": "Retry failed"}'
+          : '{"success": true}',
+        error_message: willFail ? "Retry attempt failed" : null,
         delivered_at: willFail ? null : new Date().toISOString(),
-        next_retry_at: willFail ? new Date(Date.now() + backoffMs).toISOString() : null,
+        next_retry_at: willFail
+          ? new Date(Date.now() + backoffMs).toISOString()
+          : null,
       })
-      .eq('id', deliveryId)
-      .eq('store_id', storeId)
+      .eq("id", deliveryId)
+      .eq("store_id", storeId)
       .select()
       .single();
 
@@ -505,7 +521,7 @@ export const retryWebhookDelivery = async (storeId, deliveryId) => {
 
     return mapWebhookDeliveryRecord(data);
   } catch (err) {
-    console.error('Error retrying webhook delivery:', err);
+    console.error("Error retrying webhook delivery:", err);
     throw err;
   }
 };
@@ -517,16 +533,16 @@ export const retryWebhookDelivery = async (storeId, deliveryId) => {
 export const getWebhookEventTemplates = async () => {
   try {
     const { data, error } = await supabase
-      .from('webhook_event_templates')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_name', { ascending: true });
+      .from("webhook_event_templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("display_name", { ascending: true });
 
     if (error) throw error;
 
     return data.map(mapWebhookEventTemplate);
   } catch (err) {
-    console.error('Error fetching webhook event templates:', err);
+    console.error("Error fetching webhook event templates:", err);
     throw err;
   }
 };
@@ -537,28 +553,26 @@ export const getWebhookEventTemplates = async () => {
 
 export const logApiEvent = async (storeId, payload) => {
   try {
-    const { error } = await supabase
-      .from('api_events')
-      .insert([
-        {
-          store_id: storeId,
-          api_key_id: payload.apiKeyId || null,
-          event_type: payload.eventType,
-          endpoint: payload.endpoint || null,
-          method: payload.method || null,
-          status_code: payload.statusCode || null,
-          error_message: payload.errorMessage || null,
-          ip_address: payload.ipAddress || null,
-          user_agent: payload.userAgent || null,
-          metadata: payload.metadata || {},
-        },
-      ]);
+    const { error } = await supabase.from("api_events").insert([
+      {
+        store_id: storeId,
+        api_key_id: payload.apiKeyId || null,
+        event_type: payload.eventType,
+        endpoint: payload.endpoint || null,
+        method: payload.method || null,
+        status_code: payload.statusCode || null,
+        error_message: payload.errorMessage || null,
+        ip_address: payload.ipAddress || null,
+        user_agent: payload.userAgent || null,
+        metadata: payload.metadata || {},
+      },
+    ]);
 
     if (error) throw error;
 
     return { success: true };
   } catch (err) {
-    console.error('Error logging API event:', err);
+    console.error("Error logging API event:", err);
     throw err;
   }
 };
@@ -566,17 +580,17 @@ export const logApiEvent = async (storeId, payload) => {
 export const getApiEvents = async (storeId, limit = 100) => {
   try {
     const { data, error } = await supabase
-      .from('api_events')
-      .select('*')
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false })
+      .from("api_events")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false })
       .limit(limit);
 
     if (error) throw error;
 
     return data.map(mapApiEventRecord);
   } catch (err) {
-    console.error('Error fetching API events:', err);
+    console.error("Error fetching API events:", err);
     throw err;
   }
 };
@@ -606,7 +620,9 @@ const mapWebhookEndpointRecord = (record) => ({
   name: record.name,
   url: record.url,
   isActive: record.is_active,
-  secretKey: record.secret_key ? `${record.secret_key.substring(0, 8)}...` : null,
+  secretKey: record.secret_key
+    ? `${record.secret_key.substring(0, 8)}...`
+    : null,
   apiVersion: record.api_version,
   maxRetries: record.max_retries,
   timeoutSeconds: record.timeout_seconds,

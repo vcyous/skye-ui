@@ -1,31 +1,31 @@
 import {
-    Alert,
-    Button,
-    Card,
-    Col,
-    Empty,
-    Form,
-    Input,
-    Modal,
-    Row,
-    Select,
-    Space,
-    Spin,
-    Switch,
-    Table,
-    Tag,
-    Typography,
-    message,
+  Alert,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Form,
+  Input,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Switch,
+  Table,
+  Tag,
+  Typography,
+  message,
 } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import {
-    createIntegration,
-    getIntegrationSyncRuns,
-    getIntegrations,
-    runIntegrationSync,
-    setIntegrationEnabled,
-    setIntegrationKillSwitch,
-} from "../services/integrationService.js";
+  createIntegration,
+  getIntegrationSyncRuns,
+  getIntegrations,
+  runIntegrationSync,
+  setIntegrationEnabled,
+  setIntegrationKillSwitch,
+} from "../services/api.js";
 
 export default function IntegrationsPage() {
   const [rows, setRows] = useState([]);
@@ -165,7 +165,7 @@ export default function IntegrationsPage() {
       title: "Last Sync",
       dataIndex: "lastSyncedAt",
       key: "lastSyncedAt",
-      render: (value) => (value ? new Date(value).toLocaleString() : "-") ,
+      render: (value) => (value ? new Date(value).toLocaleString() : "-"),
     },
     {
       title: "Enabled",
@@ -254,7 +254,12 @@ export default function IntegrationsPage() {
               </Button>
             </Empty>
           ) : (
-            <Table rowKey="id" dataSource={filteredRows} columns={columns} pagination={{ pageSize: 10 }} />
+            <Table
+              rowKey="id"
+              dataSource={filteredRows}
+              columns={columns}
+              pagination={{ pageSize: 10 }}
+            />
           )}
         </Spin>
       </Card>
@@ -275,7 +280,9 @@ export default function IntegrationsPage() {
               <Form.Item
                 name="displayName"
                 label="Display Name"
-                rules={[{ required: true, message: "Display name is required" }]}
+                rules={[
+                  { required: true, message: "Display name is required" },
+                ]}
               >
                 <Input placeholder="Shopee Connector" />
               </Form.Item>
@@ -284,7 +291,9 @@ export default function IntegrationsPage() {
               <Form.Item
                 name="integrationKey"
                 label="Integration Key"
-                rules={[{ required: true, message: "Integration key is required" }]}
+                rules={[
+                  { required: true, message: "Integration key is required" },
+                ]}
               >
                 <Input placeholder="shopee" />
               </Form.Item>
@@ -297,7 +306,11 @@ export default function IntegrationsPage() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="category" label="Category" initialValue="marketplace">
+              <Form.Item
+                name="category"
+                label="Category"
+                initialValue="marketplace"
+              >
                 <Select
                   options={[
                     { value: "marketplace", label: "Marketplace" },
@@ -315,7 +328,11 @@ export default function IntegrationsPage() {
           <Form.Item name="credentialsRef" label="Credentials Reference">
             <Input placeholder="vault://integrations/shopee/store-1" />
           </Form.Item>
-          <Form.Item name="isEnabled" label="Enable Immediately" valuePropName="checked">
+          <Form.Item
+            name="isEnabled"
+            label="Enable Immediately"
+            valuePropName="checked"
+          >
             <Switch />
           </Form.Item>
         </Form>
@@ -344,7 +361,8 @@ export default function IntegrationsPage() {
                 title: "Started",
                 dataIndex: "startedAt",
                 key: "startedAt",
-                render: (value) => (value ? new Date(value).toLocaleString() : "-"),
+                render: (value) =>
+                  value ? new Date(value).toLocaleString() : "-",
               },
               {
                 title: "Type",
@@ -356,7 +374,15 @@ export default function IntegrationsPage() {
                 dataIndex: "status",
                 key: "status",
                 render: (value) => (
-                  <Tag color={value === "succeeded" ? "green" : value === "failed" ? "red" : "gold"}>
+                  <Tag
+                    color={
+                      value === "succeeded"
+                        ? "green"
+                        : value === "failed"
+                          ? "red"
+                          : "gold"
+                    }
+                  >
                     {value}
                   </Tag>
                 ),

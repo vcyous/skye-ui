@@ -1,28 +1,28 @@
 import {
-    Button,
-    Card,
-    Col,
-    Empty,
-    Form,
-    Input,
-    Modal,
-    Row,
-    Select,
-    Space,
-    Spin,
-    Table,
-    Tag,
-    Typography,
-    message
+  Button,
+  Card,
+  Col,
+  Empty,
+  Form,
+  Input,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+  message,
 } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useAuthContext } from "../context/AuthContext.jsx";
 import {
-    createB2bCompany,
-    deleteB2bCompany,
-    getB2bCompanies,
-    updateB2bCompany
-} from "../services/b2bWholesaleService.js";
+  createB2bCompany,
+  deleteB2bCompany,
+  getB2bCompanies,
+  updateB2bCompany,
+} from "../services/api.js";
 
 export default function B2bCompaniesPage() {
   const { user } = useAuthContext();
@@ -81,7 +81,8 @@ export default function B2bCompaniesPage() {
   async function onDelete(companyId) {
     Modal.confirm({
       title: "Delete Company",
-      content: "Are you sure? This will remove the company and all associated data.",
+      content:
+        "Are you sure? This will remove the company and all associated data.",
       okText: "Delete",
       okType: "danger",
       async onOk() {
@@ -139,7 +140,9 @@ export default function B2bCompaniesPage() {
       render: (_, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{record.name}</Typography.Text>
-          <Typography.Text type="secondary">{record.email || "-"}</Typography.Text>
+          <Typography.Text type="secondary">
+            {record.email || "-"}
+          </Typography.Text>
         </Space>
       ),
     },
@@ -149,7 +152,9 @@ export default function B2bCompaniesPage() {
       render: (_, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text>{record.phone || "-"}</Typography.Text>
-          <Typography.Text type="secondary">{record.website || "-"}</Typography.Text>
+          <Typography.Text type="secondary">
+            {record.website || "-"}
+          </Typography.Text>
         </Space>
       ),
     },
@@ -173,10 +178,19 @@ export default function B2bCompaniesPage() {
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button type="link" size="small" onClick={() => openEditModal(record)}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => openEditModal(record)}
+          >
             Edit
           </Button>
-          <Button type="link" size="small" danger onClick={() => onDelete(record.id)}>
+          <Button
+            type="link"
+            size="small"
+            danger
+            onClick={() => onDelete(record.id)}
+          >
             Delete
           </Button>
         </Space>
@@ -223,7 +237,9 @@ export default function B2bCompaniesPage() {
         <Spin spinning={loading}>
           {filteredCompanies.length === 0 ? (
             <Empty
-              description={search ? "No companies found" : "No B2B companies yet"}
+              description={
+                search ? "No companies found" : "No B2B companies yet"
+              }
               style={{ marginTop: "48px" }}
             >
               <Button type="primary" onClick={openCreateModal}>
@@ -258,7 +274,9 @@ export default function B2bCompaniesPage() {
               <Form.Item
                 name="name"
                 label="Company Name"
-                rules={[{ required: true, message: "Company name is required" }]}
+                rules={[
+                  { required: true, message: "Company name is required" },
+                ]}
               >
                 <Input placeholder="Acme Corp" />
               </Form.Item>

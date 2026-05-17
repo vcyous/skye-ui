@@ -1,7 +1,7 @@
 // Feature 25: Security Compliance and Audit Service
 // Manages audit logging, role-based access control, and compliance tracking
 
-import { supabase } from '../api';
+import { supabase } from "./supabaseClient.js";
 
 // ============================================================================
 // AUDIT LOGGING
@@ -10,7 +10,7 @@ import { supabase } from '../api';
 export const logAuditEvent = async (storeId, payload) => {
   try {
     const { data, error } = await supabase
-      .from('audit_logs')
+      .from("audit_logs")
       .insert([
         {
           store_id: storeId,
@@ -20,14 +20,14 @@ export const logAuditEvent = async (storeId, payload) => {
           entity_type: payload.entityType || null,
           entity_id: payload.entityId || null,
           action: payload.action,
-          severity: payload.severity || 'info',
+          severity: payload.severity || "info",
           source_ip: payload.sourceIp || null,
           user_agent: payload.userAgent || null,
           request_id: payload.requestId || null,
           changes: payload.changes || null,
           old_values: payload.oldValues || null,
           new_values: payload.newValues || null,
-          status: payload.status || 'completed',
+          status: payload.status || "completed",
           error_message: payload.errorMessage || null,
           metadata: payload.metadata || {},
           is_compliant: payload.isCompliant !== false,
@@ -40,7 +40,7 @@ export const logAuditEvent = async (storeId, payload) => {
 
     return mapAuditLogRecord(data);
   } catch (err) {
-    console.error('Error logging audit event:', err);
+    console.error("Error logging audit event:", err);
     throw err;
   }
 };
@@ -48,37 +48,37 @@ export const logAuditEvent = async (storeId, payload) => {
 export const getAuditLogs = async (storeId, filters = {}) => {
   try {
     let query = supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false });
+      .from("audit_logs")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false });
 
     if (filters.eventType) {
-      query = query.eq('event_type', filters.eventType);
+      query = query.eq("event_type", filters.eventType);
     }
 
     if (filters.eventCategory) {
-      query = query.eq('event_category', filters.eventCategory);
+      query = query.eq("event_category", filters.eventCategory);
     }
 
     if (filters.severity) {
-      query = query.eq('severity', filters.severity);
+      query = query.eq("severity", filters.severity);
     }
 
     if (filters.entityType) {
-      query = query.eq('entity_type', filters.entityType);
+      query = query.eq("entity_type", filters.entityType);
     }
 
     if (filters.userId) {
-      query = query.eq('user_id', filters.userId);
+      query = query.eq("user_id", filters.userId);
     }
 
     if (filters.startDate) {
-      query = query.gte('created_at', filters.startDate.toISOString());
+      query = query.gte("created_at", filters.startDate.toISOString());
     }
 
     if (filters.endDate) {
-      query = query.lte('created_at', filters.endDate.toISOString());
+      query = query.lte("created_at", filters.endDate.toISOString());
     }
 
     const { data, error } = await query.limit(filters.limit || 100);
@@ -87,7 +87,7 @@ export const getAuditLogs = async (storeId, filters = {}) => {
 
     return data.map(mapAuditLogRecord);
   } catch (err) {
-    console.error('Error fetching audit logs:', err);
+    console.error("Error fetching audit logs:", err);
     throw err;
   }
 };
@@ -95,17 +95,17 @@ export const getAuditLogs = async (storeId, filters = {}) => {
 export const getAuditLogById = async (storeId, logId) => {
   try {
     const { data, error } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('id', logId)
-      .eq('store_id', storeId)
+      .from("audit_logs")
+      .select("*")
+      .eq("id", logId)
+      .eq("store_id", storeId)
       .single();
 
     if (error) throw error;
 
     return mapAuditLogRecord(data);
   } catch (err) {
-    console.error('Error fetching audit log:', err);
+    console.error("Error fetching audit log:", err);
     throw err;
   }
 };
@@ -113,16 +113,16 @@ export const getAuditLogById = async (storeId, logId) => {
 export const getAuditEventTypes = async () => {
   try {
     const { data, error } = await supabase
-      .from('audit_event_types')
-      .select('*')
-      .eq('is_active', true)
-      .order('event_category', { ascending: true });
+      .from("audit_event_types")
+      .select("*")
+      .eq("is_active", true)
+      .order("event_category", { ascending: true });
 
     if (error) throw error;
 
     return data.map(mapAuditEventTypeRecord);
   } catch (err) {
-    console.error('Error fetching audit event types:', err);
+    console.error("Error fetching audit event types:", err);
     throw err;
   }
 };
@@ -134,17 +134,17 @@ export const getAuditEventTypes = async () => {
 export const getRolesAndPermissions = async (storeId) => {
   try {
     const { data, error } = await supabase
-      .from('roles_permissions')
-      .select('*')
-      .eq('store_id', storeId)
-      .eq('is_enabled', true)
-      .order('role_name', { ascending: true });
+      .from("roles_permissions")
+      .select("*")
+      .eq("store_id", storeId)
+      .eq("is_enabled", true)
+      .order("role_name", { ascending: true });
 
     if (error) throw error;
 
     return data.map(mapRolePermissionRecord);
   } catch (err) {
-    console.error('Error fetching roles and permissions:', err);
+    console.error("Error fetching roles and permissions:", err);
     throw err;
   }
 };
@@ -152,17 +152,17 @@ export const getRolesAndPermissions = async (storeId) => {
 export const getUserRoles = async (storeId, userId) => {
   try {
     const { data, error } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('store_id', storeId)
-      .eq('user_id', userId)
-      .eq('is_active', true);
+      .from("user_roles")
+      .select("*")
+      .eq("store_id", storeId)
+      .eq("user_id", userId)
+      .eq("is_active", true);
 
     if (error) throw error;
 
     return data.map(mapUserRoleRecord);
   } catch (err) {
-    console.error('Error fetching user roles:', err);
+    console.error("Error fetching user roles:", err);
     throw err;
   }
 };
@@ -170,7 +170,7 @@ export const getUserRoles = async (storeId, userId) => {
 export const assignUserRole = async (storeId, userId, roleName) => {
   try {
     const { data, error } = await supabase
-      .from('user_roles')
+      .from("user_roles")
       .insert([
         {
           store_id: storeId,
@@ -187,17 +187,17 @@ export const assignUserRole = async (storeId, userId, roleName) => {
 
     // Log the role assignment
     await logAuditEvent(storeId, {
-      eventType: 'role.assigned',
-      eventCategory: 'security',
-      action: 'assign',
-      entityType: 'user_role',
+      eventType: "role.assigned",
+      eventCategory: "security",
+      action: "assign",
+      entityType: "user_role",
       entityId: userId,
       newValues: { role_name: roleName },
     });
 
     return mapUserRoleRecord(data);
   } catch (err) {
-    console.error('Error assigning user role:', err);
+    console.error("Error assigning user role:", err);
     throw err;
   }
 };
@@ -205,30 +205,30 @@ export const assignUserRole = async (storeId, userId, roleName) => {
 export const revokeUserRole = async (storeId, userId, roleName) => {
   try {
     const { error } = await supabase
-      .from('user_roles')
+      .from("user_roles")
       .update({
         is_active: false,
         revoked_at: new Date().toISOString(),
       })
-      .eq('store_id', storeId)
-      .eq('user_id', userId)
-      .eq('role_name', roleName);
+      .eq("store_id", storeId)
+      .eq("user_id", userId)
+      .eq("role_name", roleName);
 
     if (error) throw error;
 
     // Log the role revocation
     await logAuditEvent(storeId, {
-      eventType: 'role.revoked',
-      eventCategory: 'security',
-      action: 'revoke',
-      entityType: 'user_role',
+      eventType: "role.revoked",
+      eventCategory: "security",
+      action: "revoke",
+      entityType: "user_role",
       entityId: userId,
       oldValues: { role_name: roleName },
     });
 
     return { success: true };
   } catch (err) {
-    console.error('Error revoking user role:', err);
+    console.error("Error revoking user role:", err);
     throw err;
   }
 };
@@ -236,16 +236,18 @@ export const revokeUserRole = async (storeId, userId, roleName) => {
 export const getStoreUsers = async (storeId) => {
   try {
     const { data, error } = await supabase
-      .from('user_roles')
-      .select(`
+      .from("user_roles")
+      .select(
+        `
         user_id,
         role_name,
         assigned_at,
         is_active
-      `)
-      .eq('store_id', storeId)
-      .eq('is_active', true)
-      .order('assigned_at', { ascending: false });
+      `,
+      )
+      .eq("store_id", storeId)
+      .eq("is_active", true)
+      .order("assigned_at", { ascending: false });
 
     if (error) throw error;
 
@@ -264,7 +266,7 @@ export const getStoreUsers = async (storeId) => {
 
     return Object.values(userMap);
   } catch (err) {
-    console.error('Error fetching store users:', err);
+    console.error("Error fetching store users:", err);
     throw err;
   }
 };
@@ -276,13 +278,13 @@ export const getStoreUsers = async (storeId) => {
 export const logSecurityEvent = async (storeId, payload) => {
   try {
     const { data, error } = await supabase
-      .from('security_events')
+      .from("security_events")
       .insert([
         {
           store_id: storeId,
           user_id: payload.userId || null,
           event_type: payload.eventType,
-          severity: payload.severity || 'info',
+          severity: payload.severity || "info",
           description: payload.description || null,
           source_ip: payload.sourceIp || null,
           success: payload.success !== false,
@@ -298,7 +300,7 @@ export const logSecurityEvent = async (storeId, payload) => {
 
     return mapSecurityEventRecord(data);
   } catch (err) {
-    console.error('Error logging security event:', err);
+    console.error("Error logging security event:", err);
     throw err;
   }
 };
@@ -306,25 +308,25 @@ export const logSecurityEvent = async (storeId, payload) => {
 export const getSecurityEvents = async (storeId, filters = {}) => {
   try {
     let query = supabase
-      .from('security_events')
-      .select('*')
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false });
+      .from("security_events")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false });
 
     if (filters.eventType) {
-      query = query.eq('event_type', filters.eventType);
+      query = query.eq("event_type", filters.eventType);
     }
 
     if (filters.severity) {
-      query = query.eq('severity', filters.severity);
+      query = query.eq("severity", filters.severity);
     }
 
     if (filters.success !== undefined) {
-      query = query.eq('success', filters.success);
+      query = query.eq("success", filters.success);
     }
 
     if (filters.unresolvedOnly) {
-      query = query.is('resolved_at', null);
+      query = query.is("resolved_at", null);
     }
 
     const { data, error } = await query.limit(filters.limit || 50);
@@ -333,7 +335,7 @@ export const getSecurityEvents = async (storeId, filters = {}) => {
 
     return data.map(mapSecurityEventRecord);
   } catch (err) {
-    console.error('Error fetching security events:', err);
+    console.error("Error fetching security events:", err);
     throw err;
   }
 };
@@ -341,10 +343,10 @@ export const getSecurityEvents = async (storeId, filters = {}) => {
 export const resolveSecurityEvent = async (storeId, eventId) => {
   try {
     const { data, error } = await supabase
-      .from('security_events')
+      .from("security_events")
       .update({ resolved_at: new Date().toISOString() })
-      .eq('id', eventId)
-      .eq('store_id', storeId)
+      .eq("id", eventId)
+      .eq("store_id", storeId)
       .select()
       .single();
 
@@ -352,7 +354,7 @@ export const resolveSecurityEvent = async (storeId, eventId) => {
 
     return mapSecurityEventRecord(data);
   } catch (err) {
-    console.error('Error resolving security event:', err);
+    console.error("Error resolving security event:", err);
     throw err;
   }
 };
@@ -364,17 +366,17 @@ export const resolveSecurityEvent = async (storeId, eventId) => {
 export const getDataRetentionPolicies = async (storeId) => {
   try {
     const { data, error } = await supabase
-      .from('data_retention_policies')
-      .select('*')
-      .eq('store_id', storeId)
-      .eq('is_active', true)
-      .order('entity_type', { ascending: true });
+      .from("data_retention_policies")
+      .select("*")
+      .eq("store_id", storeId)
+      .eq("is_active", true)
+      .order("entity_type", { ascending: true });
 
     if (error) throw error;
 
     return data.map(mapRetentionPolicyRecord);
   } catch (err) {
-    console.error('Error fetching retention policies:', err);
+    console.error("Error fetching retention policies:", err);
     throw err;
   }
 };
@@ -382,7 +384,7 @@ export const getDataRetentionPolicies = async (storeId) => {
 export const createDataRetentionPolicy = async (storeId, payload) => {
   try {
     const { data, error } = await supabase
-      .from('data_retention_policies')
+      .from("data_retention_policies")
       .insert([
         {
           store_id: storeId,
@@ -402,7 +404,7 @@ export const createDataRetentionPolicy = async (storeId, payload) => {
 
     return mapRetentionPolicyRecord(data);
   } catch (err) {
-    console.error('Error creating retention policy:', err);
+    console.error("Error creating retention policy:", err);
     throw err;
   }
 };
@@ -410,13 +412,13 @@ export const createDataRetentionPolicy = async (storeId, payload) => {
 export const getComplianceStatus = async (storeId, framework = null) => {
   try {
     let query = supabase
-      .from('compliance_status')
-      .select('*')
-      .eq('store_id', storeId)
-      .order('compliance_framework', { ascending: true });
+      .from("compliance_status")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("compliance_framework", { ascending: true });
 
     if (framework) {
-      query = query.eq('compliance_framework', framework);
+      query = query.eq("compliance_framework", framework);
     }
 
     const { data, error } = await query;
@@ -425,25 +427,30 @@ export const getComplianceStatus = async (storeId, framework = null) => {
 
     return data.map(mapComplianceStatusRecord);
   } catch (err) {
-    console.error('Error fetching compliance status:', err);
+    console.error("Error fetching compliance status:", err);
     throw err;
   }
 };
 
-export const updateComplianceStatus = async (storeId, requirementId, payload) => {
+export const updateComplianceStatus = async (
+  storeId,
+  requirementId,
+  payload,
+) => {
   try {
     const { data, error } = await supabase
-      .from('compliance_status')
+      .from("compliance_status")
       .update({
         status: payload.status,
         evidence_url: payload.evidenceUrl || null,
         notes: payload.notes || null,
         remediation_plan: payload.remediationPlan || null,
         remediation_due_date: payload.remediationDueDate || null,
-        verified_at: payload.status === 'verified' ? new Date().toISOString() : null,
+        verified_at:
+          payload.status === "verified" ? new Date().toISOString() : null,
       })
-      .eq('store_id', storeId)
-      .eq('requirement_id', requirementId)
+      .eq("store_id", storeId)
+      .eq("requirement_id", requirementId)
       .select()
       .single();
 
@@ -451,7 +458,7 @@ export const updateComplianceStatus = async (storeId, requirementId, payload) =>
 
     return mapComplianceStatusRecord(data);
   } catch (err) {
-    console.error('Error updating compliance status:', err);
+    console.error("Error updating compliance status:", err);
     throw err;
   }
 };
@@ -466,10 +473,10 @@ export const getAuditStatistics = async (storeId, days = 30) => {
     startDate.setDate(startDate.getDate() - days);
 
     const { data, error } = await supabase
-      .from('audit_logs')
-      .select('event_category, severity')
-      .eq('store_id', storeId)
-      .gte('created_at', startDate.toISOString());
+      .from("audit_logs")
+      .select("event_category, severity")
+      .eq("store_id", storeId)
+      .gte("created_at", startDate.toISOString());
 
     if (error) throw error;
 
@@ -483,17 +490,19 @@ export const getAuditStatistics = async (storeId, days = 30) => {
 
     data.forEach((log) => {
       // Count by severity
-      stats.bySeverity[log.severity] = (stats.bySeverity[log.severity] || 0) + 1;
-      if (log.severity === 'critical') stats.criticalCount++;
-      if (log.severity === 'warning') stats.warningCount++;
+      stats.bySeverity[log.severity] =
+        (stats.bySeverity[log.severity] || 0) + 1;
+      if (log.severity === "critical") stats.criticalCount++;
+      if (log.severity === "warning") stats.warningCount++;
 
       // Count by category
-      stats.byCategory[log.event_category] = (stats.byCategory[log.event_category] || 0) + 1;
+      stats.byCategory[log.event_category] =
+        (stats.byCategory[log.event_category] || 0) + 1;
     });
 
     return stats;
   } catch (err) {
-    console.error('Error calculating audit statistics:', err);
+    console.error("Error calculating audit statistics:", err);
     throw err;
   }
 };

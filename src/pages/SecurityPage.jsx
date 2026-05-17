@@ -1,36 +1,36 @@
 import {
-    CheckCircleOutlined,
-    DeleteOutlined,
-    ExclamationCircleOutlined,
-    LockOutlined,
-    ShieldOutlined,
-    UserAddOutlined
-} from '@ant-design/icons';
+  CheckCircleOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined,
+  LockOutlined,
+  SafetyOutlined,
+  UserAddOutlined,
+} from "@ant-design/icons";
 import {
-    Alert,
-    Button,
-    Card,
-    Col,
-    Drawer,
-    Empty,
-    Form,
-    Input,
-    Modal,
-    Row,
-    Select,
-    Space,
-    Spin,
-    Statistic,
-    Table,
-    Tabs,
-    Tag
-} from 'antd';
-import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
-import * as auditService from '../services/auditService';
+  Alert,
+  Button,
+  Card,
+  Col,
+  Drawer,
+  Empty,
+  Form,
+  Input,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Statistic,
+  Table,
+  Tabs,
+  Tag,
+} from "antd";
+import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+import * as auditService from "../services/api.js";
 
 const SecurityPage = () => {
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState("users");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -61,38 +61,46 @@ const SecurityPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const storeId = localStorage.getItem('storeId') || 'demo-store';
+      const storeId = localStorage.getItem("storeId") || "demo-store";
 
-      if (activeTab === 'users') {
+      if (activeTab === "users") {
         const userData = await auditService.getStoreUsers(storeId);
         setUsers(userData);
-      } else if (activeTab === 'events') {
+      } else if (activeTab === "events") {
         const eventsData = await auditService.getSecurityEvents(storeId, {
           limit: 50,
         });
         setSecurityEvents(eventsData);
-      } else if (activeTab === 'compliance') {
+      } else if (activeTab === "compliance") {
         const complianceData = await auditService.getComplianceStatus(storeId);
         setComplianceStatus(complianceData);
 
         // Calculate compliance stats
         if (complianceData.length > 0) {
-          const verified = complianceData.filter((c) => c.status === 'verified').length;
-          const pending = complianceData.filter((c) => c.status === 'pending').length;
-          const failed = complianceData.filter((c) => c.status === 'failed').length;
+          const verified = complianceData.filter(
+            (c) => c.status === "verified",
+          ).length;
+          const pending = complianceData.filter(
+            (c) => c.status === "pending",
+          ).length;
+          const failed = complianceData.filter(
+            (c) => c.status === "failed",
+          ).length;
 
           setComplianceStats({
             total: complianceData.length,
             verified,
             pending,
             failed,
-            compliancePercentage: Math.round((verified / complianceData.length) * 100),
+            compliancePercentage: Math.round(
+              (verified / complianceData.length) * 100,
+            ),
           });
         }
       }
     } catch (err) {
-      console.error('Error loading security data:', err);
-      setError('Failed to load security data. Please try again.');
+      console.error("Error loading security data:", err);
+      setError("Failed to load security data. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -117,12 +125,16 @@ const SecurityPage = () => {
 
   const handleRoleSubmit = async (values) => {
     try {
-      const storeId = localStorage.getItem('storeId') || 'demo-store';
+      const storeId = localStorage.getItem("storeId") || "demo-store";
 
       if (selectedUser) {
         // Revoke old role and assign new one
         if (selectedUser.roles.length > 0) {
-          await auditService.revokeUserRole(storeId, selectedUser.userId, selectedUser.roles[0]);
+          await auditService.revokeUserRole(
+            storeId,
+            selectedUser.userId,
+            selectedUser.roles[0],
+          );
         }
       }
 
@@ -132,26 +144,26 @@ const SecurityPage = () => {
       form.resetFields();
       await loadSecurityData();
     } catch (err) {
-      console.error('Error assigning role:', err);
-      Modal.error({ title: 'Error', content: 'Failed to assign role' });
+      console.error("Error assigning role:", err);
+      Modal.error({ title: "Error", content: "Failed to assign role" });
     }
   };
 
   const handleRevokeRole = (user, role) => {
     Modal.confirm({
-      title: 'Revoke Role',
+      title: "Revoke Role",
       icon: <ExclamationCircleOutlined />,
       content: `Are you sure you want to revoke the "${role}" role from this user?`,
-      okText: 'Revoke',
-      okType: 'danger',
+      okText: "Revoke",
+      okType: "danger",
       onOk: async () => {
         try {
-          const storeId = localStorage.getItem('storeId') || 'demo-store';
+          const storeId = localStorage.getItem("storeId") || "demo-store";
           await auditService.revokeUserRole(storeId, user.userId, role);
           await loadSecurityData();
         } catch (err) {
-          console.error('Error revoking role:', err);
-          Modal.error({ title: 'Error', content: 'Failed to revoke role' });
+          console.error("Error revoking role:", err);
+          Modal.error({ title: "Error", content: "Failed to revoke role" });
         }
       },
     });
@@ -159,16 +171,16 @@ const SecurityPage = () => {
 
   const userColumns = [
     {
-      title: 'User ID',
-      dataIndex: 'userId',
-      key: 'userId',
+      title: "User ID",
+      dataIndex: "userId",
+      key: "userId",
       width: 200,
-      render: (id) => <span style={{ fontFamily: 'monospace' }}>{id}</span>,
+      render: (id) => <span style={{ fontFamily: "monospace" }}>{id}</span>,
     },
     {
-      title: 'Roles',
-      dataIndex: 'roles',
-      key: 'roles',
+      title: "Roles",
+      dataIndex: "roles",
+      key: "roles",
       render: (roles) =>
         roles.map((role) => (
           <Tag key={role} color="blue">
@@ -177,14 +189,14 @@ const SecurityPage = () => {
         )),
     },
     {
-      title: 'Assigned',
-      dataIndex: 'assignedAt',
-      key: 'assignedAt',
-      render: (date) => dayjs(date).format('YYYY-MM-DD'),
+      title: "Assigned",
+      dataIndex: "assignedAt",
+      key: "assignedAt",
+      render: (date) => dayjs(date).format("YYYY-MM-DD"),
     },
     {
-      title: 'Actions',
-      key: 'actions',
+      title: "Actions",
+      key: "actions",
       width: 120,
       render: (_, record) => (
         <Space>
@@ -220,59 +232,59 @@ const SecurityPage = () => {
 
   const handleResolveEvent = async (eventId) => {
     try {
-      const storeId = localStorage.getItem('storeId') || 'demo-store';
+      const storeId = localStorage.getItem("storeId") || "demo-store";
       await auditService.resolveSecurityEvent(storeId, eventId);
       await loadSecurityData();
     } catch (err) {
-      console.error('Error resolving event:', err);
-      Modal.error({ title: 'Error', content: 'Failed to resolve event' });
+      console.error("Error resolving event:", err);
+      Modal.error({ title: "Error", content: "Failed to resolve event" });
     }
   };
 
   const getSeverityColor = (severity) => {
     const colors = {
-      critical: 'red',
-      warning: 'orange',
-      info: 'blue',
+      critical: "red",
+      warning: "orange",
+      info: "blue",
     };
-    return colors[severity] || 'default';
+    return colors[severity] || "default";
   };
 
   const eventColumns = [
     {
-      title: 'Timestamp',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "Timestamp",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 150,
-      render: (date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss'),
+      render: (date) => dayjs(date).format("YYYY-MM-DD HH:mm:ss"),
       sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
-      title: 'Event Type',
-      dataIndex: 'eventType',
-      key: 'eventType',
+      title: "Event Type",
+      dataIndex: "eventType",
+      key: "eventType",
       width: 150,
       render: (type) => <Tag>{type}</Tag>,
     },
     {
-      title: 'Severity',
-      dataIndex: 'severity',
-      key: 'severity',
+      title: "Severity",
+      dataIndex: "severity",
+      key: "severity",
       width: 100,
       render: (severity) => (
         <Tag color={getSeverityColor(severity)}>{severity.toUpperCase()}</Tag>
       ),
     },
     {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
+      title: "Description",
+      dataIndex: "description",
+      key: "description",
       ellipsis: true,
     },
     {
-      title: 'Status',
-      dataIndex: 'resolvedAt',
-      key: 'status',
+      title: "Status",
+      dataIndex: "resolvedAt",
+      key: "status",
       width: 100,
       render: (resolvedAt) =>
         resolvedAt ? (
@@ -282,8 +294,8 @@ const SecurityPage = () => {
         ),
     },
     {
-      title: 'Action',
-      key: 'action',
+      title: "Action",
+      key: "action",
       width: 80,
       render: (_, record) => (
         <Button
@@ -320,7 +332,7 @@ const SecurityPage = () => {
 
   const handleComplianceSubmit = async (values) => {
     try {
-      const storeId = localStorage.getItem('storeId') || 'demo-store';
+      const storeId = localStorage.getItem("storeId") || "demo-store";
 
       if (selectedCompliance) {
         await auditService.updateComplianceStatus(
@@ -331,9 +343,9 @@ const SecurityPage = () => {
             notes: values.notes,
             remediationPlan: values.remediationPlan,
             remediationDueDate: values.remediationDueDate
-              ? values.remediationDueDate.format('YYYY-MM-DD')
+              ? values.remediationDueDate.format("YYYY-MM-DD")
               : null,
-          }
+          },
         );
       }
 
@@ -341,52 +353,54 @@ const SecurityPage = () => {
       complianceForm.resetFields();
       await loadSecurityData();
     } catch (err) {
-      console.error('Error updating compliance:', err);
-      Modal.error({ title: 'Error', content: 'Failed to update compliance status' });
+      console.error("Error updating compliance:", err);
+      Modal.error({
+        title: "Error",
+        content: "Failed to update compliance status",
+      });
     }
   };
 
   const getComplianceStatusColor = (status) => {
     const colors = {
-      verified: 'green',
-      pending: 'orange',
-      failed: 'red',
+      verified: "green",
+      pending: "orange",
+      failed: "red",
     };
-    return colors[status] || 'default';
+    return colors[status] || "default";
   };
 
   const complianceColumns = [
     {
-      title: 'Requirement',
-      dataIndex: 'requirementName',
-      key: 'requirementName',
+      title: "Requirement",
+      dataIndex: "requirementName",
+      key: "requirementName",
       width: 200,
     },
     {
-      title: 'Framework',
-      dataIndex: 'complianceFramework',
-      key: 'complianceFramework',
+      title: "Framework",
+      dataIndex: "complianceFramework",
+      key: "complianceFramework",
       width: 120,
       render: (framework) => <Tag>{framework}</Tag>,
     },
     {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
       render: (status) => (
         <Tag color={getComplianceStatusColor(status)}>{status}</Tag>
       ),
     },
     {
-      title: 'Verified',
-      dataIndex: 'verifiedAt',
-      key: 'verifiedAt',
-      render: (date) =>
-        date ? dayjs(date).format('YYYY-MM-DD') : '—',
+      title: "Verified",
+      dataIndex: "verifiedAt",
+      key: "verifiedAt",
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "—"),
     },
     {
-      title: 'Action',
-      key: 'action',
+      title: "Action",
+      key: "action",
       width: 100,
       render: (_, record) => (
         <Button
@@ -401,12 +415,13 @@ const SecurityPage = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: "24px" }}>
       {/* Page Header */}
-      <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: "24px" }}>
         <h1>Security & Compliance</h1>
-        <p style={{ color: '#666' }}>
-          Manage user access, monitor security events, and track compliance status.
+        <p style={{ color: "#666" }}>
+          Manage user access, monitor security events, and track compliance
+          status.
         </p>
       </div>
 
@@ -417,7 +432,7 @@ const SecurityPage = () => {
           description={error}
           type="error"
           closable
-          style={{ marginBottom: '16px' }}
+          style={{ marginBottom: "16px" }}
           onClose={() => setError(null)}
         />
       )}
@@ -428,22 +443,22 @@ const SecurityPage = () => {
         onChange={setActiveTab}
         items={[
           {
-            key: 'users',
+            key: "users",
             label: (
               <span>
                 <LockOutlined /> User Roles
               </span>
             ),
             children: (
-              <div style={{ marginTop: '16px' }}>
+              <div style={{ marginTop: "16px" }}>
                 {loading ? (
-                  <div style={{ textAlign: 'center', padding: '40px' }}>
+                  <div style={{ textAlign: "center", padding: "40px" }}>
                     <Spin size="large" />
                   </div>
                 ) : users.length === 0 ? (
                   <Empty
                     description="No users found"
-                    style={{ marginTop: '40px', marginBottom: '40px' }}
+                    style={{ marginTop: "40px", marginBottom: "40px" }}
                   >
                     <Button type="primary" onClick={() => showRoleModal()}>
                       <UserAddOutlined /> Add User
@@ -455,7 +470,7 @@ const SecurityPage = () => {
                       type="primary"
                       icon={<UserAddOutlined />}
                       onClick={() => showRoleModal()}
-                      style={{ marginBottom: '16px' }}
+                      style={{ marginBottom: "16px" }}
                     >
                       Add User Role
                     </Button>
@@ -471,22 +486,22 @@ const SecurityPage = () => {
             ),
           },
           {
-            key: 'events',
+            key: "events",
             label: (
               <span>
-                <ShieldOutlined /> Security Events
+                <SafetyOutlined /> Security Events
               </span>
             ),
             children: (
-              <div style={{ marginTop: '16px' }}>
+              <div style={{ marginTop: "16px" }}>
                 {loading ? (
-                  <div style={{ textAlign: 'center', padding: '40px' }}>
+                  <div style={{ textAlign: "center", padding: "40px" }}>
                     <Spin size="large" />
                   </div>
                 ) : securityEvents.length === 0 ? (
                   <Empty
                     description="No security events"
-                    style={{ marginTop: '40px', marginBottom: '40px' }}
+                    style={{ marginTop: "40px", marginBottom: "40px" }}
                   />
                 ) : (
                   <Table
@@ -501,23 +516,23 @@ const SecurityPage = () => {
             ),
           },
           {
-            key: 'compliance',
+            key: "compliance",
             label: (
               <span>
                 <CheckCircleOutlined /> Compliance
               </span>
             ),
             children: (
-              <div style={{ marginTop: '16px' }}>
+              <div style={{ marginTop: "16px" }}>
                 {loading ? (
-                  <div style={{ textAlign: 'center', padding: '40px' }}>
+                  <div style={{ textAlign: "center", padding: "40px" }}>
                     <Spin size="large" />
                   </div>
                 ) : (
                   <>
                     {/* Compliance Stats */}
                     {complianceStats && (
-                      <Row gutter={16} style={{ marginBottom: '24px' }}>
+                      <Row gutter={16} style={{ marginBottom: "24px" }}>
                         <Col xs={24} sm={12} md={6}>
                           <Card>
                             <Statistic
@@ -531,7 +546,7 @@ const SecurityPage = () => {
                             <Statistic
                               title="Verified"
                               value={complianceStats.verified}
-                              valueStyle={{ color: '#52c41a' }}
+                              valueStyle={{ color: "#52c41a" }}
                             />
                           </Card>
                         </Col>
@@ -540,7 +555,7 @@ const SecurityPage = () => {
                             <Statistic
                               title="Pending"
                               value={complianceStats.pending}
-                              valueStyle={{ color: '#faad14' }}
+                              valueStyle={{ color: "#faad14" }}
                             />
                           </Card>
                         </Col>
@@ -577,7 +592,7 @@ const SecurityPage = () => {
 
       {/* Role Assignment Modal */}
       <Modal
-        title={selectedUser ? 'Update User Role' : 'Assign User Role'}
+        title={selectedUser ? "Update User Role" : "Assign User Role"}
         open={roleModalVisible}
         onCancel={() => setRoleModalVisible(false)}
         footer={null}
@@ -586,7 +601,7 @@ const SecurityPage = () => {
           <Form.Item
             label="User ID"
             name="userId"
-            rules={[{ required: true, message: 'Please enter user ID' }]}
+            rules={[{ required: true, message: "Please enter user ID" }]}
           >
             <Input placeholder="user@example.com" disabled={!!selectedUser} />
           </Form.Item>
@@ -594,22 +609,22 @@ const SecurityPage = () => {
           <Form.Item
             label="Role"
             name="role"
-            rules={[{ required: true, message: 'Please select a role' }]}
+            rules={[{ required: true, message: "Please select a role" }]}
           >
             <Select
               placeholder="Select role"
               options={[
-                { value: 'owner', label: 'Owner (Full Access)' },
-                { value: 'admin', label: 'Admin (Most Access)' },
-                { value: 'finance', label: 'Finance (Payments & Reports)' },
-                { value: 'viewer', label: 'Viewer (Read-Only)' },
+                { value: "owner", label: "Owner (Full Access)" },
+                { value: "admin", label: "Admin (Most Access)" },
+                { value: "finance", label: "Finance (Payments & Reports)" },
+                { value: "viewer", label: "Viewer (Read-Only)" },
               ]}
             />
           </Form.Item>
 
           <Form.Item>
             <Button type="primary" htmlType="submit" block>
-              {selectedUser ? 'Update' : 'Assign'} Role
+              {selectedUser ? "Update" : "Assign"} Role
             </Button>
           </Form.Item>
         </Form>
@@ -624,18 +639,22 @@ const SecurityPage = () => {
         open={eventDrawerVisible}
       >
         {selectedEvent && (
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <Space direction="vertical" style={{ width: "100%" }} size="large">
             <div>
-              <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+              <div
+                style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}
+              >
                 Event Type
               </div>
-              <div style={{ fontSize: '14px', fontWeight: '600' }}>
+              <div style={{ fontSize: "14px", fontWeight: "600" }}>
                 {selectedEvent.eventType}
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+              <div
+                style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}
+              >
                 Severity
               </div>
               <Tag color={getSeverityColor(selectedEvent.severity)}>
@@ -644,36 +663,48 @@ const SecurityPage = () => {
             </div>
 
             <div>
-              <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+              <div
+                style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}
+              >
                 Description
               </div>
-              <div style={{ fontSize: '14px' }}>
+              <div style={{ fontSize: "14px" }}>
                 {selectedEvent.description}
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+              <div
+                style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}
+              >
                 Timestamp
               </div>
-              <div style={{ fontSize: '14px' }}>
-                {dayjs(selectedEvent.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+              <div style={{ fontSize: "14px" }}>
+                {dayjs(selectedEvent.createdAt).format("YYYY-MM-DD HH:mm:ss")}
               </div>
             </div>
 
             {selectedEvent.sourceIp && (
               <div>
-                <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#999",
+                    marginBottom: "4px",
+                  }}
+                >
                   Source IP
                 </div>
-                <div style={{ fontSize: '14px', fontFamily: 'monospace' }}>
+                <div style={{ fontSize: "14px", fontFamily: "monospace" }}>
                   {selectedEvent.sourceIp}
                 </div>
               </div>
             )}
 
             <div>
-              <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+              <div
+                style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}
+              >
                 Status
               </div>
               {selectedEvent.resolvedAt ? (
@@ -719,24 +750,18 @@ const SecurityPage = () => {
             >
               <Select
                 options={[
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'verified', label: 'Verified' },
-                  { value: 'failed', label: 'Failed' },
+                  { value: "pending", label: "Pending" },
+                  { value: "verified", label: "Verified" },
+                  { value: "failed", label: "Failed" },
                 ]}
               />
             </Form.Item>
 
-            <Form.Item
-              label="Remediation Plan"
-              name="remediationPlan"
-            >
+            <Form.Item label="Remediation Plan" name="remediationPlan">
               <Input.TextArea rows={3} />
             </Form.Item>
 
-            <Form.Item
-              label="Notes"
-              name="notes"
-            >
+            <Form.Item label="Notes" name="notes">
               <Input.TextArea rows={2} />
             </Form.Item>
 

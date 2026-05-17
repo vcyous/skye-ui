@@ -1,37 +1,37 @@
 import {
-    CheckCircleOutlined,
-    CloseCircleOutlined,
-    DeleteOutlined,
-    ExclamationCircleOutlined,
-    PlusOutlined,
-    ReloadOutlined
-} from '@ant-design/icons';
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import {
-    Alert,
-    Button,
-    Card,
-    Descriptions,
-    Drawer,
-    Empty,
-    Form,
-    Input,
-    Modal,
-    Popconfirm,
-    Select,
-    Space,
-    Spin,
-    Table,
-    Tabs,
-    Tag,
-    Tooltip
-} from 'antd';
-import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import * as webhookService from '../services/webhookService';
+  Alert,
+  Button,
+  Card,
+  Descriptions,
+  Drawer,
+  Empty,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Tabs,
+  Tag,
+  Tooltip,
+} from "antd";
+import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import * as webhookService from "../services/api.js";
 
 const WebhooksPage = () => {
   const { store } = useAuth();
-  const [activeTab, setActiveTab] = useState('apiKeys');
+  const [activeTab, setActiveTab] = useState("apiKeys");
   const [loading, setLoading] = useState(false);
 
   // API Keys State
@@ -67,7 +67,7 @@ const WebhooksPage = () => {
         const templates = await webhookService.getWebhookEventTemplates();
         setEventTemplates(templates);
       } catch (err) {
-        console.error('Error loading event templates:', err);
+        console.error("Error loading event templates:", err);
       }
     };
     loadTemplates();
@@ -81,14 +81,14 @@ const WebhooksPage = () => {
       const keys = await webhookService.getApiKeys(store.id);
       setApiKeys(keys);
     } catch (err) {
-      console.error('Error loading API keys:', err);
+      console.error("Error loading API keys:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (activeTab === 'apiKeys') {
+    if (activeTab === "apiKeys") {
       loadApiKeys();
     }
   }, [activeTab]);
@@ -105,17 +105,20 @@ const WebhooksPage = () => {
       setApiKeyForm().resetFields();
       await loadApiKeys();
       Modal.success({
-        title: 'API Key Created',
+        title: "API Key Created",
         content: (
           <div>
-            <p>Your API key has been created. Copy it now - you won't be able to see it again!</p>
+            <p>
+              Your API key has been created. Copy it now - you won't be able to
+              see it again!
+            </p>
             <Input.Password value={newKey.fullKey} readOnly />
           </div>
         ),
       });
       setShowApiKeyModal(false);
     } catch (err) {
-      Modal.error({ title: 'Error', content: err.message });
+      Modal.error({ title: "Error", content: err.message });
     }
   };
 
@@ -123,7 +126,7 @@ const WebhooksPage = () => {
     try {
       const rotated = await webhookService.rotateApiKey(store.id, keyId);
       Modal.success({
-        title: 'Key Rotated',
+        title: "Key Rotated",
         content: (
           <div>
             <p>Your API key has been rotated. Copy the new key now!</p>
@@ -133,7 +136,7 @@ const WebhooksPage = () => {
       });
       await loadApiKeys();
     } catch (err) {
-      Modal.error({ title: 'Error', content: err.message });
+      Modal.error({ title: "Error", content: err.message });
     }
   };
 
@@ -142,26 +145,26 @@ const WebhooksPage = () => {
       await webhookService.deleteApiKey(store.id, keyId);
       await loadApiKeys();
     } catch (err) {
-      Modal.error({ title: 'Error', content: err.message });
+      Modal.error({ title: "Error", content: err.message });
     }
   };
 
   const apiKeyColumns = [
     {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
     },
     {
-      title: 'Key Prefix',
-      dataIndex: 'keyPrefix',
-      key: 'keyPrefix',
+      title: "Key Prefix",
+      dataIndex: "keyPrefix",
+      key: "keyPrefix",
       render: (text) => <code>{text}</code>,
     },
     {
-      title: 'Scopes',
-      dataIndex: 'scopes',
-      key: 'scopes',
+      title: "Scopes",
+      dataIndex: "scopes",
+      key: "scopes",
       render: (scopes) => (
         <Space wrap>
           {scopes.slice(0, 2).map((scope) => (
@@ -172,22 +175,24 @@ const WebhooksPage = () => {
       ),
     },
     {
-      title: 'Status',
-      dataIndex: 'isActive',
-      key: 'isActive',
+      title: "Status",
+      dataIndex: "isActive",
+      key: "isActive",
       render: (isActive) => (
-        <Tag color={isActive ? 'green' : 'red'}>{isActive ? 'Active' : 'Inactive'}</Tag>
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Active" : "Inactive"}
+        </Tag>
       ),
     },
     {
-      title: 'Last Used',
-      dataIndex: 'lastUsedAt',
-      key: 'lastUsedAt',
-      render: (date) => date ? new Date(date).toLocaleDateString() : 'Never',
+      title: "Last Used",
+      dataIndex: "lastUsedAt",
+      key: "lastUsedAt",
+      render: (date) => (date ? new Date(date).toLocaleDateString() : "Never"),
     },
     {
-      title: 'Actions',
-      key: 'actions',
+      title: "Actions",
+      key: "actions",
       width: 150,
       render: (_, record) => (
         <Space size="small">
@@ -221,14 +226,14 @@ const WebhooksPage = () => {
       const endpoints = await webhookService.getWebhookEndpoints(store.id);
       setWebhookEndpoints(endpoints);
     } catch (err) {
-      console.error('Error loading webhook endpoints:', err);
+      console.error("Error loading webhook endpoints:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (activeTab === 'endpoints') {
+    if (activeTab === "endpoints") {
       loadWebhookEndpoints();
     }
   }, [activeTab]);
@@ -247,24 +252,30 @@ const WebhooksPage = () => {
       await loadWebhookEndpoints();
       setShowEndpointModal(false);
     } catch (err) {
-      Modal.error({ title: 'Error', content: err.message });
+      Modal.error({ title: "Error", content: err.message });
     }
   };
 
   const handleTestEndpoint = async (endpointId) => {
     setEndpointLoading((prev) => ({ ...prev, [endpointId]: true }));
     try {
-      const result = await webhookService.testWebhookEndpoint(store.id, endpointId);
+      const result = await webhookService.testWebhookEndpoint(
+        store.id,
+        endpointId,
+      );
       if (result.success) {
-        Modal.success({ title: 'Test Successful', content: 'Webhook endpoint is responding correctly.' });
+        Modal.success({
+          title: "Test Successful",
+          content: "Webhook endpoint is responding correctly.",
+        });
       } else {
         Modal.error({
-          title: 'Test Failed',
-          content: `Status: ${result.statusCode || 'Connection Error'} - ${result.message}`,
+          title: "Test Failed",
+          content: `Status: ${result.statusCode || "Connection Error"} - ${result.message}`,
         });
       }
     } catch (err) {
-      Modal.error({ title: 'Error', content: err.message });
+      Modal.error({ title: "Error", content: err.message });
     } finally {
       setEndpointLoading((prev) => ({ ...prev, [endpointId]: false }));
     }
@@ -275,49 +286,51 @@ const WebhooksPage = () => {
       await webhookService.deleteWebhookEndpoint(store.id, endpointId);
       await loadWebhookEndpoints();
     } catch (err) {
-      Modal.error({ title: 'Error', content: err.message });
+      Modal.error({ title: "Error", content: err.message });
     }
   };
 
   const endpointColumns = [
     {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
     },
     {
-      title: 'URL',
-      dataIndex: 'url',
-      key: 'url',
+      title: "URL",
+      dataIndex: "url",
+      key: "url",
       ellipsis: {
         showTitle: false,
       },
       render: (url) => <Tooltip title={url}>{url}</Tooltip>,
     },
     {
-      title: 'Status',
-      dataIndex: 'isActive',
-      key: 'isActive',
+      title: "Status",
+      dataIndex: "isActive",
+      key: "isActive",
       render: (isActive) => (
-        <Tag color={isActive ? 'green' : 'red'}>{isActive ? 'Active' : 'Inactive'}</Tag>
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Active" : "Inactive"}
+        </Tag>
       ),
     },
     {
-      title: 'Retries',
-      dataIndex: 'maxRetries',
-      key: 'maxRetries',
+      title: "Retries",
+      dataIndex: "maxRetries",
+      key: "maxRetries",
       width: 80,
     },
     {
-      title: 'Timeout',
-      dataIndex: 'timeoutSeconds',
-      key: 'timeoutSeconds',
+      title: "Timeout",
+      dataIndex: "timeoutSeconds",
+      key: "timeoutSeconds",
       render: (seconds) => `${seconds}s`,
       width: 90,
     },
     {
-      title: 'Actions',
-      key: 'actions',
+      title: "Actions",
+      key: "actions",
       width: 150,
       render: (_, record) => (
         <Space size="small">
@@ -351,20 +364,23 @@ const WebhooksPage = () => {
       if (webhookEndpoints.length > 0) {
         const allSubs = [];
         for (const endpoint of webhookEndpoints) {
-          const subs = await webhookService.getWebhookSubscriptions(store.id, endpoint.id);
+          const subs = await webhookService.getWebhookSubscriptions(
+            store.id,
+            endpoint.id,
+          );
           allSubs.push(...subs);
         }
         setSubscriptions(allSubs);
       }
     } catch (err) {
-      console.error('Error loading subscriptions:', err);
+      console.error("Error loading subscriptions:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (activeTab === 'subscriptions') {
+    if (activeTab === "subscriptions") {
       loadSubscriptions();
     }
   }, [activeTab]);
@@ -382,7 +398,7 @@ const WebhooksPage = () => {
       await loadSubscriptions();
       setShowSubscriptionModal(false);
     } catch (err) {
-      Modal.error({ title: 'Error', content: err.message });
+      Modal.error({ title: "Error", content: err.message });
     }
   };
 
@@ -391,45 +407,49 @@ const WebhooksPage = () => {
       await webhookService.deleteWebhookSubscription(store.id, subscriptionId);
       await loadSubscriptions();
     } catch (err) {
-      Modal.error({ title: 'Error', content: err.message });
+      Modal.error({ title: "Error", content: err.message });
     }
   };
 
   const subscriptionColumns = [
     {
-      title: 'Endpoint',
-      dataIndex: ['endpoint', 'name'],
-      key: 'endpointName',
+      title: "Endpoint",
+      dataIndex: ["endpoint", "name"],
+      key: "endpointName",
       render: (_, record) => {
-        const endpoint = webhookEndpoints.find((e) => e.id === record.endpointId);
-        return endpoint?.name || 'Unknown';
+        const endpoint = webhookEndpoints.find(
+          (e) => e.id === record.endpointId,
+        );
+        return endpoint?.name || "Unknown";
       },
     },
     {
-      title: 'Event Type',
-      dataIndex: 'eventType',
-      key: 'eventType',
+      title: "Event Type",
+      dataIndex: "eventType",
+      key: "eventType",
       render: (eventType) => {
         const template = eventTemplates.find((t) => t.eventType === eventType);
         return template ? template.displayName : eventType;
       },
     },
     {
-      title: 'Topic',
-      dataIndex: 'topic',
-      key: 'topic',
+      title: "Topic",
+      dataIndex: "topic",
+      key: "topic",
     },
     {
-      title: 'Status',
-      dataIndex: 'isActive',
-      key: 'isActive',
+      title: "Status",
+      dataIndex: "isActive",
+      key: "isActive",
       render: (isActive) => (
-        <Tag color={isActive ? 'green' : 'red'}>{isActive ? 'Active' : 'Inactive'}</Tag>
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Active" : "Inactive"}
+        </Tag>
       ),
     },
     {
-      title: 'Actions',
-      key: 'actions',
+      title: "Actions",
+      key: "actions",
       width: 100,
       render: (_, record) => (
         <Popconfirm
@@ -453,20 +473,28 @@ const WebhooksPage = () => {
       if (subscriptions.length > 0) {
         const allDeliveries = [];
         for (const sub of subscriptions) {
-          const delivs = await webhookService.getWebhookDeliveries(store.id, sub.id, 20);
+          const delivs = await webhookService.getWebhookDeliveries(
+            store.id,
+            sub.id,
+            20,
+          );
           allDeliveries.push(...delivs);
         }
-        setDeliveries(allDeliveries.sort((a, b) => new Date(b.triggeredAt) - new Date(a.triggeredAt)));
+        setDeliveries(
+          allDeliveries.sort(
+            (a, b) => new Date(b.triggeredAt) - new Date(a.triggeredAt),
+          ),
+        );
       }
     } catch (err) {
-      console.error('Error loading deliveries:', err);
+      console.error("Error loading deliveries:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (activeTab === 'deliveries') {
+    if (activeTab === "deliveries") {
       loadDeliveries();
     }
   }, [activeTab]);
@@ -477,7 +505,7 @@ const WebhooksPage = () => {
       await webhookService.retryWebhookDelivery(store.id, deliveryId);
       await loadDeliveries();
     } catch (err) {
-      Modal.error({ title: 'Error', content: err.message });
+      Modal.error({ title: "Error", content: err.message });
     } finally {
       setDeliveryLoading((prev) => ({ ...prev, [deliveryId]: false }));
     }
@@ -485,27 +513,27 @@ const WebhooksPage = () => {
 
   const deliveryColumns = [
     {
-      title: 'Event Type',
-      dataIndex: 'eventType',
-      key: 'eventType',
+      title: "Event Type",
+      dataIndex: "eventType",
+      key: "eventType",
       width: 150,
     },
     {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
       width: 100,
       render: (status) => {
-        let color = 'default';
+        let color = "default";
         let icon = null;
-        if (status === 'succeeded') {
-          color = 'green';
+        if (status === "succeeded") {
+          color = "green";
           icon = <CheckCircleOutlined />;
-        } else if (status === 'failed') {
-          color = 'red';
+        } else if (status === "failed") {
+          color = "red";
           icon = <CloseCircleOutlined />;
-        } else if (status === 'pending_retry') {
-          color = 'orange';
+        } else if (status === "pending_retry") {
+          color = "orange";
           icon = <ExclamationCircleOutlined />;
         }
         return (
@@ -516,28 +544,28 @@ const WebhooksPage = () => {
       },
     },
     {
-      title: 'Attempts',
-      dataIndex: 'attemptNo',
-      key: 'attemptNo',
+      title: "Attempts",
+      dataIndex: "attemptNo",
+      key: "attemptNo",
       width: 80,
       render: (attempt, record) => `${attempt}/${record.maxRetries}`,
     },
     {
-      title: 'Response Code',
-      dataIndex: 'httpStatusCode',
-      key: 'httpStatusCode',
+      title: "Response Code",
+      dataIndex: "httpStatusCode",
+      key: "httpStatusCode",
       width: 100,
     },
     {
-      title: 'Triggered',
-      dataIndex: 'triggeredAt',
-      key: 'triggeredAt',
+      title: "Triggered",
+      dataIndex: "triggeredAt",
+      key: "triggeredAt",
       width: 150,
       render: (date) => new Date(date).toLocaleString(),
     },
     {
-      title: 'Actions',
-      key: 'actions',
+      title: "Actions",
+      key: "actions",
       width: 150,
       render: (_, record) => (
         <Space size="small">
@@ -551,7 +579,7 @@ const WebhooksPage = () => {
           >
             Details
           </Button>
-          {record.status !== 'succeeded' && (
+          {record.status !== "succeeded" && (
             <Button
               type="link"
               size="small"
@@ -567,8 +595,8 @@ const WebhooksPage = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px' }}>
+    <div style={{ padding: "24px" }}>
+      <div style={{ marginBottom: "24px" }}>
         <h1>APIs & Webhooks</h1>
         <p>Manage API credentials, webhook subscriptions, and delivery logs.</p>
       </div>
@@ -578,11 +606,11 @@ const WebhooksPage = () => {
         onChange={setActiveTab}
         items={[
           {
-            key: 'apiKeys',
-            label: 'API Keys',
+            key: "apiKeys",
+            label: "API Keys",
             children: (
               <div>
-                <div style={{ marginBottom: '16px' }}>
+                <div style={{ marginBottom: "16px" }}>
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
@@ -608,11 +636,11 @@ const WebhooksPage = () => {
             ),
           },
           {
-            key: 'endpoints',
-            label: 'Webhook Endpoints',
+            key: "endpoints",
+            label: "Webhook Endpoints",
             children: (
               <div>
-                <div style={{ marginBottom: '16px' }}>
+                <div style={{ marginBottom: "16px" }}>
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
@@ -638,11 +666,11 @@ const WebhooksPage = () => {
             ),
           },
           {
-            key: 'subscriptions',
-            label: 'Subscriptions',
+            key: "subscriptions",
+            label: "Subscriptions",
             children: (
               <div>
-                <div style={{ marginBottom: '16px' }}>
+                <div style={{ marginBottom: "16px" }}>
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
@@ -655,7 +683,7 @@ const WebhooksPage = () => {
                     <Alert
                       message="Create a webhook endpoint first"
                       type="info"
-                      style={{ marginTop: '16px' }}
+                      style={{ marginTop: "16px" }}
                     />
                   )}
                 </div>
@@ -676,8 +704,8 @@ const WebhooksPage = () => {
             ),
           },
           {
-            key: 'deliveries',
-            label: 'Delivery Logs',
+            key: "deliveries",
+            label: "Delivery Logs",
             children: (
               <div>
                 <Spin spinning={loading}>
@@ -708,15 +736,11 @@ const WebhooksPage = () => {
         }}
         onOk={() => apiKeyForm.submit()}
       >
-        <Form
-          form={apiKeyForm}
-          layout="vertical"
-          onFinish={handleCreateApiKey}
-        >
+        <Form form={apiKeyForm} layout="vertical" onFinish={handleCreateApiKey}>
           <Form.Item
             name="name"
             label="Key Name"
-            rules={[{ required: true, message: 'Key name is required' }]}
+            rules={[{ required: true, message: "Key name is required" }]}
           >
             <Input placeholder="e.g., My Integration" />
           </Form.Item>
@@ -724,7 +748,7 @@ const WebhooksPage = () => {
           <Form.Item
             name="scopes"
             label="Scopes"
-            rules={[{ required: true, message: 'Select at least one scope' }]}
+            rules={[{ required: true, message: "Select at least one scope" }]}
           >
             <Select
               mode="multiple"
@@ -756,7 +780,7 @@ const WebhooksPage = () => {
           <Form.Item
             name="name"
             label="Endpoint Name"
-            rules={[{ required: true, message: 'Name is required' }]}
+            rules={[{ required: true, message: "Name is required" }]}
           >
             <Input placeholder="e.g., My Webhook Receiver" />
           </Form.Item>
@@ -765,8 +789,8 @@ const WebhooksPage = () => {
             name="url"
             label="Endpoint URL"
             rules={[
-              { required: true, message: 'URL is required' },
-              { type: 'url', message: 'Please enter a valid URL' },
+              { required: true, message: "URL is required" },
+              { type: "url", message: "Please enter a valid URL" },
             ]}
           >
             <Input placeholder="https://example.com/webhooks" />
@@ -780,11 +804,7 @@ const WebhooksPage = () => {
             <Input />
           </Form.Item>
 
-          <Form.Item
-            name="maxRetries"
-            label="Max Retries"
-            initialValue={5}
-          >
+          <Form.Item name="maxRetries" label="Max Retries" initialValue={5}>
             <Input type="number" min={1} max={10} />
           </Form.Item>
 
@@ -816,7 +836,7 @@ const WebhooksPage = () => {
           <Form.Item
             name="endpointId"
             label="Webhook Endpoint"
-            rules={[{ required: true, message: 'Select an endpoint' }]}
+            rules={[{ required: true, message: "Select an endpoint" }]}
           >
             <Select
               placeholder="Select endpoint"
@@ -830,7 +850,7 @@ const WebhooksPage = () => {
           <Form.Item
             name="eventType"
             label="Event Type"
-            rules={[{ required: true, message: 'Select an event type' }]}
+            rules={[{ required: true, message: "Select an event type" }]}
           >
             <Select
               placeholder="Select event type"
@@ -841,11 +861,7 @@ const WebhooksPage = () => {
             />
           </Form.Item>
 
-          <Form.Item
-            name="topic"
-            label="Topic"
-            initialValue="all"
-          >
+          <Form.Item name="topic" label="Topic" initialValue="all">
             <Input placeholder="e.g., all, specific-id" />
           </Form.Item>
         </Form>
@@ -861,15 +877,19 @@ const WebhooksPage = () => {
       >
         {selectedDelivery && (
           <div>
-            <Descriptions size="small" column={1} style={{ marginBottom: '24px' }}>
+            <Descriptions
+              size="small"
+              column={1}
+              style={{ marginBottom: "24px" }}
+            >
               <Descriptions.Item label="Status">
                 <Tag
                   color={
-                    selectedDelivery.status === 'succeeded'
-                      ? 'green'
-                      : selectedDelivery.status === 'failed'
-                      ? 'red'
-                      : 'orange'
+                    selectedDelivery.status === "succeeded"
+                      ? "green"
+                      : selectedDelivery.status === "failed"
+                        ? "red"
+                        : "orange"
                   }
                 >
                   {selectedDelivery.status}
@@ -882,7 +902,7 @@ const WebhooksPage = () => {
                 {selectedDelivery.attemptNo} / {selectedDelivery.maxRetries}
               </Descriptions.Item>
               <Descriptions.Item label="HTTP Status">
-                {selectedDelivery.httpStatusCode || 'N/A'}
+                {selectedDelivery.httpStatusCode || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Triggered">
                 {new Date(selectedDelivery.triggeredAt).toLocaleString()}
@@ -903,7 +923,7 @@ const WebhooksPage = () => {
               <Card
                 size="small"
                 title="Error Message"
-                style={{ marginBottom: '16px' }}
+                style={{ marginBottom: "16px" }}
                 type="inner"
               >
                 <code>{selectedDelivery.errorMessage}</code>
@@ -914,16 +934,16 @@ const WebhooksPage = () => {
               <Card
                 size="small"
                 title="Response Body"
-                style={{ marginBottom: '16px' }}
+                style={{ marginBottom: "16px" }}
                 type="inner"
               >
-                <code style={{ whiteSpace: 'pre-wrap', fontSize: '12px' }}>
+                <code style={{ whiteSpace: "pre-wrap", fontSize: "12px" }}>
                   {selectedDelivery.responseBody}
                 </code>
               </Card>
             )}
 
-            {selectedDelivery.status !== 'succeeded' && (
+            {selectedDelivery.status !== "succeeded" && (
               <Button
                 type="primary"
                 block

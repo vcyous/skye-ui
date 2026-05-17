@@ -3,7 +3,9 @@
  * Handles company management, buyer roles, wholesale pricing, and B2B order workflows
  */
 
-import { getStoreContext, normalizeError, supabase } from "./api.js";
+import { supabase } from "./supabaseClient.js";
+import { normalizeError } from "./utils/errorUtils.js";
+import { getStoreContext } from "./storeService.js";
 
 // ============================================================================
 // COMPANY MANAGEMENT

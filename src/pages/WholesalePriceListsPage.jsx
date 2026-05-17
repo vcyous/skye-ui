@@ -19,12 +19,12 @@ import {
   message,
 } from "antd";
 import { useEffect, useMemo, useState } from "react";
-import { getProducts } from "../services/api.js";
 import {
   addProductToWholesalePriceList,
   createWholesalePriceList,
+  getProducts,
   getWholesalePriceLists,
-} from "../services/b2bWholesaleService.js";
+} from "../services/api.js";
 
 export default function WholesalePriceListsPage() {
   const [priceLists, setPriceLists] = useState([]);
