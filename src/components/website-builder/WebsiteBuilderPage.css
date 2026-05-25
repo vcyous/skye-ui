@@ -1,0 +1,426 @@
+/* =========================================================================
+   Website Builder — Scoped Styles
+   ========================================================================= */
+
+/* ── Root Container ── */
+.wb-root {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
+  min-height: 0;
+}
+
+/* ── Action Bar ── */
+.wb-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #fff;
+  border: 1px solid #D1DBDB;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.wb-action-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.wb-action-bar-divider {
+  width: 1px;
+  height: 32px;
+  background: #D1DBDB;
+  flex-shrink: 0;
+}
+
+.wb-page-title {
+  margin: 0 !important;
+  font-size: 16px !important;
+  line-height: 1.2 !important;
+}
+
+.wb-page-subtitle {
+  font-size: 12px !important;
+}
+
+.wb-action-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wb-back-btn {
+  color: #6B7280 !important;
+  font-weight: 600;
+}
+
+/* ── Split Layout ── */
+.wb-split {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 12px;
+}
+
+/* ── Left Panel (Controls) ── */
+.wb-left-panel {
+  width: 40%;
+  min-width: 320px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #D1DBDB;
+  border-radius: 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #D1DBDB transparent;
+}
+
+.wb-left-panel::-webkit-scrollbar {
+  width: 5px;
+}
+
+.wb-left-panel::-webkit-scrollbar-thumb {
+  background: #D1DBDB;
+  border-radius: 10px;
+}
+
+.wb-section {
+  padding: 18px 18px 14px;
+}
+
+.wb-section-title {
+  display: block;
+  margin-bottom: 14px !important;
+  font-size: 13px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #073A33 !important;
+}
+
+.wb-panel-divider {
+  height: 1px;
+  background: #E5E7EB;
+  margin: 0 18px;
+}
+
+/* ── Template Grid ── */
+.wb-template-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.wb-template-card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  background: #fff;
+  border: 2px solid #E5E7EB;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  outline: none;
+  font-family: inherit;
+}
+
+.wb-template-card:hover {
+  border-color: #A3C9C2;
+  box-shadow: 0 4px 16px rgba(13, 92, 83, 0.1);
+  transform: translateY(-2px);
+}
+
+.wb-template-card--active {
+  border-color: #0D5C53 !important;
+  box-shadow: 0 0 0 3px rgba(13, 92, 83, 0.15), 0 4px 16px rgba(13, 92, 83, 0.12) !important;
+}
+
+.wb-template-thumb {
+  position: relative;
+  height: 100px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.wb-template-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 18px;
+  color: #fff;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+  z-index: 2;
+}
+
+/* ── Mini wireframe inside thumbnail ── */
+.wb-template-wireframe {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 60%;
+  opacity: 0.35;
+}
+
+.wb-wf-bar {
+  height: 4px;
+  background: #fff;
+  border-radius: 2px;
+}
+
+.wb-wf-hero {
+  height: 22px;
+  background: #fff;
+  border-radius: 3px;
+}
+
+.wb-wf-row {
+  display: flex;
+  gap: 4px;
+}
+
+.wb-wf-box {
+  flex: 1;
+  height: 16px;
+  background: #fff;
+  border-radius: 2px;
+}
+
+.wb-template-meta {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wb-template-name {
+  font-size: 13px !important;
+}
+
+.wb-template-desc {
+  font-size: 11px !important;
+  line-height: 1.35 !important;
+}
+
+/* ── Customization Panel ── */
+.wb-customization-collapse .ant-collapse-header {
+  padding: 10px 0 !important;
+}
+
+.wb-customization-collapse .ant-collapse-content-box {
+  padding: 0 0 8px !important;
+}
+
+.wb-collapse-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.wb-collapse-count {
+  font-size: 11px;
+  font-weight: 400;
+  color: #9CA3AF;
+  margin-left: auto;
+}
+
+.wb-customization-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wb-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wb-field-label {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #6B7280 !important;
+}
+
+.wb-color-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+}
+
+.wb-color-field-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wb-color-hex {
+  font-size: 11px !important;
+  color: #9CA3AF !important;
+}
+
+/* ── Right Panel (Preview) ── */
+.wb-right-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #D1DBDB;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.wb-preview-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Preview Toolbar ── */
+.wb-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  border-bottom: 1px solid #E5E7EB;
+  background: #FAFBFC;
+  flex-shrink: 0;
+}
+
+.wb-preview-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wb-preview-dim {
+  font-size: 12px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.wb-preview-fit-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #D1DBDB;
+  border-radius: 6px;
+  background: #fff;
+  color: #6B7280;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 13px;
+}
+
+.wb-preview-fit-btn:hover {
+  border-color: #0D5C53;
+  color: #0D5C53;
+  background: #E8F3F1;
+}
+
+/* ── Preview Viewport ── */
+.wb-preview-viewport-wrapper {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  background:
+    repeating-conic-gradient(#F3F4F6 0% 25%, #fff 0% 50%) 0 0 / 16px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #D1DBDB transparent;
+}
+
+.wb-preview-viewport-wrapper::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.wb-preview-viewport-wrapper::-webkit-scrollbar-thumb {
+  background: #D1DBDB;
+  border-radius: 10px;
+}
+
+.wb-preview-viewport {
+  border: 1px solid #D1DBDB;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  background: #fff;
+  flex-shrink: 0;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wb-preview-viewport--mobile {
+  border-radius: 24px;
+  border-width: 3px;
+  border-color: #1F2937;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.wb-preview-empty {
+  display: grid;
+  place-items: center;
+  min-height: 400px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 960px) {
+  .wb-split {
+    flex-direction: column;
+  }
+
+  .wb-left-panel {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    max-height: 45vh;
+  }
+
+  .wb-right-panel {
+    min-height: 50vh;
+  }
+
+  .wb-template-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .wb-action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wb-action-bar-right {
+    justify-content: flex-end;
+  }
+
+  .wb-template-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .wb-preview-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
