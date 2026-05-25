@@ -7,10 +7,10 @@
  * Depends on: supabaseClient, utils/errorUtils, utils/dbUtils, storeService
  */
 
-import { supabase } from "./supabaseClient.js";
-import { normalizeError, isMissingTableError } from "./utils/errorUtils.js";
-import { tableExists } from "./utils/dbUtils.js";
 import { getStoreContext } from "./storeService.js";
+import { supabase } from "./supabaseClient.js";
+import { tableExists } from "./utils/dbUtils.js";
+import { isMissingTableError, normalizeError } from "./utils/errorUtils.js";
 
 export async function getDashboardSummary() {
   const { store } = await getStoreContext();
@@ -262,7 +262,10 @@ async function writeAnalyticsReportCache(
   }
 }
 
-export async function invalidateAnalyticsReportCache(storeId, reportType = null) {
+export async function invalidateAnalyticsReportCache(
+  storeId: string,
+  reportType: string | null = null,
+) {
   if (!(await tableExists("analytics_report_cache"))) {
     return;
   }

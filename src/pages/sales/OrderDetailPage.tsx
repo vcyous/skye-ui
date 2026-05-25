@@ -1,46 +1,84 @@
-// @ts-nocheck
+import {
+  ArrowLeftOutlined,
+  CarOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+} from "@ant-design/icons";
 import {
   Alert,
+  App,
+  Badge,
   Button,
   Card,
   Col,
-  Descriptions,
+  Divider,
+  Form,
   Input,
   List,
+  Modal,
   Row,
   Select,
   Space,
   Spin,
   Table,
   Tag,
+  Timeline,
   Typography,
-  message,
 } from "antd";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { useLocalization } from "../../context/LocalizationContext.jsx";
+import { Link, useParams } from "react-router-dom";
+import { useLocalization } from "../../context/LocalizationContext";
 import {
   addOrderInternalNote,
+  createShipment,
   getOrderDetail,
+  getOrderFulfillmentItems,
   getOrderLifecycleOptions,
   updateOrderLifecycleState,
-} from "../../services/api.js";
+} from "../../services/api";
+import type { OrderDetail } from "../../services/orderService";
+import type { FulfillmentItem } from "../../services/shippingService";
+
+interface ShipmentFormValues {
+  carrier: string;
+  trackingNumber: string;
+  note?: string;
+}
+
+const FULFILLMENT_STATUS_BADGE: Record<string, "success" | "warning" | "processing" | "default"> = {
+  fulfilled: "success",
+  unfulfilled: "warning",
+  partial: "processing",
+  shipped: "processing",
+};
 
 export default function OrderDetailPage() {
-  const { formatCurrency, formatDate } = useLocalization();
-  const { orderId } = useParams();
-  const [state, setState] = useState({ loading: true, data: null, error: "" });
-  const [saving, setSaving] = useState(false);
-  const [internalNote, setInternalNote] = useState("");
+  const { formatCurrency } = useLocalization();
+  const { message } = App.useApp();
+  const { orderId } = useParams<{ orderId: string }>();
+  const [state, setState] = useState<{
+    loading: boolean;
+    data: OrderDetail | null;
+    error: string;
+  }>({ loading: true, data: null, error: "" });
+  const [saving, setSaving] = useState<boolean>(false);
+  const [internalNote, setInternalNote] = useState<string>("");
+  const [fulfillmentItems, setFulfillmentItems] = useState<FulfillmentItem[]>([]);
+  const [shipmentModalOpen, setShipmentModalOpen] = useState<boolean>(false);
+  const [isShipping, setIsShipping] = useState<boolean>(false);
+  const [shipmentForm] = Form.useForm<ShipmentFormValues>();
 
   const loadOrder = () => {
-    getOrderDetail(orderId)
-      .then((data) => setState({ loading: false, data, error: "" }))
-      .catch((err) =>
+    Promise.all([getOrderDetail(orderId!), getOrderFulfillmentItems(orderId!)])
+      .then(([orderData, fulfillment]) => {
+        setState({ loading: false, data: orderData as OrderDetail, error: "" });
+        setFulfillmentItems(fulfillment as FulfillmentItem[]);
+      })
+      .catch((err: unknown) =>
         setState({
           loading: false,
           data: null,
-          error: err.message || "Failed to load order.",
+          error: err instanceof Error ? err.message : "Failed to load order.",
         }),
       );
   };
@@ -50,14 +88,14 @@ export default function OrderDetailPage() {
     loadOrder();
   }, [orderId]);
 
-  async function applyLifecyclePatch(patch) {
+  async function applyLifecyclePatch(patch: Record<string, string>) {
     setSaving(true);
     try {
-      await updateOrderLifecycleState(orderId, patch);
+      await updateOrderLifecycleState(orderId!, patch);
       await loadOrder();
-      message.success("Order lifecycle updated.");
-    } catch (err) {
-      message.error(err.message || "Failed to update order lifecycle.");
+      message.success("Order updated.");
+    } catch (err: unknown) {
+      message.error(err instanceof Error ? err.message : "Failed to update order.");
     } finally {
       setSaving(false);
     }
@@ -65,28 +103,50 @@ export default function OrderDetailPage() {
 
   async function submitInternalNote() {
     const text = internalNote.trim();
-    if (!text) {
-      message.warning("Please enter an internal note first.");
-      return;
-    }
-
+    if (!text) return;
     setSaving(true);
     try {
-      await addOrderInternalNote(orderId, text);
+      await addOrderInternalNote(orderId!, text);
       setInternalNote("");
       await loadOrder();
-      message.success("Internal note added.");
-    } catch (err) {
-      message.error(err.message || "Failed to add internal note.");
+      message.success("Note added.");
+    } catch (err: unknown) {
+      message.error(err instanceof Error ? err.message : "Failed to add note.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onCreateShipment(values: ShipmentFormValues) {
+    if (!orderId) return;
+    setIsShipping(true);
+    try {
+      const unshipped = fulfillmentItems.filter((item) => item.remainingQty > 0);
+      await createShipment({
+        orderId,
+        carrier: values.carrier,
+        trackingNumber: values.trackingNumber,
+        note: values.note,
+        items: unshipped.map((item) => ({
+          orderItemId: item.id,
+          quantity: item.remainingQty,
+        })),
+      });
+      setShipmentModalOpen(false);
+      shipmentForm.resetFields();
+      message.success("Shipment created.");
+      loadOrder();
+    } catch (err: unknown) {
+      message.error(err instanceof Error ? err.message : "Failed to create shipment.");
+    } finally {
+      setIsShipping(false);
     }
   }
 
   if (state.loading) {
     return (
       <Card>
-        <Spin />
+        <Space><Spin /><Typography.Text>Loading order...</Typography.Text></Space>
       </Card>
     );
   }
@@ -97,387 +157,393 @@ export default function OrderDetailPage() {
 
   const order = state.data;
   const lifecycleOptions = getOrderLifecycleOptions({
-    status: order.status,
-    paymentStatus: order.paymentStatus,
-    fulfillmentStatus: order.fulfillmentStatus,
+    status: order?.status,
+    paymentStatus: order?.paymentStatus,
+    fulfillmentStatus: order?.fulfillmentStatus,
   });
-  const columns = [
-    { title: "Product", dataIndex: "productTitle", key: "productTitle" },
-    { title: "Variant", dataIndex: "variantTitle", key: "variantTitle" },
-    { title: "SKU", dataIndex: "sku", key: "sku" },
-    { title: "Qty", dataIndex: "quantity", key: "quantity" },
+
+  const hasUnshipped = fulfillmentItems.some((item) => item.remainingQty > 0);
+
+  const itemColumns = [
     {
-      title: "Unit Price",
-      dataIndex: "unitPrice",
-      key: "unitPrice",
-      render: (value) => formatCurrency(value),
+      title: "Product",
+      key: "product",
+      render: (_: unknown, record: OrderDetail["items"][0]) => (
+        <Space direction="vertical" size={0}>
+          <Typography.Text strong style={{ fontSize: 13 }}>{record.productTitle}</Typography.Text>
+          {record.variantTitle && (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>{record.variantTitle}</Typography.Text>
+          )}
+          {record.sku && (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>SKU: {record.sku}</Typography.Text>
+          )}
+        </Space>
+      ),
     },
     {
-      title: "Line Total",
-      dataIndex: "lineTotal",
-      key: "lineTotal",
-      render: (value) => formatCurrency(value),
+      title: "Qty",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 60,
+      render: (value: number) => <Typography.Text style={{ fontSize: 13 }}>{value}</Typography.Text>,
+    },
+    {
+      title: "Price",
+      key: "price",
+      width: 100,
+      render: (_: unknown, record: OrderDetail["items"][0]) => (
+        <Typography.Text style={{ fontSize: 13 }}>
+          {formatCurrency(record.unitPrice)}
+        </Typography.Text>
+      ),
+    },
+    {
+      title: "Total",
+      key: "total",
+      width: 110,
+      render: (_: unknown, record: OrderDetail["items"][0]) => (
+        <Typography.Text strong style={{ fontSize: 13 }}>
+          {formatCurrency(record.lineTotal)}
+        </Typography.Text>
+      ),
+    },
+    {
+      title: "Fulfillment",
+      key: "fulfillment",
+      width: 120,
+      render: (_: unknown, record: OrderDetail["items"][0]) => {
+        const fi = fulfillmentItems.find((item) => item.id === record.id);
+        if (!fi) return <Tag>—</Tag>;
+        return fi.remainingQty === 0 ? (
+          <Tag icon={<CheckCircleOutlined />} color="success">Fulfilled</Tag>
+        ) : (
+          <Tag icon={<ClockCircleOutlined />} color="warning">
+            {fi.allocatedQty}/{fi.orderedQty} shipped
+          </Tag>
+        );
+      },
     },
   ];
 
   return (
     <section style={{ display: "grid", gap: 16 }}>
-      <header>
-        <Typography.Title level={3} className="page-title">
-          Order {order.orderNumber}
-        </Typography.Title>
-        <Typography.Text className="page-subtitle">
-          Track customer, items, totals, and timeline in one place.
-        </Typography.Text>
-      </header>
+      {/* Page header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <Link to="/orders">
+          <Button type="text" icon={<ArrowLeftOutlined />} style={{ padding: "0 8px" }} />
+        </Link>
+        <div style={{ flex: 1 }}>
+          <Space align="center">
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              Order #{order?.orderNumber}
+            </Typography.Title>
+            <Badge
+              status={order?.paymentStatus === "paid" ? "success" : "warning"}
+              text={
+                <Typography.Text style={{ fontSize: 13, textTransform: "capitalize" }}>
+                  {order?.paymentStatus || "pending"}
+                </Typography.Text>
+              }
+            />
+            <Badge
+              status={FULFILLMENT_STATUS_BADGE[order?.fulfillmentStatus || "unfulfilled"] ?? "default"}
+              text={
+                <Typography.Text style={{ fontSize: 13, textTransform: "capitalize" }}>
+                  {order?.fulfillmentStatus || "unfulfilled"}
+                </Typography.Text>
+              }
+            />
+          </Space>
+          {order?.createdAt && (
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              {new Date(order.createdAt).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Typography.Text>
+          )}
+        </div>
+        {hasUnshipped && (
+          <Button type="primary" icon={<CarOutlined />} onClick={() => setShipmentModalOpen(true)}>
+            Create shipment
+          </Button>
+        )}
+      </div>
 
       <Row gutter={[16, 16]}>
+        {/* Left column — main content */}
         <Col xs={24} lg={16}>
-          <Card title="Lifecycle Controls" style={{ marginBottom: 16 }}>
-            <Space direction="vertical" size={12} style={{ width: "100%" }}>
-              <Space wrap>
-                <Typography.Text strong>Order Status</Typography.Text>
+          {/* Items card */}
+          <Card
+            title="Items"
+            bodyStyle={{ padding: 0 }}
+            style={{ marginBottom: 12 }}
+            extra={!hasUnshipped && <Tag color="success" icon={<CheckCircleOutlined />}>Fully shipped</Tag>}
+          >
+            <Table
+              rowKey="id"
+              columns={itemColumns}
+              dataSource={order?.items ?? []}
+              pagination={false}
+              size="middle"
+            />
+            {/* Order totals */}
+            <div style={{ padding: "12px 16px", borderTop: "1px solid #f0f0f0" }}>
+              {[
+                { label: "Subtotal", value: order?.displaySubtotalAmount ?? order?.subtotalAmount ?? 0 },
+                { label: "Shipping", value: order?.displayShippingAmount ?? order?.shippingAmount ?? 0 },
+                { label: "Discount", value: -(order?.displayDiscountAmount ?? order?.discountAmount ?? 0) },
+                { label: "Tax", value: order?.displayTaxAmount ?? order?.taxAmount ?? 0 },
+              ].map((row) => (
+                <div key={row.label} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>{row.label}</Typography.Text>
+                  <Typography.Text style={{ fontSize: 13 }}>
+                    {formatCurrency(Math.abs(row.value), order?.displayCurrencyCode || "USD")}
+                  </Typography.Text>
+                </div>
+              ))}
+              <Divider style={{ margin: "8px 0" }} />
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography.Text strong>Total</Typography.Text>
+                <Typography.Text strong style={{ fontSize: 15 }}>
+                  {formatCurrency(
+                    order?.displayTotalAmount ?? order?.totalAmount ?? 0,
+                    order?.displayCurrencyCode || order?.currencyCode || "USD",
+                  )}
+                </Typography.Text>
+              </div>
+            </div>
+          </Card>
+
+          {/* Payment status card */}
+          <Card title="Payment" style={{ marginBottom: 12 }}>
+            <Space direction="vertical" size={8} style={{ width: "100%" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Typography.Text style={{ fontSize: 13 }}>Payment status</Typography.Text>
                 <Select
-                  style={{ width: 240 }}
-                  value={order.status}
+                  size="small"
+                  value={order?.paymentStatus}
                   disabled={saving}
                   onChange={(value) =>
-                    applyLifecyclePatch({
-                      status: value,
-                      note: `Order status changed from ${order.status} to ${value}`,
-                    })
+                    applyLifecyclePatch({ paymentStatus: value, note: `Payment status → ${value}` })
                   }
-                  options={lifecycleOptions.status.map((item) => ({
-                    value: item,
-                    label: item,
-                  }))}
+                  options={lifecycleOptions.paymentStatus.map((item) => ({ value: item, label: item }))}
+                  style={{ width: 180 }}
                 />
-              </Space>
-              <Space wrap>
-                <Typography.Text strong>Payment Status</Typography.Text>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Typography.Text style={{ fontSize: 13 }}>Order status</Typography.Text>
                 <Select
-                  style={{ width: 240 }}
-                  value={order.paymentStatus}
+                  size="small"
+                  value={order?.status}
                   disabled={saving}
                   onChange={(value) =>
-                    applyLifecyclePatch({
-                      paymentStatus: value,
-                      note: `Payment status changed to ${value}`,
-                    })
+                    applyLifecyclePatch({ status: value, note: `Order status → ${value}` })
                   }
-                  options={lifecycleOptions.paymentStatus.map((item) => ({
-                    value: item,
-                    label: item,
-                  }))}
+                  options={lifecycleOptions.status.map((item) => ({ value: item, label: item }))}
+                  style={{ width: 180 }}
                 />
-              </Space>
-              <Space wrap>
-                <Typography.Text strong>Fulfillment Status</Typography.Text>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Typography.Text style={{ fontSize: 13 }}>Fulfillment status</Typography.Text>
                 <Select
-                  style={{ width: 240 }}
-                  value={order.fulfillmentStatus || "unfulfilled"}
+                  size="small"
+                  value={order?.fulfillmentStatus || "unfulfilled"}
                   disabled={saving}
                   onChange={(value) =>
-                    applyLifecyclePatch({
-                      fulfillmentStatus: value,
-                      note: `Fulfillment status changed to ${value}`,
-                    })
+                    applyLifecyclePatch({ fulfillmentStatus: value, note: `Fulfillment → ${value}` })
                   }
-                  options={lifecycleOptions.fulfillmentStatus.map((item) => ({
-                    value: item,
-                    label: item,
-                  }))}
+                  options={lifecycleOptions.fulfillmentStatus.map((item) => ({ value: item, label: item }))}
+                  style={{ width: 180 }}
                 />
-              </Space>
-              <Input.TextArea
-                rows={3}
-                value={internalNote}
-                onChange={(event) => setInternalNote(event.target.value)}
-                placeholder="Add internal note to timeline"
-              />
-              <Button onClick={submitInternalNote} loading={saving}>
-                Add Internal Note
-              </Button>
+              </div>
             </Space>
           </Card>
 
-          <Card title="Order Items">
-            <Table
-              rowKey="id"
-              columns={columns}
-              dataSource={order.items}
-              pagination={false}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} lg={8}>
-          <Card title="Order Summary">
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label="Status">
-                <Tag color="blue">{order.status}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Payment">
-                <Tag>{order.paymentStatus}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Fulfillment">
-                <Tag color="green">
-                  {order.fulfillmentStatus || "unfulfilled"}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Customer">
-                {order.customerName}
-              </Descriptions.Item>
-              <Descriptions.Item label="Email">
-                {order.customerEmail || "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Phone">
-                {order.customerPhone || "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Subtotal">
-                {formatCurrency(
-                  order.displaySubtotalAmount ?? order.subtotalAmount,
-                  order.displayCurrencyCode || order.currencyCode || "USD",
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="Discount">
-                {formatCurrency(
-                  order.displayDiscountAmount ?? order.discountAmount,
-                  order.displayCurrencyCode || order.currencyCode || "USD",
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="Shipping">
-                {formatCurrency(
-                  order.displayShippingAmount ?? order.shippingAmount,
-                  order.displayCurrencyCode || order.currencyCode || "USD",
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="Tax">
-                {formatCurrency(
-                  order.displayTaxAmount ?? order.taxAmount,
-                  order.displayCurrencyCode || order.currencyCode || "USD",
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="Total">
-                {formatCurrency(
-                  order.displayTotalAmount ?? order.totalAmount,
-                  order.displayCurrencyCode || order.currencyCode || "USD",
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="Display Currency">
-                <Tag>
-                  {order.displayCurrencyCode || order.currencyCode || "USD"}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="FX Snapshot">
-                {order.currencySnapshot
-                  ? `${order.currencySnapshot.fxRate} (${order.currencySnapshot.fxSource})`
-                  : "Not available"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Subscription Context">
-                {order.subscriptionContext ? (
-                  <Space direction="vertical" size={0}>
-                    <Typography.Text>
-                      {order.subscriptionContext.planName || "Subscription"}
-                    </Typography.Text>
-                    <Space>
-                      <Tag>
-                        {order.subscriptionContext.isRenewal
-                          ? "renewal"
-                          : "first charge"}
-                      </Tag>
-                      <Tag>{order.subscriptionContext.status}</Tag>
-                    </Space>
-                    <Typography.Text type="secondary">
-                      Next billing:{" "}
-                      {order.subscriptionContext.nextBillingAt
-                        ? formatDate(order.subscriptionContext.nextBillingAt, {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })
-                        : "-"}
-                    </Typography.Text>
-                  </Space>
-                ) : (
-                  "Not a subscription order"
-                )}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-        </Col>
-      </Row>
+          {/* Shipments + Transactions */}
+          <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+            <Col xs={24} md={12}>
+              <Card title="Shipments" bodyStyle={{ padding: 0 }}>
+                <List
+                  dataSource={order?.shipments as Array<Record<string, unknown>>}
+                  locale={{ emptyText: <div style={{ padding: "16px", textAlign: "center" }}><Typography.Text type="secondary">No shipments yet</Typography.Text></div> }}
+                  renderItem={(item: Record<string, unknown>) => (
+                    <List.Item key={item.id as string} style={{ padding: "10px 16px" }}>
+                      <List.Item.Meta
+                        title={<Typography.Text strong style={{ fontSize: 13 }}>{item.carrier as string || "Unknown"} · {item.status as string}</Typography.Text>}
+                        description={<Typography.Text type="secondary" style={{ fontSize: 12 }}>Tracking: {item.trackingNumber as string || "—"}</Typography.Text>}
+                      />
+                    </List.Item>
+                  )}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} md={12}>
+              <Card title="Transactions" bodyStyle={{ padding: 0 }}>
+                <List
+                  dataSource={order?.transactions as Array<Record<string, unknown>>}
+                  locale={{ emptyText: <div style={{ padding: "16px", textAlign: "center" }}><Typography.Text type="secondary">No transactions yet</Typography.Text></div> }}
+                  renderItem={(item: Record<string, unknown>) => (
+                    <List.Item key={item.id as string} style={{ padding: "10px 16px" }}>
+                      <List.Item.Meta
+                        title={<Typography.Text strong style={{ fontSize: 13 }}>{item.paymentMethodName as string} · {formatCurrency(item.amount as number)}</Typography.Text>}
+                        description={<Tag color={item.status === "success" ? "success" : "default"}>{item.status as string}</Tag>}
+                      />
+                    </List.Item>
+                  )}
+                />
+              </Card>
+            </Col>
+          </Row>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <Card title="Shipping Address">
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label="Name">
-                {order.shippingAddress.fullName || "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Address">
-                {order.shippingAddress.addressLine1 || "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="City">
-                {order.shippingAddress.city || "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Postal Code">
-                {order.shippingAddress.postalCode || "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Country">
-                {order.shippingAddress.country || "-"}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Timeline">
-            <List
-              dataSource={order.timeline}
-              renderItem={(item) => (
-                <List.Item key={item.id}>
-                  <List.Item.Meta
-                    title={`${item.status} · ${formatDate(item.createdAt, { dateStyle: "medium", timeStyle: "short" })}`}
-                    description={item.note || "No note"}
-                  />
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={8}>
-          <Card title="Invoice">
-            {order.invoice ? (
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Invoice Number">
-                  {order.invoice.invoiceNumber}
-                </Descriptions.Item>
-                <Descriptions.Item label="Subtotal">
-                  {formatCurrency(
-                    order.invoice.subtotal,
-                    order.displayCurrencyCode || order.currencyCode || "USD",
-                  )}
-                </Descriptions.Item>
-                <Descriptions.Item label="Taxable Amount">
-                  {formatCurrency(
-                    order.invoice.taxableAmount,
-                    order.displayCurrencyCode || order.currencyCode || "USD",
-                  )}
-                </Descriptions.Item>
-                <Descriptions.Item label="Tax Behavior">
-                  <Tag
-                    color={
-                      order.invoice.taxBehavior === "inclusive"
-                        ? "gold"
-                        : "blue"
-                    }
-                  >
-                    {order.invoice.taxBehavior}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Tax Rate">
-                  {Number(order.invoice.taxRate || 0).toFixed(2)}%
-                </Descriptions.Item>
-                <Descriptions.Item label="Tax">
-                  {formatCurrency(
-                    order.invoice.taxAmount,
-                    order.displayCurrencyCode || order.currencyCode || "USD",
-                  )}
-                </Descriptions.Item>
-                <Descriptions.Item label="Discount">
-                  {formatCurrency(
-                    order.invoice.discountAmount,
-                    order.displayCurrencyCode || order.currencyCode || "USD",
-                  )}
-                </Descriptions.Item>
-                <Descriptions.Item label="Invoice Status">
-                  <Tag>{order.invoice.status || "issued"}</Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Total">
-                  {formatCurrency(
-                    order.invoice.total,
-                    order.displayCurrencyCode || order.currencyCode || "USD",
-                  )}
-                </Descriptions.Item>
-              </Descriptions>
+          {/* Timeline */}
+          <Card title="Order timeline">
+            {(order?.timeline ?? []).length === 0 ? (
+              <Typography.Text type="secondary">No events yet.</Typography.Text>
             ) : (
-              <Typography.Text type="secondary">
-                No invoice generated yet.
+              <Timeline
+                items={(order?.timeline ?? []).map((event) => ({
+                  color:
+                    event.status === "shipped" ? "green"
+                    : event.status === "delivered" ? "blue"
+                    : event.status === "cancelled" ? "red"
+                    : "gray",
+                  children: (
+                    <div>
+                      <Typography.Text strong style={{ textTransform: "capitalize", fontSize: 13 }}>
+                        {event.status.replace(/_/g, " ")}
+                      </Typography.Text>
+                      {event.note && (
+                        <Typography.Text type="secondary" style={{ fontSize: 13 }}> — {event.note}</Typography.Text>
+                      )}
+                      <br />
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        {new Date(event.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                      </Typography.Text>
+                    </div>
+                  ),
+                }))}
+              />
+            )}
+            <Divider style={{ marginBottom: 12 }} />
+            <Space.Compact style={{ width: "100%" }}>
+              <Input
+                value={internalNote}
+                onChange={(e) => setInternalNote(e.target.value)}
+                placeholder="Leave a comment..."
+                onPressEnter={submitInternalNote}
+              />
+              <Button onClick={submitInternalNote} loading={saving}>
+                Post
+              </Button>
+            </Space.Compact>
+          </Card>
+        </Col>
+
+        {/* Right sidebar */}
+        <Col xs={24} lg={8}>
+          {/* Customer */}
+          <Card title="Customer" style={{ marginBottom: 12 }}>
+            <Typography.Text strong style={{ fontSize: 13 }}>
+              {order?.customerName || "Guest"}
+            </Typography.Text>
+            <br />
+            {order?.customerEmail && (
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                {order.customerEmail}
               </Typography.Text>
             )}
+            {order?.customerPhone && (
+              <>
+                <br />
+                <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                  {order.customerPhone}
+                </Typography.Text>
+              </>
+            )}
           </Card>
-        </Col>
-        <Col xs={24} lg={8}>
-          <Card title="Transactions">
-            <List
-              dataSource={order.transactions}
-              locale={{ emptyText: "No transactions yet." }}
-              renderItem={(item) => (
-                <List.Item key={item.id}>
-                  <List.Item.Meta
-                    title={`${item.paymentMethodName} · ${formatCurrency(item.amount, item.currencyCode || order.displayCurrencyCode || "USD")}`}
-                    description={`${item.status} · ref ${item.gatewayTransactionId || "-"} · attempts ${item.attemptCount || 0}${
-                      item.failureCode ? ` · ${item.failureCode}` : ""
-                    }`}
-                  />
-                </List.Item>
-              )}
-            />
+
+          {/* Shipping address */}
+          <Card title="Shipping address" style={{ marginBottom: 12 }}>
+            {order?.shippingAddress ? (
+              <Space direction="vertical" size={2}>
+                <Typography.Text strong style={{ fontSize: 13 }}>
+                  {order.shippingAddress.fullName}
+                </Typography.Text>
+                <Typography.Text style={{ fontSize: 13 }}>{order.shippingAddress.addressLine1}</Typography.Text>
+                {Boolean(order.shippingAddress.addressLine2) && (
+                  <Typography.Text style={{ fontSize: 13 }}>{String(order.shippingAddress.addressLine2)}</Typography.Text>
+                )}
+                <Typography.Text style={{ fontSize: 13 }}>
+                  {[order.shippingAddress.city, order.shippingAddress.postalCode].filter(Boolean).join(", ")}
+                </Typography.Text>
+                <Typography.Text style={{ fontSize: 13 }}>{order.shippingAddress.country}</Typography.Text>
+              </Space>
+            ) : (
+              <Typography.Text type="secondary">No address provided.</Typography.Text>
+            )}
           </Card>
-        </Col>
-        <Col xs={24} lg={8}>
-          <Card title="Shipments">
-            <List
-              dataSource={order.shipments}
-              locale={{ emptyText: "No shipments yet." }}
-              renderItem={(item) => (
-                <List.Item key={item.id}>
-                  <List.Item.Meta
-                    title={`${item.shippingMethodName} · ${item.status}`}
-                    description={`${item.carrier || "No carrier"} · ${item.trackingNumber || "No tracking"}`}
-                  />
-                </List.Item>
+
+          {/* Tags / meta */}
+          <Card title="Order details" bodyStyle={{ padding: "12px 16px" }}>
+            <Space direction="vertical" size={8} style={{ width: "100%" }}>
+              {order?.subscriptionContext && (
+                <div>
+                  <Typography.Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 2 }}>Subscription</Typography.Text>
+                  <Space>
+                    <Tag color="purple">{order.subscriptionContext.planName || "Subscription"}</Tag>
+                    <Tag>{order.subscriptionContext.isRenewal ? "Renewal" : "First charge"}</Tag>
+                  </Space>
+                </div>
               )}
-            />
+              <div>
+                <Typography.Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 2 }}>Currency</Typography.Text>
+                <Tag>{order?.displayCurrencyCode || order?.currencyCode || "USD"}</Tag>
+                {order?.currencySnapshot && (
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {" "}FX: {order.currencySnapshot.fxRate}
+                  </Typography.Text>
+                )}
+              </div>
+            </Space>
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <Card title="Returns">
-            <List
-              dataSource={order.returns}
-              locale={{ emptyText: "No returns recorded." }}
-              renderItem={(item) => (
-                <List.Item key={item.id}>
-                  <List.Item.Meta
-                    title={`${item.rmaNumber} · ${item.status}`}
-                    description={`${item.reason || "No reason provided"} · ${String(item.reasonCode || "other").replaceAll("_", " ")}`}
-                  />
-                </List.Item>
-              )}
+      {/* Create Shipment Modal */}
+      <Modal
+        title="Create shipment"
+        open={shipmentModalOpen}
+        onOk={() => shipmentForm.submit()}
+        onCancel={() => setShipmentModalOpen(false)}
+        confirmLoading={isShipping}
+        okText="Create shipment"
+      >
+        <Form form={shipmentForm} layout="vertical" onFinish={onCreateShipment}>
+          <Form.Item name="carrier" label="Carrier" rules={[{ required: true }]}>
+            <Select
+              options={[
+                { value: "JNE", label: "JNE" },
+                { value: "J&T", label: "J&T Express" },
+                { value: "SiCepat", label: "SiCepat" },
+                { value: "Anteraja", label: "Anteraja" },
+                { value: "Pos Indonesia", label: "Pos Indonesia" },
+                { value: "other", label: "Other" },
+              ]}
+              placeholder="Select carrier"
             />
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Refunds">
-            <List
-              dataSource={order.refunds}
-              locale={{ emptyText: "No refunds processed." }}
-              renderItem={(item) => (
-                <List.Item key={item.id}>
-                  <List.Item.Meta
-                    title={`${formatCurrency(item.amount, order.displayCurrencyCode || order.currencyCode || "USD")} · ${item.status} · ${item.refundType || "partial"}`}
-                    description={`${formatDate(item.createdAt, { dateStyle: "medium", timeStyle: "short" })}${item.note ? ` · ${item.note}` : ""}`}
-                  />
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-      </Row>
+          </Form.Item>
+          <Form.Item name="trackingNumber" label="Tracking number" rules={[{ required: true }]}>
+            <Input placeholder="e.g. JNE1234567890" />
+          </Form.Item>
+          <Form.Item name="note" label="Note (optional)">
+            <Input.TextArea rows={2} placeholder="Handling instructions, etc." />
+          </Form.Item>
+        </Form>
+      </Modal>
     </section>
   );
 }

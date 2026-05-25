@@ -6,10 +6,10 @@
  * Depends on: supabaseClient, utils/errorUtils, utils/slugUtils
  */
 
+import { StoreSummary, UserProfile } from "../types";
 import { assertSupabaseConfigured, supabase } from "./supabaseClient";
 import { isMissingTableError, normalizeError } from "./utils/errorUtils";
 import { buildUniqueHandle } from "./utils/slugUtils";
-import { UserProfile, StoreSummary } from "../types";
 
 const DEFAULT_THEME_CONFIG = {
   colors: {
@@ -58,7 +58,7 @@ interface CustomerSegmentCondition {
 }
 
 interface CustomerSegmentFilter {
-  match: 'all' | 'any';
+  match: "all" | "any";
   conditions: CustomerSegmentCondition[];
 }
 
@@ -118,7 +118,10 @@ function resolveCustomerSegmentFieldValue(customer: any, field: string): any {
   return customer[key];
 }
 
-function evaluateCustomerSegmentCondition(customer: any, condition: CustomerSegmentCondition): boolean {
+function evaluateCustomerSegmentCondition(
+  customer: any,
+  condition: CustomerSegmentCondition,
+): boolean {
   const left = resolveCustomerSegmentFieldValue(customer, condition.field);
   const operator = String(condition.operator || "").toLowerCase();
   const right = condition.value;
@@ -182,7 +185,10 @@ function evaluateCustomerSegmentCondition(customer: any, condition: CustomerSegm
   return false;
 }
 
-export function evaluateCustomerSegmentFilter(customer: any, filterInput: any): boolean {
+export function evaluateCustomerSegmentFilter(
+  customer: any,
+  filterInput: any,
+): boolean {
   const filter = normalizeCustomerSegmentFilter(filterInput);
   if (!filter.conditions.length) {
     return true;
@@ -286,7 +292,10 @@ export function toCsvValue(value: any): string {
   return `"${next.replace(/"/g, '""')}"`;
 }
 
-export function parseSimpleCsv(content: string | null | undefined): { headers: string[], records: Record<string, string>[] } {
+export function parseSimpleCsv(content: string | null | undefined): {
+  headers: string[];
+  records: Record<string, string>[];
+} {
   const rows = String(content || "")
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -329,10 +338,13 @@ export function parseSimpleCsv(content: string | null | undefined): { headers: s
   );
   const records = rows.slice(1).map((row) => {
     const values = parseLine(row);
-    return headers.reduce((acc, header, index) => {
-      acc[header] = values[index] || "";
-      return acc;
-    }, {} as Record<string, string>);
+    return headers.reduce(
+      (acc, header, index) => {
+        acc[header] = values[index] || "";
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
   });
 
   return { headers, records };
@@ -375,6 +387,10 @@ export function mapStoreSummary(store: any): StoreSummary | null {
     status: store.status,
     createdAt: store.created_at,
     updatedAt: store.updated_at,
+    // NEW
+    isPublished: store.is_published ?? false,
+    subdomain: store.subdomain || null,
+    onboardingCompletedAt: store.onboarding_completed_at || null,
   };
 }
 
@@ -464,11 +480,16 @@ async function findPrimaryStoreByOwner(userId: string): Promise<any> {
   return data?.[0] || null;
 }
 
-async function insertPrimaryStore(userId: string, displayName: string): Promise<any> {
+async function insertPrimaryStore(
+  userId: string,
+  displayName: string,
+): Promise<any> {
+  const slug = buildUniqueHandle(displayName || "skye-store");
   const insertPayload = {
     user_id: userId,
     name: `${displayName || "Skye"} Store`,
-    slug: buildUniqueHandle(displayName || "skye-store"),
+    slug,
+    subdomain: slug,
     description: "Default store profile",
     status: "active",
     currency: "IDR",
@@ -488,7 +509,10 @@ async function insertPrimaryStore(userId: string, displayName: string): Promise<
   return data;
 }
 
-export async function ensureAppUser(authUser: any, payload: any = {}): Promise<any> {
+export async function ensureAppUser(
+  authUser: any,
+  payload: any = {},
+): Promise<any> {
   const existing = await getAppUserById(authUser.id);
   if (existing) {
     return existing;
@@ -543,7 +567,10 @@ async function ensureThemes(storeId: string): Promise<void> {
   }
 }
 
-export async function ensurePrimaryStore(authUser: any, profile: any): Promise<any> {
+export async function ensurePrimaryStore(
+  authUser: any,
+  profile: any,
+): Promise<any> {
   let store = await findPrimaryStoreByOwner(authUser.id);
 
   if (!store) {
@@ -561,7 +588,11 @@ export async function ensurePrimaryStore(authUser: any, profile: any): Promise<a
   return store;
 }
 
-export async function getStoreContext(): Promise<{ authUser: any, profile: any, store: any }> {
+export async function getStoreContext(): Promise<{
+  authUser: any;
+  profile: any;
+  store: any;
+}> {
   const authUser = await getCurrentAuthUser();
   const profile = await ensureAppUser(authUser);
   const store = await ensurePrimaryStore(authUser, profile);
@@ -794,4 +825,59 @@ export async function updateStoreBranding(payload: any): Promise<any> {
     ok: true,
     branding: nextConfig.branding,
   };
+}
+
+export async function completeOnboarding(payload: {
+  storeName: string;
+  currency: string;
+  timezone: string;
+  templateSlug: string;
+}): Promise<void> {
+  const { authUser, store } = await getStoreContext();
+
+  const { error: storeErr } = await supabase
+    .from("stores")
+    .update({
+      name: payload.storeName,
+      currency: payload.currency,
+      timezone: payload.timezone,
+      onboarding_completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", store.id)
+    .eq("owner_id", authUser.id);
+
+  if (storeErr) throw normalizeError(storeErr);
+
+  const { error: themeErr } = await supabase
+    .from("themes")
+    .update({
+      template_slug: payload.templateSlug,
+      is_published: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("store_id", store.id)
+    .eq("is_published", true);
+
+  if (themeErr) throw normalizeError(themeErr);
+}
+
+export async function toggleStorePublish(
+  publish: boolean,
+): Promise<{ subdomain: string | null }> {
+  const { authUser, store } = await getStoreContext();
+
+  const { data, error } = await supabase
+    .from("stores")
+    .update({
+      is_published: publish,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", store.id)
+    .eq("owner_id", authUser.id)
+    .select("subdomain")
+    .single();
+
+  if (error) throw normalizeError(error);
+  return { subdomain: data.subdomain ?? null };
 }

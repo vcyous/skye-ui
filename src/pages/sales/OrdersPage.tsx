@@ -1,45 +1,64 @@
-// @ts-nocheck
+import {
+  ExportOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import {
   Alert,
+  App,
+  Badge,
+  Button,
   Card,
-  Col,
   Input,
-  Row,
   Select,
   Space,
-  Spin,
+  Table,
+  Tabs,
   Tag,
   Typography,
-  message,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useLocalization } from "../../context/LocalizationContext.jsx";
+import { useLocalization } from "../../context/LocalizationContext";
 import {
   getOrderLifecycleOptions,
   getOrders,
   updateOrderLifecycleState,
-} from "../../services/api.js";
+} from "../../services/api";
+import type { OrderSummary } from "../../services/orderService";
 
-const statuses = [
-  "semua_orders",
-  "not_paid",
-  "need_ship",
-  "ongoing_shipped",
-  "receive",
-  "pending",
-  "cancelled",
-  "failed_delivery",
+const STATUS_TABS = [
+  { key: "semua_orders", label: "All" },
+  { key: "not_paid", label: "Unpaid" },
+  { key: "need_ship", label: "Unfulfilled" },
+  { key: "ongoing_shipped", label: "In transit" },
+  { key: "receive", label: "Delivered" },
+  { key: "cancelled", label: "Cancelled" },
 ];
+
+const PAYMENT_TAG: Record<string, { color: string; label: string }> = {
+  paid: { color: "success", label: "Paid" },
+  pending: { color: "warning", label: "Pending" },
+  refunded: { color: "default", label: "Refunded" },
+  failed: { color: "error", label: "Failed" },
+};
+
+const FULFILLMENT_TAG: Record<string, { color: string; label: string }> = {
+  fulfilled: { color: "success", label: "Fulfilled" },
+  unfulfilled: { color: "warning", label: "Unfulfilled" },
+  partial: { color: "processing", label: "Partial" },
+  shipped: { color: "processing", label: "Shipped" },
+};
 
 export default function OrdersPage() {
   const { formatCurrency } = useLocalization();
-  const [selected, setSelected] = useState("semua_orders");
-  const [search, setSearch] = useState("");
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [updatingId, setUpdatingId] = useState("");
+  const { message } = App.useApp();
+  const [selected, setSelected] = useState<string>("semua_orders");
+  const [search, setSearch] = useState<string>("");
+  const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+  const [updatingId, setUpdatingId] = useState<string>("");
 
   const loadOrders = async () => {
     setLoading(true);
@@ -47,8 +66,8 @@ export default function OrdersPage() {
     try {
       const data = await getOrders(selected);
       setOrders(data);
-    } catch (err) {
-      setError(err.message || "Failed to load orders.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load orders.");
     } finally {
       setLoading(false);
     }
@@ -60,10 +79,7 @@ export default function OrdersPage() {
 
   const visibleOrders = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) {
-      return orders;
-    }
-
+    if (!term) return orders;
     return orders.filter((order) => {
       const haystack = [
         order.orderNumber,
@@ -79,195 +95,224 @@ export default function OrdersPage() {
     });
   }, [orders, search]);
 
-  const totalValue = useMemo(
-    () =>
-      visibleOrders
-        .reduce(
-          (sum, order) =>
-            sum +
-            Number(order.displayTotal ?? order.total ?? order.total_price),
-          0,
-        )
-        .toFixed(2),
-    [visibleOrders],
-  );
-
-  async function updateLifecycle(order, patch) {
+  async function updateLifecycle(order: OrderSummary, patch: Record<string, string>) {
     setUpdatingId(order.id);
     try {
       await updateOrderLifecycleState(order.id, patch);
       await loadOrders();
-      message.success("Order lifecycle updated.");
-    } catch (err) {
-      message.error(err.message || "Failed to update order lifecycle.");
+      message.success("Order updated.");
+    } catch (err: unknown) {
+      message.error(err instanceof Error ? err.message : "Failed to update order.");
     } finally {
       setUpdatingId("");
     }
   }
 
+  const columns: ColumnsType<OrderSummary> = [
+    {
+      title: "Order",
+      key: "order",
+      render: (_: unknown, record: OrderSummary) => (
+        <Link
+          to={`/orders/${record.id}`}
+          style={{ fontWeight: 500, color: "#0D5C53" }}
+        >
+          #{record.orderNumber ?? record.order_number}
+        </Link>
+      ),
+    },
+    {
+      title: "Date",
+      key: "date",
+      render: (_: unknown, record: OrderSummary) => {
+        const raw = record.created_at ?? record.createdAt;
+        if (!raw) return "—";
+        return (
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            {new Date(raw).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </Typography.Text>
+        );
+      },
+    },
+    {
+      title: "Customer",
+      key: "customer",
+      render: (_: unknown, record: OrderSummary) => (
+        <Typography.Text style={{ fontSize: 13 }}>
+          {record.customerName ?? record.customer_name ?? "Guest"}
+        </Typography.Text>
+      ),
+    },
+    {
+      title: "Total",
+      key: "total",
+      render: (_: unknown, record: OrderSummary) => (
+        <Typography.Text strong style={{ fontSize: 13 }}>
+          {formatCurrency(
+            record.displayTotal ?? record.total ?? record.total_price,
+            record.displayCurrencyCode || record.currencyCode || "USD",
+          )}
+        </Typography.Text>
+      ),
+    },
+    {
+      title: "Payment",
+      key: "payment",
+      render: (_: unknown, record: OrderSummary) => {
+        const info = PAYMENT_TAG[record.paymentStatus || "pending"] ?? { color: "default", label: record.paymentStatus || "Pending" };
+        return <Tag color={info.color}>{info.label}</Tag>;
+      },
+    },
+    {
+      title: "Fulfillment",
+      key: "fulfillment",
+      render: (_: unknown, record: OrderSummary) => {
+        const info = FULFILLMENT_TAG[record.fulfillmentStatus || "unfulfilled"] ?? { color: "default", label: record.fulfillmentStatus || "Unfulfilled" };
+        return <Tag color={info.color}>{info.label}</Tag>;
+      },
+    },
+    {
+      title: "Status",
+      key: "status",
+      render: (_: unknown, record: OrderSummary) => {
+        const options = getOrderLifecycleOptions({
+          status: record.status,
+          paymentStatus: record.paymentStatus,
+          fulfillmentStatus: record.fulfillmentStatus,
+        });
+        return (
+          <Select
+            size="small"
+            value={record.status}
+            disabled={updatingId === record.id}
+            loading={updatingId === record.id}
+            onChange={(value) =>
+              updateLifecycle(record, {
+                status: value,
+                note: `Status changed from ${record.status} to ${value}`,
+              })
+            }
+            options={options.status.map((item) => ({ value: item, label: item }))}
+            style={{ width: 150 }}
+          />
+        );
+      },
+    },
+    {
+      title: "",
+      key: "actions",
+      width: 80,
+      render: (_: unknown, record: OrderSummary) => (
+        <Link to={`/orders/${record.id}`}>
+          <Button type="link" size="small" style={{ padding: 0, fontSize: 13 }}>
+            View
+          </Button>
+        </Link>
+      ),
+    },
+  ];
+
+  const tabCounts = useMemo(() => {
+    const counts: Record<string, number> = { semua_orders: orders.length };
+    for (const o of orders) {
+      if (o.paymentStatus === "pending" || o.paymentStatus === "not_paid") {
+        counts["not_paid"] = (counts["not_paid"] || 0) + 1;
+      }
+      if (o.fulfillmentStatus === "unfulfilled") {
+        counts["need_ship"] = (counts["need_ship"] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [orders]);
+
   return (
-    <section style={{ display: "grid", gap: 16 }}>
-      <header>
-        <Typography.Title level={3} className="page-title">
+    <section style={{ display: "grid", gap: 0 }}>
+      {/* Page header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <Typography.Title level={4} style={{ margin: 0 }}>
           Orders
         </Typography.Title>
-        <Typography.Text className="page-subtitle">
-          Manage order lifecycle and keep shipment execution under control.
-        </Typography.Text>
-      </header>
+        <Space>
+          <Button icon={<ExportOutlined />}>Export</Button>
+        </Space>
+      </div>
 
-      <Row gutter={[12, 12]}>
-        <Col xs={24} md={8}>
-          <Card title="Total Orders">{visibleOrders.length}</Card>
-        </Col>
-        <Col xs={24} md={8}>
-          <Card title="Total Value">{formatCurrency(totalValue)}</Card>
-        </Col>
-        <Col xs={24} md={8}>
-          <Card title="Selected Filter">{selected}</Card>
-        </Col>
-      </Row>
+      {error && (
+        <Alert
+          type="error"
+          message={error}
+          showIcon
+          style={{ marginBottom: 12 }}
+          action={<Button size="small" onClick={loadOrders}>Retry</Button>}
+        />
+      )}
 
-      <Card>
-        <Space wrap>
-          <Typography.Text strong>Status</Typography.Text>
-          <Select
-            value={selected}
-            onChange={(value) => setSelected(value)}
-            options={statuses.map((status) => ({
-              value: status,
-              label: status,
+      <Card bodyStyle={{ padding: 0 }}>
+        {/* Status tabs */}
+        <div style={{ borderBottom: "1px solid #f0f0f0", paddingLeft: 16 }}>
+          <Tabs
+            activeKey={selected}
+            onChange={setSelected}
+            size="small"
+            items={STATUS_TABS.map((tab) => ({
+              key: tab.key,
+              label: (
+                <span>
+                  {tab.label}
+                  {tabCounts[tab.key] != null && (
+                    <span style={{ marginLeft: 6, color: "#999", fontSize: 12 }}>
+                      {tabCounts[tab.key]}
+                    </span>
+                  )}
+                </span>
+              ),
             }))}
-            style={{ width: 220 }}
           />
+        </div>
+
+        {/* Filter bar */}
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0", display: "flex", gap: 8, alignItems: "center" }}>
           <Input
-            allowClear
+            prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+            placeholder="Search orders"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search order, customer, or status"
+            onChange={(e) => setSearch(e.target.value)}
+            allowClear
             style={{ width: 280 }}
           />
-        </Space>
+          <div style={{ marginLeft: "auto" }}>
+            <Badge count={visibleOrders.length} showZero color="#8c8c8c" overflowCount={9999}>
+              <Typography.Text type="secondary" style={{ fontSize: 13, paddingRight: 8 }}>
+                orders
+              </Typography.Text>
+            </Badge>
+          </div>
+        </div>
+
+        <Table
+          rowKey="id"
+          loading={loading}
+          columns={columns}
+          dataSource={visibleOrders}
+          pagination={{
+            pageSize: 20,
+            showSizeChanger: false,
+            showTotal: (total) => `${total} orders`,
+          }}
+          size="middle"
+          locale={{
+            emptyText: (
+              <div style={{ padding: "32px 0" }}>
+                <Typography.Text type="secondary">No orders found</Typography.Text>
+              </div>
+            ),
+          }}
+        />
       </Card>
-
-      {error ? <Alert type="error" message={error} showIcon /> : null}
-
-      {loading ? (
-        <Card>
-          <Spin />
-        </Card>
-      ) : (
-        <Row gutter={[12, 12]}>
-          {visibleOrders.map((order) => {
-            const options = getOrderLifecycleOptions({
-              status: order.status,
-              paymentStatus: order.paymentStatus,
-              fulfillmentStatus: order.fulfillmentStatus,
-            });
-
-            return (
-              <Col xs={24} md={12} xl={8} key={order.id}>
-                <Card title={order.orderNumber ?? order.order_number}>
-                  <Typography.Paragraph
-                    type="secondary"
-                    style={{ marginTop: -8 }}
-                  >
-                    {order.customerName ?? order.customer_name}
-                  </Typography.Paragraph>
-                  <Typography.Title level={4} style={{ marginTop: 0 }}>
-                    {formatCurrency(
-                      order.displayTotal ?? order.total ?? order.total_price,
-                      order.displayCurrencyCode || order.currencyCode || "USD",
-                    )}
-                  </Typography.Title>
-                  <Tag color="blue">{order.status}</Tag>
-                  <Tag color="gold">{order.paymentStatus || "pending"}</Tag>
-                  <Tag color="green">
-                    {order.fulfillmentStatus || "unfulfilled"}
-                  </Tag>
-                  {order.subscriptionId ? (
-                    <Tag color="purple">
-                      {order.isSubscriptionRenewal
-                        ? "Subscription renewal"
-                        : "Subscription"}
-                    </Tag>
-                  ) : null}
-                  {order.subscriptionStatus ? (
-                    <Tag>{order.subscriptionStatus}</Tag>
-                  ) : null}
-                  <Space
-                    direction="vertical"
-                    style={{ width: "100%", marginTop: 12 }}
-                  >
-                    <Space wrap>
-                      <Typography.Text type="secondary">Order</Typography.Text>
-                      <Select
-                        size="small"
-                        value={order.status}
-                        disabled={updatingId === order.id}
-                        onChange={(value) =>
-                          updateLifecycle(order, {
-                            status: value,
-                            note: `Order status changed from ${order.status} to ${value}`,
-                          })
-                        }
-                        options={options.status.map((item) => ({
-                          value: item,
-                          label: item,
-                        }))}
-                        style={{ width: 180 }}
-                      />
-                    </Space>
-                    <Space wrap>
-                      <Typography.Text type="secondary">
-                        Payment
-                      </Typography.Text>
-                      <Select
-                        size="small"
-                        value={order.paymentStatus || "pending"}
-                        disabled={updatingId === order.id}
-                        onChange={(value) =>
-                          updateLifecycle(order, {
-                            paymentStatus: value,
-                            note: `Payment status changed to ${value}`,
-                          })
-                        }
-                        options={options.paymentStatus.map((item) => ({
-                          value: item,
-                          label: item,
-                        }))}
-                        style={{ width: 180 }}
-                      />
-                    </Space>
-                    <Space wrap>
-                      <Typography.Text type="secondary">
-                        Fulfillment
-                      </Typography.Text>
-                      <Select
-                        size="small"
-                        value={order.fulfillmentStatus || "unfulfilled"}
-                        disabled={updatingId === order.id}
-                        onChange={(value) =>
-                          updateLifecycle(order, {
-                            fulfillmentStatus: value,
-                            note: `Fulfillment status changed to ${value}`,
-                          })
-                        }
-                        options={options.fulfillmentStatus.map((item) => ({
-                          value: item,
-                          label: item,
-                        }))}
-                        style={{ width: 180 }}
-                      />
-                    </Space>
-                    <Link to={`/orders/${order.id}`}>View Detail</Link>
-                  </Space>
-                </Card>
-              </Col>
-            );
-          })}
-        </Row>
-      )}
     </section>
   );
 }

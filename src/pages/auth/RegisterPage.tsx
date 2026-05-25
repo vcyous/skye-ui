@@ -30,10 +30,12 @@ export default function RegisterPage() {
         );
         navigate("/login", { replace: true });
       } else {
-        navigate("/", { replace: true });
+        navigate("/onboarding", { replace: true });
       }
     } catch (err) {
-      setSubmitError((err as Error).message || "Registration failed. Please try again.");
+      setSubmitError(
+        (err as Error).message || "Registration failed. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }

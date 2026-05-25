@@ -1,6 +1,6 @@
-// @ts-nocheck
 import {
   Alert,
+  App,
   Button,
   Card,
   Col,
@@ -17,7 +17,6 @@ import {
   Table,
   Tag,
   Typography,
-  message,
 } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -34,7 +33,13 @@ import {
   updateShipmentStatus,
   updateShippingMethod,
   updateShippingZone,
-} from "../../services/api.js";
+} from "../../services/api";
+import type {
+  FulfillmentItem,
+  Shipment,
+  ShippingMethod,
+  ShippingZone,
+} from "../../services/shippingService";
 
 const shippingTypeOptions = [
   { value: "flat_rate", label: "Flat Rate" },
@@ -43,27 +48,40 @@ const shippingTypeOptions = [
 ];
 
 export default function ShippingPage() {
-  const [methods, setMethods] = useState([]);
-  const [zones, setZones] = useState([]);
-  const [shipments, setShipments] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [savingShipment, setSavingShipment] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState("");
-  const [fulfillmentItems, setFulfillmentItems] = useState([]);
-  const [shipmentItemQty, setShipmentItemQty] = useState({});
-  const [notice, setNotice] = useState({ type: "", message: "" });
-  const [editingMethod, setEditingMethod] = useState(null);
-  const [editingZone, setEditingZone] = useState(null);
-  const [createShipmentOpen, setCreateShipmentOpen] = useState(false);
+  const { message } = App.useApp();
+  const [methods, setMethods] = useState<ShippingMethod[]>([]);
+  const [zones, setZones] = useState<ShippingZone[]>([]);
+  const [shipments, setShipments] = useState<Shipment[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string>("");
+  const [savingShipment, setSavingShipment] = useState<boolean>(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string>("");
+  const [fulfillmentItems, setFulfillmentItems] = useState<FulfillmentItem[]>(
+    [],
+  );
+  const [shipmentItemQty, setShipmentItemQty] = useState<
+    Record<string, number>
+  >({});
+  const [notice, setNotice] = useState<{ type: string; message: string }>({
+    type: "",
+    message: "",
+  });
+  const [editingMethod, setEditingMethod] = useState<ShippingMethod | null>(
+    null,
+  );
+  const [editingZone, setEditingZone] = useState<ShippingZone | null>(null);
+  const [createShipmentOpen, setCreateShipmentOpen] = useState<boolean>(false);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [zoneForm] = Form.useForm();
   const [editZoneForm] = Form.useForm();
   const [shipmentForm] = Form.useForm();
-  const [isCreateMethodModalOpen, setIsCreateMethodModalOpen] = useState(false);
-  const [isCreateZoneModalOpen, setIsCreateZoneModalOpen] = useState(false);
+  const [isCreateMethodModalOpen, setIsCreateMethodModalOpen] =
+    useState<boolean>(false);
+  const [isCreateZoneModalOpen, setIsCreateZoneModalOpen] =
+    useState<boolean>(false);
 
   async function loadData() {
     setLoading(true);
@@ -81,8 +99,10 @@ export default function ShippingPage() {
       setZones(zoneRows);
       setShipments(shipmentRows);
       setOrders(orderRows);
-    } catch (err) {
-      setLoadError(err.message || "Failed to load shipping data.");
+    } catch (err: unknown) {
+      setLoadError(
+        err instanceof Error ? err.message : "Failed to load shipping data.",
+      );
     } finally {
       setLoading(false);
     }
@@ -104,7 +124,7 @@ export default function ShippingPage() {
     [methods, zones, shipments],
   );
 
-  async function onSelectOrder(orderId) {
+  async function onSelectOrder(orderId: string) {
     setSelectedOrderId(orderId);
     shipmentForm.setFieldValue("orderId", orderId);
     if (!orderId) {
@@ -115,38 +135,48 @@ export default function ShippingPage() {
 
     try {
       const items = await getOrderFulfillmentItems(orderId);
-      setFulfillmentItems(items);
+      setFulfillmentItems(items as FulfillmentItem[]);
       setShipmentItemQty(
-        items.reduce((acc, item) => {
-          acc[item.id] = 0;
-          return acc;
-        }, {}),
+        (items as FulfillmentItem[]).reduce(
+          (acc: Record<string, number>, item) => {
+            acc[item.id] = 0;
+            return acc;
+          },
+          {},
+        ),
       );
-    } catch (err) {
+    } catch (err: unknown) {
       setNotice({
         type: "error",
-        message: err.message || "Failed to load fulfillment items.",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Failed to load fulfillment items.",
       });
     }
   }
 
-  async function onCreate(values) {
+  async function onCreate(values: Record<string, unknown>) {
     setNotice({ type: "", message: "" });
     try {
-      await createShippingMethod(values);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await createShippingMethod(values as any);
       form.resetFields();
       setIsCreateMethodModalOpen(false);
       await loadData();
       setNotice({ type: "success", message: "Shipping method created." });
-    } catch (err) {
+    } catch (err: unknown) {
       setNotice({
         type: "error",
-        message: err.message || "Failed to create shipping method.",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Failed to create shipping method.",
       });
     }
   }
 
-  function openEdit(record) {
+  function openEdit(record: ShippingMethod) {
     setEditingMethod(record);
     editForm.setFieldsValue({
       name: record.name,
@@ -157,7 +187,7 @@ export default function ShippingPage() {
     });
   }
 
-  function openEditZone(record) {
+  function openEditZone(record: ShippingZone) {
     setEditingZone(record);
     editZoneForm.setFieldsValue({
       name: record.name,
@@ -168,83 +198,92 @@ export default function ShippingPage() {
     });
   }
 
-  async function onUpdate(values) {
+  async function onUpdate(values: Record<string, unknown>) {
     if (!editingMethod) return;
     setNotice({ type: "", message: "" });
     try {
-      await updateShippingMethod(editingMethod.id, values);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await updateShippingMethod(editingMethod.id, values as any);
       setEditingMethod(null);
       await loadData();
       setNotice({ type: "success", message: "Shipping method updated." });
-    } catch (err) {
+    } catch (err: unknown) {
       setNotice({
         type: "error",
-        message: err.message || "Failed to update shipping method.",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Failed to update shipping method.",
       });
     }
   }
 
-  async function onCreateZone(values) {
+  async function onCreateZone(values: Record<string, unknown>) {
     setNotice({ type: "", message: "" });
     try {
-      await createShippingZone(values);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await createShippingZone(values as any);
       zoneForm.resetFields();
       setIsCreateZoneModalOpen(false);
       await loadData();
       setNotice({ type: "success", message: "Shipping zone created." });
-    } catch (err) {
+    } catch (err: unknown) {
       setNotice({
         type: "error",
-        message: err.message || "Failed to create zone.",
+        message: err instanceof Error ? err.message : "Failed to create zone.",
       });
     }
   }
 
-  async function onUpdateZone(values) {
+  async function onUpdateZone(values: Record<string, unknown>) {
     if (!editingZone) return;
     setNotice({ type: "", message: "" });
     try {
-      await updateShippingZone(editingZone.id, values);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await updateShippingZone(editingZone.id, values as any);
       setEditingZone(null);
       await loadData();
       setNotice({ type: "success", message: "Shipping zone updated." });
-    } catch (err) {
+    } catch (err: unknown) {
       setNotice({
         type: "error",
-        message: err.message || "Failed to update zone.",
+        message: err instanceof Error ? err.message : "Failed to update zone.",
       });
     }
   }
 
-  async function onDeleteZone(record) {
+  async function onDeleteZone(record: ShippingZone) {
     setNotice({ type: "", message: "" });
     try {
       await deleteShippingZone(record.id);
       await loadData();
       setNotice({ type: "success", message: "Shipping zone deleted." });
-    } catch (err) {
+    } catch (err: unknown) {
       setNotice({
         type: "error",
-        message: err.message || "Failed to delete zone.",
+        message: err instanceof Error ? err.message : "Failed to delete zone.",
       });
     }
   }
 
-  async function onDelete(record) {
+  async function onDelete(record: ShippingMethod) {
     setNotice({ type: "", message: "" });
     try {
       await deleteShippingMethod(record.id);
       await loadData();
       setNotice({ type: "success", message: "Shipping method deleted." });
-    } catch (err) {
+    } catch (err: unknown) {
       setNotice({
         type: "error",
-        message: err.message || "Failed to delete shipping method.",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Failed to delete shipping method.",
       });
     }
   }
 
-  async function onCreateShipment(values) {
+  async function onCreateShipment(values: Record<string, unknown>) {
     setNotice({ type: "", message: "" });
     setSavingShipment(true);
     try {
@@ -261,7 +300,8 @@ export default function ShippingPage() {
       }
 
       await createShipment({
-        ...values,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(values as any),
         items: selectedItems,
       });
       shipmentForm.resetFields();
@@ -270,26 +310,28 @@ export default function ShippingPage() {
       setShipmentItemQty({});
       await loadData();
       setNotice({ type: "success", message: "Shipment created." });
-    } catch (err) {
+    } catch (err: unknown) {
       setNotice({
         type: "error",
-        message: err.message || "Failed to create shipment.",
+        message:
+          err instanceof Error ? err.message : "Failed to create shipment.",
       });
     } finally {
       setSavingShipment(false);
     }
   }
 
-  async function onShipmentStatus(record, status) {
+  async function onShipmentStatus(record: Shipment, status: string) {
     setNotice({ type: "", message: "" });
     try {
       await updateShipmentStatus(record.id, status);
       await loadData();
       setNotice({ type: "success", message: `Shipment marked ${status}.` });
-    } catch (err) {
+    } catch (err: unknown) {
       setNotice({
         type: "error",
-        message: err.message || "Failed to update shipment.",
+        message:
+          err instanceof Error ? err.message : "Failed to update shipment.",
       });
     }
   }
@@ -300,13 +342,13 @@ export default function ShippingPage() {
       title: "Type",
       dataIndex: "shippingType",
       key: "shippingType",
-      render: (value) => <Tag>{value}</Tag>,
+      render: (value: string) => <Tag>{value}</Tag>,
     },
     { title: "Base Rate", dataIndex: "baseRate", key: "baseRate" },
     {
       title: "Zones",
       key: "zones",
-      render: (_, record) =>
+      render: (_: unknown, record: ShippingMethod) =>
         record.zones?.length
           ? record.zones.map((zone) => zone.name).join(", ")
           : "All zones",
@@ -314,13 +356,13 @@ export default function ShippingPage() {
     {
       title: "Status",
       key: "status",
-      render: (_, record) =>
+      render: (_: unknown, record: ShippingMethod) =>
         record.isActive ? <Tag color="green">active</Tag> : <Tag>inactive</Tag>,
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_, record) => (
+      render: (_: unknown, record: ShippingMethod) => (
         <Space>
           <Button size="small" onClick={() => openEdit(record)}>
             Edit
@@ -341,18 +383,18 @@ export default function ShippingPage() {
       title: "Postal Pattern",
       dataIndex: "postalCodePattern",
       key: "postalCodePattern",
-      render: (value) => value || "-",
+      render: (value: string) => value || "-",
     },
     {
       title: "Status",
       key: "status",
-      render: (_, record) =>
+      render: (_: unknown, record: ShippingZone) =>
         record.isActive ? <Tag color="green">active</Tag> : <Tag>inactive</Tag>,
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_, record) => (
+      render: (_: unknown, record: ShippingZone) => (
         <Space>
           <Button size="small" onClick={() => openEditZone(record)}>
             Edit
@@ -378,18 +420,18 @@ export default function ShippingPage() {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      render: (value) => <Tag color="blue">{value}</Tag>,
+      render: (value: string) => <Tag color="blue">{value}</Tag>,
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_, record) => (
+      render: (_: unknown, record: Shipment) => (
         <Space>
           <Select
             size="small"
             value={record.status}
             style={{ width: 130 }}
-            onChange={(value) => onShipmentStatus(record, value)}
+            onChange={(value: string) => onShipmentStatus(record, value)}
             options={[
               { value: "pending", label: "pending" },
               { value: "shipped", label: "shipped" },
@@ -422,7 +464,13 @@ export default function ShippingPage() {
       </header>
 
       {notice.message ? (
-        <Alert type={notice.type || "info"} message={notice.message} showIcon />
+        <Alert
+          type={
+            (notice.type || "info") as "info" | "success" | "error" | "warning"
+          }
+          message={notice.message}
+          showIcon
+        />
       ) : null}
 
       {loadError ? (
@@ -496,10 +544,7 @@ export default function ShippingPage() {
       <Card
         title="Shipping Zones"
         extra={
-          <Button
-            type="primary"
-            onClick={() => setIsCreateZoneModalOpen(true)}
-          >
+          <Button type="primary" onClick={() => setIsCreateZoneModalOpen(true)}>
             Add Zone
           </Button>
         }
@@ -536,7 +581,12 @@ export default function ShippingPage() {
         }}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={onCreate} requiredMark={false}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onCreate}
+          requiredMark={false}
+        >
           <Form.Item name="name" label="Name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
@@ -551,7 +601,12 @@ export default function ShippingPage() {
           <Form.Item name="baseRate" label="Base Rate" initialValue={0}>
             <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
           </Form.Item>
-          <Form.Item name="isActive" label="Active" valuePropName="checked" initialValue>
+          <Form.Item
+            name="isActive"
+            label="Active"
+            valuePropName="checked"
+            initialValue
+          >
             <Switch />
           </Form.Item>
           <Form.Item name="zoneIds" label="Zones">
@@ -577,12 +632,13 @@ export default function ShippingPage() {
         }}
         destroyOnClose
       >
-        <Form form={zoneForm} layout="vertical" onFinish={onCreateZone} requiredMark={false}>
-          <Form.Item
-            name="name"
-            label="Zone Name"
-            rules={[{ required: true }]}
-          >
+        <Form
+          form={zoneForm}
+          layout="vertical"
+          onFinish={onCreateZone}
+          requiredMark={false}
+        >
+          <Form.Item name="name" label="Zone Name" rules={[{ required: true }]}>
             <Input placeholder="Jakarta Metro" />
           </Form.Item>
           <Form.Item name="countryCode" label="Country">
@@ -594,7 +650,12 @@ export default function ShippingPage() {
           <Form.Item name="postalCodePattern" label="Postal Pattern">
             <Input placeholder="10*" />
           </Form.Item>
-          <Form.Item name="isActive" label="Active" valuePropName="checked" initialValue>
+          <Form.Item
+            name="isActive"
+            label="Active"
+            valuePropName="checked"
+            initialValue
+          >
             <Switch />
           </Form.Item>
         </Form>

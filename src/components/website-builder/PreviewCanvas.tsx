@@ -1,34 +1,39 @@
-// @ts-nocheck
 import {
   DesktopOutlined,
-  MobileOutlined,
   ExpandOutlined,
+  MobileOutlined,
 } from "@ant-design/icons";
-import { Radio, Typography, Tooltip } from "antd";
-import { useRef, useState, useEffect, useCallback } from "react";
+import { Radio, Spin, Tooltip, Typography } from "antd";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { PreviewProduct, TemplateProps } from "../../types";
 
 const DEVICE_WIDTHS = {
   desktop: 1280,
   mobile: 375,
 };
 
-/**
- * Preview canvas — renders the active template inside a scaled viewport.
- *
- * @param {{
- *   viewMode: 'desktop' | 'mobile',
- *   onViewModeChange: (mode: 'desktop' | 'mobile') => void,
- *   activeTemplate: { component: React.ComponentType, name: string } | undefined,
- *   config: { texts: Record<string, string>, colors: Record<string, string> },
- * }} props
- */
+interface PreviewCanvasProps {
+  viewMode: "desktop" | "mobile";
+  onViewModeChange: (mode: "desktop" | "mobile") => void;
+  activeTemplate:
+    | { component: React.ComponentType<TemplateProps>; name: string }
+    | undefined;
+  config: TemplateProps["config"];
+  storeName: string;
+  products?: PreviewProduct[];
+  isLoading?: boolean;
+}
+
 export default function PreviewCanvas({
   viewMode,
   onViewModeChange,
   activeTemplate,
   config,
-}) {
-  const wrapperRef = useRef(null);
+  storeName,
+  products,
+  isLoading,
+}: PreviewCanvasProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
   const computeScale = useCallback(() => {
@@ -100,8 +105,16 @@ export default function PreviewCanvas({
             transformOrigin: "top center",
           }}
         >
-          {TemplateComponent ? (
-            <TemplateComponent config={config} />
+          {isLoading ? (
+            <div style={{ padding: 48, textAlign: "center" }}>
+              <Spin tip="Loading preview..." />
+            </div>
+          ) : TemplateComponent ? (
+            <TemplateComponent
+              config={config}
+              storeName={storeName}
+              products={products}
+            />
           ) : (
             <div className="wb-preview-empty">
               <Typography.Text type="secondary">

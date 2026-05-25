@@ -6,6 +6,9 @@
  */
 
 export { setAccessToken, setAuthFailureHandler } from "./authTokenUtils";
+
+export { sendEmail } from "./emailService";
+export type { EmailPayload, EmailTemplate } from "./emailService";
 export {
   supabase as api,
   assertSupabaseConfigured,
@@ -42,6 +45,7 @@ export {
 } from "./authService";
 
 export {
+  completeOnboarding,
   createInvoiceNumber,
   createOrderNumber,
   createRmaNumber,
@@ -52,9 +56,27 @@ export {
   getTemplates,
   mapPublicUser,
   mapStoreSummary,
+  toggleStorePublish,
   updateStoreBranding,
   updateStoreProfile,
 } from "./storeService";
+
+export {
+  activateTemplate,
+  DEFAULT_CATALOG_CONFIG,
+  getActiveTheme,
+  getCatalogOptions,
+  getProductsForPreview,
+  saveThemeConfig,
+  uploadProductImage,
+  uploadStoreAsset,
+} from "./websiteBuilderService";
+
+export type {
+  CatalogConfig,
+  CatalogOption,
+  ThemeConfig,
+} from "./websiteBuilderService";
 
 export {
   bulkDeleteProducts,
@@ -222,6 +244,13 @@ export {
   revalidateCheckout,
   saveCheckoutRecoveryState,
 } from "./checkoutService";
+
+export type {
+  CheckoutRecoveryState,
+  CheckoutSnapshot,
+} from "./checkoutService";
+
+export type { OrderDetail, OrderSummary } from "./orderService";
 
 export {
   addUtcDays,

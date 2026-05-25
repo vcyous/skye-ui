@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { LayoutOutlined } from "@ant-design/icons";
+import { GlobalOutlined, LayoutOutlined, SaveOutlined, ShopOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
@@ -16,14 +15,50 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getStoreProfile,
   getTemplates,
   updateStoreBranding,
   updateStoreProfile,
 } from "../../services/api.js";
+
+interface StoreProfile {
+  id: string;
+  storeName: string;
+  description?: string;
+  status?: string;
+  currencyCode?: string;
+  timezone?: string;
+  locale?: string;
+  country?: string;
+  contactEmail?: string;
+  email?: string;
+  contactPhone?: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  branding?: {
+    logoUrl?: string;
+    primaryColor?: string;
+    accentColor?: string;
+    headingFont?: string;
+    bodyFont?: string;
+  };
+}
+
+interface Template {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
+interface Notice {
+  type: "success" | "error" | "info" | "warning";
+  message: string;
+}
 
 const currencyOptions = ["USD", "IDR", "SGD", "EUR", "GBP"].map((code) => ({
   value: code,
@@ -56,64 +91,62 @@ const statusOptions = ["draft", "active", "inactive", "archived"].map(
 
 export default function StorePage() {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
-  const [templates, setTemplates] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [settingsNotice, setSettingsNotice] = useState(null);
-  const [brandingNotice, setBrandingNotice] = useState(null);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [isSavingBranding, setIsSavingBranding] = useState(false);
-  const [isSettingsDirty, setIsSettingsDirty] = useState(false);
-  const [isBrandingDirty, setIsBrandingDirty] = useState(false);
+  const [profile, setProfile] = useState<StoreProfile | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string>("");
+  const [settingsNotice, setSettingsNotice] = useState<Notice | null>(null);
+  const [brandingNotice, setBrandingNotice] = useState<Notice | null>(null);
+  const [isSavingSettings, setIsSavingSettings] = useState<boolean>(false);
+  const [isSavingBranding, setIsSavingBranding] = useState<boolean>(false);
+  const [isSettingsDirty, setIsSettingsDirty] = useState<boolean>(false);
+  const [isBrandingDirty, setIsBrandingDirty] = useState<boolean>(false);
   const [settingsForm] = Form.useForm();
   const [brandingForm] = Form.useForm();
 
-  const activeTemplateName =
-    useMemo(
-      () => templates.find((item) => item.active)?.name || "Default Branding",
-      [templates],
-    ) || "Default Branding";
+  const activeTemplateName = useMemo(
+    () => templates.find((item) => item.active)?.name || "Default branding",
+    [templates],
+  );
 
   async function loadStoreData() {
     setLoadError("");
     setIsLoading(true);
     try {
-      const [store, list] = await Promise.all([
-        getStoreProfile(),
-        getTemplates(),
-      ]);
-      setProfile(store);
-      setTemplates(list);
+      const [store, list] = await Promise.all([getStoreProfile(), getTemplates()]);
+      const s = store as StoreProfile;
+      const t = list as Template[];
+      setProfile(s);
+      setTemplates(t);
 
       settingsForm.setFieldsValue({
-        storeName: store.storeName,
-        description: store.description || "",
-        status: store.status || "active",
-        currencyCode: store.currencyCode || "IDR",
-        timezone: store.timezone || "Asia/Jakarta",
-        locale: store.locale || "id",
-        country: store.country || "ID",
-        contactEmail: store.contactEmail || store.email || "",
-        contactPhone: store.contactPhone || "",
-        address: store.address || "",
-        city: store.city || "",
-        province: store.province || "",
-        postalCode: store.postalCode || "",
+        storeName: s.storeName,
+        description: s.description || "",
+        status: s.status || "active",
+        currencyCode: s.currencyCode || "IDR",
+        timezone: s.timezone || "Asia/Jakarta",
+        locale: s.locale || "id",
+        country: s.country || "ID",
+        contactEmail: s.contactEmail || s.email || "",
+        contactPhone: s.contactPhone || "",
+        address: s.address || "",
+        city: s.city || "",
+        province: s.province || "",
+        postalCode: s.postalCode || "",
       });
 
       brandingForm.setFieldsValue({
-        logoUrl: store.branding?.logoUrl || "",
-        primaryColor: store.branding?.primaryColor || "#006c9c",
-        accentColor: store.branding?.accentColor || "#ffd566",
-        headingFont: store.branding?.headingFont || "Space Grotesk",
-        bodyFont: store.branding?.bodyFont || "Manrope",
+        logoUrl: s.branding?.logoUrl || "",
+        primaryColor: s.branding?.primaryColor || "#006c9c",
+        accentColor: s.branding?.accentColor || "#ffd566",
+        headingFont: s.branding?.headingFont || "Space Grotesk",
+        bodyFont: s.branding?.bodyFont || "Manrope",
       });
 
       setIsSettingsDirty(false);
       setIsBrandingDirty(false);
-    } catch (err) {
-      setLoadError(err.message || "Failed to load store settings.");
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load store settings.");
     } finally {
       setIsLoading(false);
     }
@@ -123,52 +156,44 @@ export default function StorePage() {
     loadStoreData();
   }, []);
 
-  async function onSaveSettings(values) {
+  async function onSaveSettings(values: Record<string, unknown>) {
     setSettingsNotice(null);
     setIsSavingSettings(true);
     try {
       const updated = await updateStoreProfile(values);
-      setProfile(updated);
+      setProfile(updated as StoreProfile);
       setSettingsNotice({ type: "success", message: "Store settings saved." });
       setIsSettingsDirty(false);
-    } catch (err) {
+    } catch (err: unknown) {
       setSettingsNotice({
         type: "error",
-        message: err.message || "Failed to save store settings.",
+        message: err instanceof Error ? err.message : "Failed to save store settings.",
       });
     } finally {
       setIsSavingSettings(false);
     }
   }
 
-  async function onSaveBranding(values) {
+  async function onSaveBranding(values: Record<string, unknown>) {
     setBrandingNotice(null);
     setIsSavingBranding(true);
     try {
-      const result = await updateStoreBranding(values);
+      const result = (await updateStoreBranding(values)) as { branding: Record<string, unknown>; persistedIn: string };
       setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              branding: {
-                ...prev.branding,
-                ...result.branding,
-              },
-            }
-          : prev,
+        prev ? { ...prev, branding: { ...prev.branding, ...(result.branding as StoreProfile["branding"]) } } : prev,
       );
       setBrandingNotice({
         type: "success",
         message:
           result.persistedIn === "stores.settings"
-            ? "Branding saved with fallback storage."
+            ? "Branding saved (fallback storage)."
             : "Branding saved to active theme.",
       });
       setIsBrandingDirty(false);
-    } catch (err) {
+    } catch (err: unknown) {
       setBrandingNotice({
         type: "error",
-        message: err.message || "Failed to save branding.",
+        message: err instanceof Error ? err.message : "Failed to save branding.",
       });
     } finally {
       setIsSavingBranding(false);
@@ -178,9 +203,9 @@ export default function StorePage() {
   if (isLoading) {
     return (
       <Card>
-        <Space align="center" size={12}>
+        <Space>
           <Spin />
-          <Typography.Text>Loading store profile...</Typography.Text>
+          <Typography.Text>Loading store settings...</Typography.Text>
         </Space>
       </Card>
     );
@@ -193,12 +218,8 @@ export default function StorePage() {
           type="error"
           showIcon
           message="Unable to load store settings"
-          description={
-            <Space direction="vertical">
-              <Typography.Text>{loadError}</Typography.Text>
-              <Button onClick={loadStoreData}>Retry</Button>
-            </Space>
-          }
+          description={loadError}
+          action={<Button size="small" onClick={loadStoreData}>Retry</Button>}
         />
       </Card>
     );
@@ -211,319 +232,395 @@ export default function StorePage() {
           type="warning"
           showIcon
           message="Store profile not found"
-          description="Please retry. If this persists, relogin to regenerate your store context."
+          description="Please retry. If this persists, re-login to regenerate your store context."
         />
       </Card>
     );
   }
 
   const brandingPreview = {
-    logoUrl:
-      brandingForm.getFieldValue("logoUrl") || profile.branding?.logoUrl || "",
-    primaryColor:
-      brandingForm.getFieldValue("primaryColor") ||
-      profile.branding?.primaryColor ||
-      "#006c9c",
-    accentColor:
-      brandingForm.getFieldValue("accentColor") ||
-      profile.branding?.accentColor ||
-      "#ffd566",
-    headingFont:
-      brandingForm.getFieldValue("headingFont") ||
-      profile.branding?.headingFont ||
-      "Space Grotesk",
-    bodyFont:
-      brandingForm.getFieldValue("bodyFont") ||
-      profile.branding?.bodyFont ||
-      "Manrope",
+    logoUrl: brandingForm.getFieldValue("logoUrl") || profile.branding?.logoUrl || "",
+    primaryColor: brandingForm.getFieldValue("primaryColor") || profile.branding?.primaryColor || "#006c9c",
+    accentColor: brandingForm.getFieldValue("accentColor") || profile.branding?.accentColor || "#ffd566",
+    headingFont: brandingForm.getFieldValue("headingFont") || profile.branding?.headingFont || "Space Grotesk",
+    bodyFont: brandingForm.getFieldValue("bodyFont") || profile.branding?.bodyFont || "Manrope",
   };
 
   return (
     <section style={{ display: "grid", gap: 16 }}>
-      <header>
-        <Typography.Title level={3} className="page-title">
-          Store Management
+      {/* Page header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Typography.Title level={4} style={{ margin: 0 }}>
+          Settings
         </Typography.Title>
-        <Typography.Text className="page-subtitle">
-          Profile, Template/Decoration, Logistics/Shipping, Payment Gateway,
-          financial report.
-        </Typography.Text>
-      </header>
-
-      <Row gutter={[12, 12]}>
-        <Col xs={24} md={8}>
-          <Card title="Store">{profile.storeName}</Card>
-        </Col>
-        <Col xs={24} md={8}>
-          <Card title="Templates">{templates.length || 0}</Card>
-        </Col>
-        <Col xs={24} md={8}>
-          <Card title="Active Theme">{activeTemplateName}</Card>
-        </Col>
-      </Row>
-
-      <Card title="Profile">
-        {settingsNotice?.message ? (
-          <Alert
-            type={settingsNotice.type}
-            message={settingsNotice.message}
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-        ) : null}
-
-        <Form
-          form={settingsForm}
-          layout="vertical"
-          onFinish={onSaveSettings}
-          onValuesChange={() => setIsSettingsDirty(true)}
-          requiredMark={false}
+        <Button
+          type="primary"
+          icon={<LayoutOutlined />}
+          onClick={() => navigate("/store/website-builder")}
         >
-          <Row gutter={[12, 12]}>
-            <Col xs={24} md={12}>
-              <Form.Item
-                name="storeName"
-                label="Store name"
-                rules={[{ required: true, message: "Store name is required." }]}
-              >
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="contactEmail" label="Contact email">
-                <Input type="email" placeholder="store@example.com" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="contactPhone" label="Contact phone">
-                <Input placeholder="+62..." />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item
-                name="status"
-                label="Status"
-                rules={[{ required: true, message: "Status is required." }]}
-              >
-                <Select options={statusOptions} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item
-                name="currencyCode"
-                label="Currency"
-                rules={[{ required: true, message: "Currency is required." }]}
-              >
-                <Select options={currencyOptions} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item
-                name="timezone"
-                label="Timezone"
-                rules={[{ required: true, message: "Timezone is required." }]}
-              >
-                <Select options={timezoneOptions} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item
-                name="locale"
-                label="Locale"
-                rules={[{ required: true, message: "Locale is required." }]}
-              >
-                <Select options={localeOptions} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item
-                name="country"
-                label="Country"
-                rules={[{ required: true, message: "Country is required." }]}
-              >
-                <Select options={countryOptions} />
-              </Form.Item>
-            </Col>
-            <Col xs={24}>
-              <Divider style={{ margin: "8px 0" }} />
-            </Col>
-            <Col xs={24}>
+          Open website builder
+        </Button>
+      </div>
+
+      <Row gutter={[16, 16]}>
+        {/* Store details */}
+        <Col xs={24} lg={16}>
+          <Card
+            title={
+              <Space>
+                <ShopOutlined />
+                Store details
+              </Space>
+            }
+            style={{ marginBottom: 16 }}
+            extra={
+              isSettingsDirty && (
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  size="small"
+                  loading={isSavingSettings}
+                  onClick={() => settingsForm.submit()}
+                >
+                  Save
+                </Button>
+              )
+            }
+          >
+            {settingsNotice?.message && (
+              <Alert
+                type={settingsNotice.type}
+                message={settingsNotice.message}
+                showIcon
+                style={{ marginBottom: 16 }}
+                closable
+                onClose={() => setSettingsNotice(null)}
+              />
+            )}
+
+            <Form
+              form={settingsForm}
+              layout="vertical"
+              onFinish={onSaveSettings}
+              onValuesChange={() => setIsSettingsDirty(true)}
+              requiredMark={false}
+            >
+              {/* Business name + description */}
+              <Typography.Text type="secondary" style={{ fontSize: 12, textTransform: "uppercase", fontWeight: 600, display: "block", marginBottom: 12 }}>
+                Business information
+              </Typography.Text>
+              <Row gutter={12}>
+                <Col xs={24} md={12}>
+                  <Form.Item name="storeName" label="Store name" rules={[{ required: true }]}>
+                    <Input placeholder="My Awesome Store" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="status" label="Status" rules={[{ required: true }]}>
+                    <Select options={statusOptions} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24}>
+                  <Form.Item name="description" label="Store description">
+                    <Input.TextArea rows={2} placeholder="Brief description of your store" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Divider style={{ margin: "8px 0 16px" }} />
+
+              {/* Contact */}
+              <Typography.Text type="secondary" style={{ fontSize: 12, textTransform: "uppercase", fontWeight: 600, display: "block", marginBottom: 12 }}>
+                Contact information
+              </Typography.Text>
+              <Row gutter={12}>
+                <Col xs={24} md={12}>
+                  <Form.Item name="contactEmail" label="Contact email">
+                    <Input type="email" placeholder="store@example.com" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="contactPhone" label="Contact phone">
+                    <Input placeholder="+62..." />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Divider style={{ margin: "8px 0 16px" }} />
+
+              {/* Address */}
+              <Typography.Text type="secondary" style={{ fontSize: 12, textTransform: "uppercase", fontWeight: 600, display: "block", marginBottom: 12 }}>
+                Store address
+              </Typography.Text>
               <Form.Item name="address" label="Address">
                 <Input placeholder="Street address" />
               </Form.Item>
-            </Col>
-            <Col xs={24} md={8}>
-              <Form.Item name="city" label="City">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={8}>
-              <Form.Item name="province" label="Province">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={8}>
-              <Form.Item name="postalCode" label="Postal code">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col xs={24}>
-              <Form.Item name="description" label="Description">
-                <Input.TextArea rows={3} />
-              </Form.Item>
-            </Col>
-          </Row>
+              <Row gutter={12}>
+                <Col xs={24} md={8}>
+                  <Form.Item name="city" label="City">
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Form.Item name="province" label="Province / State">
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Form.Item name="postalCode" label="Postal code">
+                    <Input />
+                  </Form.Item>
+                </Col>
+              </Row>
 
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={isSavingSettings}
-            disabled={!isSettingsDirty}
+              <Divider style={{ margin: "8px 0 16px" }} />
+
+              {/* Locale & preferences */}
+              <Typography.Text type="secondary" style={{ fontSize: 12, textTransform: "uppercase", fontWeight: 600, display: "block", marginBottom: 12 }}>
+                Store defaults
+              </Typography.Text>
+              <Row gutter={12}>
+                <Col xs={24} md={12}>
+                  <Form.Item name="currencyCode" label="Currency" rules={[{ required: true }]}>
+                    <Select options={currencyOptions} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="country" label="Country" rules={[{ required: true }]}>
+                    <Select options={countryOptions} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="timezone" label="Timezone" rules={[{ required: true }]}>
+                    <Select options={timezoneOptions} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="locale" label="Language" rules={[{ required: true }]}>
+                    <Select options={localeOptions} />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={isSavingSettings}
+                disabled={!isSettingsDirty}
+                icon={<SaveOutlined />}
+              >
+                Save settings
+              </Button>
+            </Form>
+          </Card>
+
+          {/* Branding card */}
+          <Card
+            title={
+              <Space>
+                <GlobalOutlined />
+                Brand & appearance
+              </Space>
+            }
+            extra={
+              isBrandingDirty && (
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  size="small"
+                  loading={isSavingBranding}
+                  onClick={() => brandingForm.submit()}
+                >
+                  Save
+                </Button>
+              )
+            }
           >
-            Save store settings
-          </Button>
-        </Form>
-      </Card>
+            {brandingNotice?.message && (
+              <Alert
+                type={brandingNotice.type}
+                message={brandingNotice.message}
+                showIcon
+                style={{ marginBottom: 16 }}
+                closable
+                onClose={() => setBrandingNotice(null)}
+              />
+            )}
 
-      <Card
-        title="Template / Decoration"
-        extra={
-          <Button
-            type="primary"
-            icon={<LayoutOutlined />}
-            onClick={() => navigate("/store/website-builder")}
-          >
-            Open Website Builder
-          </Button>
-        }
-      >
-        {brandingNotice?.message ? (
-          <Alert
-            type={brandingNotice.type}
-            message={brandingNotice.message}
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-        ) : null}
-
-        <Form
-          form={brandingForm}
-          layout="vertical"
-          onFinish={onSaveBranding}
-          onValuesChange={() => setIsBrandingDirty(true)}
-          requiredMark={false}
-          style={{ marginBottom: 16 }}
-        >
-          <Row gutter={[12, 12]}>
-            <Col xs={24} md={12}>
+            <Form
+              form={brandingForm}
+              layout="vertical"
+              onFinish={onSaveBranding}
+              onValuesChange={() => setIsBrandingDirty(true)}
+              requiredMark={false}
+            >
               <Form.Item name="logoUrl" label="Logo URL">
                 <Input placeholder="https://..." />
               </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item name="primaryColor" label="Primary color">
-                <Input placeholder="#006c9c" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item name="accentColor" label="Accent color">
-                <Input placeholder="#ffd566" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="headingFont" label="Heading font">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="bodyFont" label="Body font">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
+              <Row gutter={12}>
+                <Col xs={24} md={12}>
+                  <Form.Item name="primaryColor" label="Primary color">
+                    <Space.Compact style={{ width: "100%" }}>
+                      <Form.Item name="primaryColor" noStyle>
+                        <Input placeholder="#006c9c" />
+                      </Form.Item>
+                      <Form.Item shouldUpdate noStyle>
+                        {() => (
+                          <div
+                            style={{
+                              width: 36,
+                              background: brandingForm.getFieldValue("primaryColor") || "#006c9c",
+                              border: "1px solid #d9d9d9",
+                              borderLeft: "none",
+                              borderRadius: "0 6px 6px 0",
+                            }}
+                          />
+                        )}
+                      </Form.Item>
+                    </Space.Compact>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="accentColor" label="Accent color">
+                    <Input placeholder="#ffd566" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="headingFont" label="Heading font">
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="bodyFont" label="Body font">
+                    <Input />
+                  </Form.Item>
+                </Col>
+              </Row>
 
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={isSavingBranding}
-            disabled={!isBrandingDirty}
-          >
-            Save branding
-          </Button>
-        </Form>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={isSavingBranding}
+                disabled={!isBrandingDirty}
+                icon={<SaveOutlined />}
+              >
+                Save branding
+              </Button>
+            </Form>
+          </Card>
+        </Col>
 
-        <Card style={{ marginBottom: 16 }}>
-          <Typography.Title level={5} style={{ marginTop: 0 }}>
-            Branding Preview
-          </Typography.Title>
-          <div
-            style={{
-              border: `1px solid ${brandingPreview.accentColor}`,
-              borderRadius: 12,
-              padding: 16,
-              background: "rgba(255,255,255,0.5)",
-            }}
-          >
-            {brandingPreview.logoUrl ? (
-              <img
-                src={brandingPreview.logoUrl}
-                alt="Store logo"
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 8,
-                  objectFit: "cover",
-                }}
-              />
-            ) : (
+        {/* Right sidebar */}
+        <Col xs={24} lg={8}>
+          {/* Store overview */}
+          <Card style={{ marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
               <div
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 8,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 10,
                   background: brandingPreview.primaryColor,
                   color: "#fff",
-                  display: "grid",
-                  placeItems: "center",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20,
                   fontWeight: 700,
+                  flexShrink: 0,
                 }}
               >
-                {String(profile.storeName || "S")
-                  .slice(0, 1)
-                  .toUpperCase()}
+                {profile.storeName?.[0]?.toUpperCase()}
               </div>
+              <div>
+                <Typography.Text strong style={{ display: "block" }}>
+                  {profile.storeName}
+                </Typography.Text>
+                <Tag color={profile.status === "active" ? "success" : "default"} style={{ fontSize: 12 }}>
+                  {profile.status || "draft"}
+                </Tag>
+              </div>
+            </div>
+            {profile.description && (
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                {profile.description}
+              </Typography.Text>
             )}
+          </Card>
 
-            <Typography.Title
-              level={4}
+          {/* Brand preview */}
+          <Card title="Branding preview" style={{ marginBottom: 12 }}>
+            <div
               style={{
-                margin: "10px 0 4px",
-                color: brandingPreview.primaryColor,
-                fontFamily: brandingPreview.headingFont,
+                border: `2px solid ${brandingPreview.accentColor}`,
+                borderRadius: 10,
+                padding: 16,
               }}
             >
-              {profile.storeName}
-            </Typography.Title>
-            <Typography.Text style={{ fontFamily: brandingPreview.bodyFont }}>
-              {profile.description || "No store description yet."}
-            </Typography.Text>
-          </div>
-        </Card>
+              {brandingPreview.logoUrl ? (
+                <img
+                  src={brandingPreview.logoUrl}
+                  alt="Store logo"
+                  style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover" }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 8,
+                    background: brandingPreview.primaryColor,
+                    color: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 700,
+                    fontSize: 18,
+                  }}
+                >
+                  {profile.storeName?.[0]?.toUpperCase()}
+                </div>
+              )}
+              <Typography.Title
+                level={5}
+                style={{ margin: "10px 0 4px", color: brandingPreview.primaryColor, fontFamily: brandingPreview.headingFont }}
+              >
+                {profile.storeName}
+              </Typography.Title>
+              <Typography.Text style={{ fontSize: 13, fontFamily: brandingPreview.bodyFont, color: "#666" }}>
+                {profile.description || "Your store description"}
+              </Typography.Text>
+            </div>
+          </Card>
 
-        <List
-          dataSource={templates}
-          renderItem={(item) => (
-            <List.Item key={item.id}>
-              <List.Item.Meta title={item.name} />
-              {item.active ? <Tag color="green">active</Tag> : null}
-            </List.Item>
-          )}
-          locale={{
-            emptyText:
-              "No templates available yet. Fallback branding is active.",
-          }}
-        />
-      </Card>
+          {/* Templates list */}
+          <Card title="Themes" extra={<Button size="small" onClick={() => navigate("/store/website-builder")}>Manage</Button>}>
+            {templates.length === 0 ? (
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                No themes yet. Default branding is active.
+              </Typography.Text>
+            ) : (
+              <List
+                size="small"
+                dataSource={templates}
+                renderItem={(item) => (
+                  <List.Item
+                    key={item.id}
+                    extra={item.active ? <Tag color="success">Active</Tag> : null}
+                  >
+                    <Typography.Text style={{ fontSize: 13 }}>{item.name}</Typography.Text>
+                  </List.Item>
+                )}
+              />
+            )}
+            <div style={{ marginTop: 12 }}>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Active theme: {activeTemplateName}
+              </Typography.Text>
+            </div>
+          </Card>
+        </Col>
+      </Row>
     </section>
   );
 }

@@ -58,64 +58,45 @@ import { useLocalization } from "./context/LocalizationContext.jsx";
 
 const LoginPage = lazy(() => import("./pages/auth/LoginPage.jsx"));
 const RegisterPage = lazy(() => import("./pages/auth/RegisterPage.jsx"));
+const OnboardingPage = lazy(
+  () => import("./pages/onboarding/OnboardingPage.jsx"),
+);
 
 const DashboardPage = lazy(() => import("./pages/overview/DashboardPage.jsx"));
-const AnalyticsPage = lazy(() => import("./pages/overview/AnalyticsPage.jsx"));
 
 const ProductsPage = lazy(() => import("./pages/catalog/ProductsPage.jsx"));
 const CollectionsPage = lazy(
   () => import("./pages/catalog/CollectionsPage.jsx"),
 );
-const InventoryPage = lazy(() => import("./pages/catalog/InventoryPage.jsx"));
-const DiscountsPage = lazy(() => import("./pages/catalog/DiscountsPage.jsx"));
-const CampaignsPage = lazy(() => import("./pages/catalog/CampaignsPage.jsx"));
-const ContentPagesPage = lazy(
-  () => import("./pages/catalog/ContentPagesPage.jsx"),
-);
 
 const CartPage = lazy(() => import("./pages/sales/CartPage.jsx"));
-const AbandonedCartsPage = lazy(
-  () => import("./pages/sales/AbandonedCartsPage.jsx"),
-);
 const CheckoutPage = lazy(() => import("./pages/sales/CheckoutPage.jsx"));
 const OrdersPage = lazy(() => import("./pages/sales/OrdersPage.jsx"));
 const OrderDetailPage = lazy(() => import("./pages/sales/OrderDetailPage.jsx"));
-const SubscriptionsPage = lazy(
-  () => import("./pages/sales/SubscriptionsPage.jsx"),
-);
-const CustomersPage = lazy(() => import("./pages/sales/CustomersPage.jsx"));
-const PaymentsPage = lazy(() => import("./pages/sales/PaymentsPage.jsx"));
-const ReturnsPage = lazy(() => import("./pages/sales/ReturnsPage.jsx"));
 
 const ShippingPage = lazy(() => import("./pages/operations/ShippingPage.jsx"));
-const TaxPage = lazy(() => import("./pages/operations/TaxPage.jsx"));
-
-const B2bCompaniesPage = lazy(() => import("./pages/b2b/B2bCompaniesPage.jsx"));
-const WholesalePriceListsPage = lazy(
-  () => import("./pages/b2b/WholesalePriceListsPage.jsx"),
-);
-const IntegrationsPage = lazy(() => import("./pages/b2b/IntegrationsPage.jsx"));
-const WebhooksPage = lazy(() => import("./pages/b2b/WebhooksPage.jsx"));
-
-const AutomationsPage = lazy(
-  () => import("./pages/automation/AutomationsPage.jsx"),
-);
-
-const SecurityPage = lazy(() => import("./pages/security/SecurityPage.jsx"));
-const AuditPage = lazy(() => import("./pages/security/AuditPage.jsx"));
 
 const StorePage = lazy(() => import("./pages/settings/StorePage.jsx"));
 const WebsiteBuilderPage = lazy(
-  () =>
-    import("./components/website-builder/WebsiteBuilderPage.jsx"),
+  () => import("./components/website-builder/WebsiteBuilderPage.jsx"),
 );
-const LocalizationPage = lazy(
-  () => import("./pages/settings/LocalizationPage.jsx"),
+const StorefrontPreviewPage = lazy(
+  () => import("./pages/storefront/StorefrontPreviewPage.jsx"),
 );
-const MultiCurrencyPage = lazy(
-  () => import("./pages/settings/MultiCurrencyPage.jsx"),
+const StorefrontProductPage = lazy(
+  () => import("./pages/storefront/StorefrontProductPage.jsx"),
+);
+const StorefrontCartPage = lazy(
+  () => import("./pages/storefront/StorefrontCartPage.jsx"),
+);
+const StorefrontCheckoutPage = lazy(
+  () => import("./pages/storefront/StorefrontCheckoutPage.jsx"),
+);
+const StorefrontOrderConfirmationPage = lazy(
+  () => import("./pages/storefront/StorefrontOrderConfirmationPage.jsx"),
 );
 const ProfilePage = lazy(() => import("./pages/settings/ProfilePage.jsx"));
+import ComingSoonPage from "./pages/ComingSoonPage.js";
 
 const menuSections = [
   {
@@ -125,6 +106,23 @@ const menuSections = [
     children: [
       { to: "/", label: "Homepage/Dashboard", icon: <DashboardOutlined /> },
       { to: "/analytics", label: "Analytics", icon: <BarChartOutlined /> },
+    ],
+  },
+  {
+    key: "builder",
+    label: "Website",
+    icon: <AppstoreOutlined />,
+    children: [
+      {
+        to: "/store/website-builder",
+        label: "Website Builder",
+        icon: <AppstoreOutlined />,
+      },
+      {
+        to: "/store",
+        label: "Store Settings",
+        icon: <ShopOutlined />,
+      },
     ],
   },
   {
@@ -220,7 +218,6 @@ const menuSections = [
     label: "Settings",
     icon: <SettingOutlined />,
     children: [
-      { to: "/store", label: "Store Management", icon: <ShopOutlined /> },
       { to: "/localization", label: "Localization", icon: <GlobalOutlined /> },
       {
         to: "/multi-currency",
@@ -237,7 +234,7 @@ const flatLinks = menuSections.flatMap((section) => section.children);
 function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, store } = useAuth();
   const { t, activeLocale, settings, setLocale } = useLocalization();
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.lg;
@@ -307,11 +304,16 @@ function AppLayout() {
         <div className="app-logo-mark">SK</div>
         <div>
           <Typography.Title level={4} className="app-logo-title">
-            Skye Apps
+            {store?.name || "Skye"}
           </Typography.Title>
-          <Typography.Text className="app-logo-subtitle">
-            Admin dashboard
-          </Typography.Text>
+          <Badge
+            status={store?.isPublished ? "success" : "default"}
+            text={
+              <Typography.Text style={{ fontSize: 11 }} type="secondary">
+                {store?.isPublished ? "Published" : "Draft"}
+              </Typography.Text>
+            }
+          />
         </div>
       </Space>
 
@@ -336,73 +338,186 @@ function AppLayout() {
   );
 
   return (
+    <Layout className="app-shell">
+      {!isMobile ? (
+        <Layout.Sider width="fit-content" className="app-sider">
+          {sideNavigation}
+        </Layout.Sider>
+      ) : null}
+
+      <Drawer
+        placement="left"
+        width={320}
+        title="Navigation"
+        open={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        className="app-mobile-drawer"
+      >
+        {sideNavigation}
+      </Drawer>
+
+      <Layout.Content className="app-content">
+        <Card className="app-topbar" styles={{ body: { padding: "10px 16px" } }}>
+          <Flex justify="space-between" align="center" gap={12}>
+            <Space size={10} align="center">
+              {isMobile ? (
+                <Button size="small" onClick={() => setMobileNavOpen(true)}>Menu</Button>
+              ) : null}
+              <Space size={6} align="center">
+                <div className="app-logo-mark" style={{ width: 28, height: 28, fontSize: "0.72rem" }}>SK</div>
+                <Typography.Text strong style={{ fontSize: 14 }}>
+                  {isMobile ? currentRouteLabel : (store?.name || "Skye")}
+                </Typography.Text>
+              </Space>
+            </Space>
+            <Flex align="center" gap={8} wrap="nowrap">
+              <Tag color="processing" style={{ margin: 0 }}>{t("app.liveOps", "Live Ops")}</Tag>
+              <Badge
+                status="processing"
+                text={t("app.realtimeSync", "Realtime sync")}
+              />
+              <Select
+                size="small"
+                value={activeLocale}
+                style={{ minWidth: 100 }}
+                onChange={(value) => setLocale(value, true)}
+                options={(settings?.enabledLocales || ["id", "en"]).map(
+                  (localeCode) => ({
+                    value: localeCode,
+                    label: localeCode,
+                  }),
+                )}
+              />
+              <Avatar size="small" className="app-user-avatar">
+                {String(user?.email || "U")
+                  .slice(0, 1)
+                  .toUpperCase()}
+              </Avatar>
+            </Flex>
+          </Flex>
+        </Card>
+
+        <div className="app-content-scroll">
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
+              {/* MVP 1 — active routes */}
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/products" element={<ProductsPage />} />
+              <Route path="/collections" element={<CollectionsPage />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+              <Route path="/shipping" element={<ShippingPage />} />
+              <Route
+                path="/store/website-builder"
+                element={<WebsiteBuilderPage />}
+              />
+              <Route path="/store" element={<StorePage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+
+              {/* Coming soon — not yet in MVP 1 */}
+              <Route path="/analytics" element={<ComingSoonPage />} />
+              <Route path="/inventory" element={<ComingSoonPage />} />
+              <Route path="/discounts" element={<ComingSoonPage />} />
+              <Route path="/campaigns" element={<ComingSoonPage />} />
+              <Route path="/content-pages" element={<ComingSoonPage />} />
+              <Route path="/abandoned-carts" element={<ComingSoonPage />} />
+              <Route path="/subscriptions" element={<ComingSoonPage />} />
+              <Route path="/customers" element={<ComingSoonPage />} />
+              <Route path="/payments" element={<ComingSoonPage />} />
+              <Route path="/returns" element={<ComingSoonPage />} />
+              <Route path="/tax" element={<ComingSoonPage />} />
+              <Route path="/b2b-companies" element={<ComingSoonPage />} />
+              <Route path="/wholesale-price-lists" element={<ComingSoonPage />} />
+              <Route path="/integrations" element={<ComingSoonPage />} />
+              <Route path="/webhooks" element={<ComingSoonPage />} />
+              <Route path="/automations" element={<ComingSoonPage />} />
+              <Route path="/security" element={<ComingSoonPage />} />
+              <Route path="/audit" element={<ComingSoonPage />} />
+              <Route path="/localization" element={<ComingSoonPage />} />
+              <Route path="/multi-currency" element={<ComingSoonPage />} />
+            </Routes>
+          </Suspense>
+        </div>
+      </Layout.Content>
+    </Layout>
+  );
+}
+
+function PageFallback() {
+  return <Card className="page-fallback">Loading page...</Card>;
+}
+
+export default function App() {
+  return (
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary: '#0D5C53',
-          colorSuccess: '#15803D',
-          colorWarning: '#D97706',
-          colorError: '#DC2626',
-          colorInfo: '#0D5C53',
-          colorTextBase: '#111827',
-          colorBgBase: '#FFFFFF',
-          colorPrimaryBg: '#E8F3F1',
-          colorPrimaryBgHover: '#D1E7E3',
-          colorPrimaryBorder: '#A3C9C2',
-          colorPrimaryBorderHover: '#7AB0A7',
-          colorPrimaryHover: '#0A4A42',
-          colorPrimaryActive: '#073A33',
-          colorPrimaryText: '#0D5C53',
-          colorPrimaryTextHover: '#0A4A42',
-          colorPrimaryTextActive: '#073A33',
-          colorSuccessBg: '#ECF7EF',
-          colorSuccessBgHover: '#D9F0E0',
-          colorSuccessBorder: '#9DD6AF',
-          colorSuccessBorderHover: '#6BBD84',
-          colorSuccessHover: '#116532',
-          colorSuccessActive: '#0A4F28',
-          colorSuccessText: '#15803D',
-          colorSuccessTextHover: '#116532',
-          colorSuccessTextActive: '#0A4F28',
-          colorWarningBg: '#FFF7ED',
-          colorWarningBgHover: '#FFEDD5',
-          colorWarningBorder: '#FDBA74',
-          colorWarningBorderHover: '#FB923C',
-          colorWarningHover: '#B45309',
-          colorWarningActive: '#92400E',
-          colorWarningText: '#D97706',
-          colorWarningTextHover: '#B45309',
-          colorWarningTextActive: '#92400E',
-          colorErrorBg: '#FEF2F2',
-          colorErrorBgHover: '#FEE2E2',
-          colorErrorBorder: '#FCA5A5',
-          colorErrorBorderHover: '#F87171',
-          colorErrorHover: '#B91C1C',
-          colorErrorActive: '#991B1B',
-          colorErrorText: '#DC2626',
-          colorErrorTextHover: '#B91C1C',
-          colorErrorTextActive: '#991B1B',
-          colorInfoBg: '#E8F3F1',
-          colorInfoBgHover: '#D1E7E3',
-          colorInfoBorder: '#A3C9C2',
-          colorInfoBorderHover: '#7AB0A7',
-          colorInfoHover: '#0A4A42',
-          colorInfoActive: '#073A33',
-          colorInfoText: '#0D5C53',
-          colorInfoTextHover: '#0A4A42',
-          colorInfoTextActive: '#073A33',
-          colorText: '#111827',
-          colorTextSecondary: '#374151',
-          colorTextTertiary: '#6B7280',
-          colorTextQuaternary: '#9CA3AF',
-          colorTextDisabled: '#9CA3AF',
-          colorBgContainer: '#FFFFFF',
-          colorBgElevated: '#FFFFFF',
-          colorBgLayout: '#EDF4F2',
-          colorBgSpotlight: '#111827',
-          colorBgMask: 'rgba(17, 24, 39, 0.45)',
-          colorBorder: '#D1DBDB',
-          colorBorderSecondary: '#E5E7EB',
+          colorPrimary: "#0D5C53",
+          colorSuccess: "#15803D",
+          colorWarning: "#D97706",
+          colorError: "#DC2626",
+          colorInfo: "#0D5C53",
+          colorTextBase: "#111827",
+          colorBgBase: "#FFFFFF",
+          colorPrimaryBg: "#E8F3F1",
+          colorPrimaryBgHover: "#D1E7E3",
+          colorPrimaryBorder: "#A3C9C2",
+          colorPrimaryBorderHover: "#7AB0A7",
+          colorPrimaryHover: "#0A4A42",
+          colorPrimaryActive: "#073A33",
+          colorPrimaryText: "#0D5C53",
+          colorPrimaryTextHover: "#0A4A42",
+          colorPrimaryTextActive: "#073A33",
+          colorSuccessBg: "#ECF7EF",
+          colorSuccessBgHover: "#D9F0E0",
+          colorSuccessBorder: "#9DD6AF",
+          colorSuccessBorderHover: "#6BBD84",
+          colorSuccessHover: "#116532",
+          colorSuccessActive: "#0A4F28",
+          colorSuccessText: "#15803D",
+          colorSuccessTextHover: "#116532",
+          colorSuccessTextActive: "#0A4F28",
+          colorWarningBg: "#FFF7ED",
+          colorWarningBgHover: "#FFEDD5",
+          colorWarningBorder: "#FDBA74",
+          colorWarningBorderHover: "#FB923C",
+          colorWarningHover: "#B45309",
+          colorWarningActive: "#92400E",
+          colorWarningText: "#D97706",
+          colorWarningTextHover: "#B45309",
+          colorWarningTextActive: "#92400E",
+          colorErrorBg: "#FEF2F2",
+          colorErrorBgHover: "#FEE2E2",
+          colorErrorBorder: "#FCA5A5",
+          colorErrorBorderHover: "#F87171",
+          colorErrorHover: "#B91C1C",
+          colorErrorActive: "#991B1B",
+          colorErrorText: "#DC2626",
+          colorErrorTextHover: "#B91C1C",
+          colorErrorTextActive: "#991B1B",
+          colorInfoBg: "#E8F3F1",
+          colorInfoBgHover: "#D1E7E3",
+          colorInfoBorder: "#A3C9C2",
+          colorInfoBorderHover: "#7AB0A7",
+          colorInfoHover: "#0A4A42",
+          colorInfoActive: "#073A33",
+          colorInfoText: "#0D5C53",
+          colorInfoTextHover: "#0A4A42",
+          colorInfoTextActive: "#073A33",
+          colorText: "#111827",
+          colorTextSecondary: "#374151",
+          colorTextTertiary: "#6B7280",
+          colorTextQuaternary: "#9CA3AF",
+          colorTextDisabled: "#9CA3AF",
+          colorBgContainer: "#FFFFFF",
+          colorBgElevated: "#FFFFFF",
+          colorBgLayout: "#EDF4F2",
+          colorBgSpotlight: "#111827",
+          colorBgMask: "rgba(17, 24, 39, 0.45)",
+          colorBorder: "#D1DBDB",
+          colorBorderSecondary: "#E5E7EB",
           borderRadius: 8,
           borderRadiusXS: 2,
           borderRadiusSM: 4,
@@ -413,172 +528,64 @@ function AppLayout() {
           margin: 16,
           marginSM: 12,
           marginLG: 24,
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
-          boxShadowSecondary: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)",
+          boxShadowSecondary: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
           fontFamily: "Manrope, sans-serif",
         },
       }}
     >
       <AntApp>
-        <Layout className="app-shell">
-          {!isMobile ? (
-            <Layout.Sider width="fit-content" className="app-sider">
-              {sideNavigation}
-            </Layout.Sider>
-          ) : null}
-
-          <Drawer
-            placement="left"
-            width={320}
-            title="Navigation"
-            open={mobileNavOpen}
-            onClose={() => setMobileNavOpen(false)}
-            className="app-mobile-drawer"
-          >
-            {sideNavigation}
-          </Drawer>
-
-          <Layout.Content className="app-content">
-            <Card className="app-topbar">
-              <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
-                <Space size={12} align="center" wrap>
-                  {isMobile ? (
-                    <Button onClick={() => setMobileNavOpen(true)}>Menu</Button>
-                  ) : null}
-                  <div>
-                    <Typography.Text className="app-kicker">
-                      {t("app.workspace", "Workspace")}
-                    </Typography.Text>
-                    <Typography.Title level={4} className="app-topbar-title">
-                      {currentRouteLabel}
-                    </Typography.Title>
-                    <Typography.Text className="app-topbar-subtitle">
-                      {t("app.commerceControl", "Commerce control center")}
-                    </Typography.Text>
-                  </div>
-                </Space>
-                <Flex align="center" gap={10} wrap="wrap">
-                  <Tag color="processing">{t("app.liveOps", "Live Ops")}</Tag>
-                  <Badge
-                    status="processing"
-                    text={t("app.realtimeSync", "Realtime sync")}
-                  />
-                  <Select
-                    size="small"
-                    value={activeLocale}
-                    style={{ minWidth: 112 }}
-                    onChange={(value) => setLocale(value, true)}
-                    options={(settings?.enabledLocales || ["id", "en"]).map(
-                      (localeCode) => ({
-                        value: localeCode,
-                        label: localeCode,
-                      }),
-                    )}
-                  />
-                  <Avatar className="app-user-avatar">
-                    {String(user?.email || "U")
-                      .slice(0, 1)
-                      .toUpperCase()}
-                  </Avatar>
-                </Flex>
-              </Flex>
-            </Card>
-
-            <div className="app-content-scroll">
-              <Suspense fallback={<PageFallback />}>
-                <Routes>
-                  <Route path="/" element={<DashboardPage />} />
-                  <Route path="/analytics" element={<AnalyticsPage />} />
-                  <Route path="/products" element={<ProductsPage />} />
-                  <Route path="/collections" element={<CollectionsPage />} />
-                  <Route path="/inventory" element={<InventoryPage />} />
-                  <Route path="/discounts" element={<DiscountsPage />} />
-                  <Route path="/campaigns" element={<CampaignsPage />} />
-                  <Route path="/content-pages" element={<ContentPagesPage />} />
-                  <Route path="/cart" element={<CartPage />} />
-                  <Route
-                    path="/abandoned-carts"
-                    element={<AbandonedCartsPage />}
-                  />
-                  <Route path="/checkout" element={<CheckoutPage />} />
-                  <Route path="/orders" element={<OrdersPage />} />
-                  <Route
-                    path="/subscriptions"
-                    element={<SubscriptionsPage />}
-                  />
-                  <Route path="/customers" element={<CustomersPage />} />
-                  <Route
-                    path="/orders/:orderId"
-                    element={<OrderDetailPage />}
-                  />
-                  <Route path="/payments" element={<PaymentsPage />} />
-                  <Route path="/shipping" element={<ShippingPage />} />
-                  <Route path="/tax" element={<TaxPage />} />
-                  <Route path="/returns" element={<ReturnsPage />} />
-                  <Route
-                    path="/store/website-builder"
-                    element={<WebsiteBuilderPage />}
-                  />
-                  <Route path="/store" element={<StorePage />} />
-                  <Route path="/b2b-companies" element={<B2bCompaniesPage />} />
-                  <Route
-                    path="/wholesale-price-lists"
-                    element={<WholesalePriceListsPage />}
-                  />
-                  <Route path="/integrations" element={<IntegrationsPage />} />
-                  <Route path="/webhooks" element={<WebhooksPage />} />
-                  <Route path="/automations" element={<AutomationsPage />} />
-                  <Route path="/security" element={<SecurityPage />} />
-                  <Route path="/audit" element={<AuditPage />} />
-                  <Route path="/localization" element={<LocalizationPage />} />
-                  <Route
-                    path="/multi-currency"
-                    element={<MultiCurrencyPage />}
-                  />
-                  <Route path="/profile" element={<ProfilePage />} />
-                </Routes>
-              </Suspense>
-            </div>
-          </Layout.Content>
-        </Layout>
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            <Route path="/preview" element={<StorefrontPreviewPage />} />
+            <Route
+              path="/storefront/product/:handle"
+              element={<StorefrontProductPage />}
+            />
+            <Route path="/storefront/cart" element={<StorefrontCartPage />} />
+            <Route
+              path="/storefront/checkout"
+              element={<StorefrontCheckoutPage />}
+            />
+            <Route
+              path="/storefront/order-confirmed/:orderId"
+              element={<StorefrontOrderConfirmationPage />}
+            />
+            <Route
+              path="/login"
+              element={
+                <PublicOnlyRoute>
+                  <LoginPage />
+                </PublicOnlyRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <PublicOnlyRoute>
+                  <RegisterPage />
+                </PublicOnlyRoute>
+              }
+            />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <OnboardingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Suspense>
       </AntApp>
     </ConfigProvider>
-  );
-}
-
-function PageFallback() {
-  return <Card className="page-fallback">Loading page...</Card>;
-}
-
-export default function App() {
-  return (
-    <Suspense fallback={<PageFallback />}>
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            <PublicOnlyRoute>
-              <LoginPage />
-            </PublicOnlyRoute>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <PublicOnlyRoute>
-              <RegisterPage />
-            </PublicOnlyRoute>
-          }
-        />
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </Suspense>
   );
 }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Alert,
   Button,
@@ -16,13 +15,29 @@ import {
 } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCart } from "../../context/CartContext.jsx";
-import { useLocalization } from "../../context/LocalizationContext.jsx";
+import { useCart } from "../../context/CartContext";
+import { useLocalization } from "../../context/LocalizationContext";
+import type { CheckoutSnapshot } from "../../services/api";
 import {
   createOrderFromCart,
   getCheckoutSnapshot,
   revalidateCheckout,
-} from "../../services/api.js";
+} from "../../services/api";
+
+interface CheckoutFormValues {
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  addressLine1?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
+  shippingMethodId?: string;
+  paymentMethodId?: string;
+  discountCode?: string | string[];
+  note?: string;
+  displayCurrency?: string;
+}
 
 const checkoutSteps = [
   { key: "cart_review", title: "Cart" },
@@ -32,7 +47,7 @@ const checkoutSteps = [
   { key: "review", title: "Review" },
 ];
 
-function resolveStepIndex(step) {
+function resolveStepIndex(step: string): number {
   const index = checkoutSteps.findIndex((item) => item.key === step);
   return index >= 0 ? index : 0;
 }
@@ -49,24 +64,28 @@ export default function CheckoutPage() {
     refreshCheckoutRecovery,
   } = useCart();
 
-  const [snapshot, setSnapshot] = useState({
+  const [snapshot, setSnapshot] = useState<CheckoutSnapshot>({
     cart: { items: [], subtotal: 0 },
     discounts: [],
     paymentMethods: [],
     shippingMethods: [],
     taxRules: [],
     recovery: null,
+  } as unknown as CheckoutSnapshot);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string>("");
+  const [notice, setNotice] = useState<{ type: string; message: string }>({
+    type: "",
+    message: "",
   });
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [notice, setNotice] = useState({ type: "", message: "" });
-  const [currentStep, setCurrentStep] = useState("cart_review");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRevalidating, setIsRevalidating] = useState(false);
-  const [revalidation, setRevalidation] = useState(null);
-  const [displayCurrency, setDisplayCurrency] = useState("USD");
+  const [currentStep, setCurrentStep] = useState<string>("cart_review");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isRevalidating, setIsRevalidating] = useState<boolean>(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [revalidation, setRevalidation] = useState<any>(null);
+  const [displayCurrency, setDisplayCurrency] = useState<string>("USD");
   const [form] = Form.useForm();
-  const saveTimerRef = useRef(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeStepIndex = useMemo(
     () => resolveStepIndex(currentStep),
@@ -122,7 +141,7 @@ export default function CheckoutPage() {
     };
   }, []);
 
-  function persistDraft(nextState = currentStep) {
+  function persistDraft(nextState: string = currentStep) {
     const values = form.getFieldsValue(true);
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
@@ -139,7 +158,7 @@ export default function CheckoutPage() {
     }, 300);
   }
 
-  async function moveStep(direction) {
+  async function moveStep(direction: number) {
     const nextIndex = Math.max(
       0,
       Math.min(checkoutSteps.length - 1, activeStepIndex + direction),
@@ -199,7 +218,7 @@ export default function CheckoutPage() {
     }
   }
 
-  async function onSubmit(values) {
+  async function onSubmit(values: CheckoutFormValues) {
     setNotice({ type: "", message: "" });
     setIsSubmitting(true);
 

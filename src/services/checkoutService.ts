@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * checkoutService — Checkout session management, validation, and recovery state
  *
@@ -7,16 +6,81 @@
  * Depends on: supabaseClient, utils/errorUtils, storeService, cartService, discountService, taxService, shippingService
  */
 
-import { supabase } from "./supabaseClient.js";
-import { normalizeError } from "./utils/errorUtils.js";
-import { tableExists } from "./utils/dbUtils.js";
-import { getStoreContext, mapStoreSummary } from "./storeService.js";
-import { ensureActiveCart, getCart } from "./cartService.js";
-import { getDiscounts, listDiscountRows, resolveApplicableDiscounts, calculateDiscountAmount, normalizeCodeList } from "./discountService.js";
-import { getPaymentMethods } from "./paymentService.js";
-import { getShippingMethods } from "./shippingService.js";
-import { getTaxRules, resolveMatchingTaxRule, resolveTaxPricing } from "./taxService.js";
-import { getCurrencyConversionQuote, getCurrencySettings } from "./currencyService.js";
+import { ensureActiveCart, getCart } from "./cartService";
+import {
+  getCurrencyConversionQuote,
+  getCurrencySettings,
+} from "./currencyService";
+import {
+  calculateDiscountAmount,
+  getDiscounts,
+  listDiscountRows,
+  resolveApplicableDiscounts,
+} from "./discountService";
+import { getPaymentMethods } from "./paymentService";
+import { getShippingMethods } from "./shippingService";
+import { getStoreContext, mapStoreSummary } from "./storeService";
+import { supabase } from "./supabaseClient";
+import {
+  getTaxRules,
+  resolveMatchingTaxRule,
+  resolveTaxPricing,
+} from "./taxService";
+import { tableExists } from "./utils/dbUtils";
+import { normalizeError } from "./utils/errorUtils";
+
+interface RevalidationIssue {
+  code: string;
+  message: string;
+}
+
+interface AppliedDiscount {
+  id: string;
+  code: string;
+  title: string;
+  amount: number;
+}
+
+interface CheckoutPricing {
+  subtotal: number;
+  discountAmount: number;
+  shippingAmount: number;
+  taxableAmount: number;
+  taxAmount: number;
+  totalAmount: number;
+  taxBehavior?: string;
+  taxRate?: number;
+}
+
+interface RevalidateResult {
+  ok: boolean;
+  issues: RevalidationIssue[];
+  cart: import("./cartService").CartDetails;
+  appliedDiscounts: AppliedDiscount[];
+  pricing: CheckoutPricing;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  currencyQuote?: any;
+}
+
+export interface CheckoutRecoveryState {
+  sessionId: string | null;
+  state: string;
+  status: string;
+  formData: Record<string, unknown>;
+  revalidation: RevalidateResult | null;
+  lastError: string | null;
+}
+
+export interface CheckoutSnapshot {
+  store: import("../types").StoreSummary;
+  cart: import("./cartService").CartDetails;
+  discounts: unknown[];
+  paymentMethods: unknown[];
+  shippingMethods: unknown[];
+  taxRules: unknown[];
+  recovery: CheckoutRecoveryState;
+  currencySettings: unknown;
+}
 
 const CHECKOUT_STEP_ORDER = [
   "cart_review",
@@ -28,14 +92,17 @@ const CHECKOUT_STEP_ORDER = [
   "failed",
 ];
 
-function normalizeCheckoutStep(value) {
+function normalizeCheckoutStep(value: unknown): string {
   const step = String(value || "cart_review")
     .trim()
     .toLowerCase();
   return CHECKOUT_STEP_ORDER.includes(step) ? step : "cart_review";
 }
 
-function isValidCheckoutTransition(currentStep, nextStep) {
+function isValidCheckoutTransition(
+  currentStep: unknown,
+  nextStep: unknown,
+): boolean {
   const current = normalizeCheckoutStep(currentStep);
   const next = normalizeCheckoutStep(nextStep);
 
@@ -60,7 +127,7 @@ function isValidCheckoutTransition(currentStep, nextStep) {
   return nextIndex === currentIndex + 1;
 }
 
-async function resolveCheckoutSessionTable() {
+async function resolveCheckoutSessionTable(): Promise<string | null> {
   if (await tableExists("checkout_sessions")) {
     return "checkout_sessions";
   }
@@ -68,7 +135,14 @@ async function resolveCheckoutSessionTable() {
   return null;
 }
 
-async function saveCheckoutSessionEvent(payload) {
+async function saveCheckoutSessionEvent(payload: {
+  sessionId: string;
+  fromState?: string;
+  toState: string;
+  status?: string;
+  note?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
   if (!(await tableExists("checkout_state_events"))) {
     return;
   }
@@ -87,7 +161,9 @@ async function saveCheckoutSessionEvent(payload) {
   }
 }
 
-export async function revalidateCheckout(payload = {}) {
+export async function revalidateCheckout(
+  payload: Record<string, unknown> = {},
+): Promise<RevalidateResult> {
   const { store } = await getStoreContext();
   const cart = await getCart();
 
@@ -107,7 +183,7 @@ export async function revalidateCheckout(payload = {}) {
     };
   }
 
-  const issues = [];
+  const issues: RevalidationIssue[] = [];
 
   const variantIds = cart.items.map((item) => item.variantId).filter(Boolean);
   const { data: liveVariants, error: liveVariantError } = await supabase
@@ -116,50 +192,70 @@ export async function revalidateCheckout(payload = {}) {
       "id, price, quantity_in_stock, products!inner(id, title, store_id, status)",
     )
     .in("id", variantIds)
-    .eq("products.store_id", store.id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .eq("products.store_id", (store as any).id);
 
   if (liveVariantError) {
     throw normalizeError(liveVariantError);
   }
 
-  const liveById = new Map((liveVariants || []).map((row) => [row.id, row]));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const liveById = new Map(
+    (liveVariants || []).map((row: any) => [row.id, row]),
+  );
 
   for (const cartItem of cart.items) {
-    const live = liveById.get(cartItem.variantId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const live = liveById.get((cartItem as any).variantId);
     if (!live) {
       issues.push({
         code: "VARIANT_MISSING",
-        message: `${cartItem.productName} is no longer available`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        message: `${(cartItem as any).productName} is no longer available`,
       });
       continue;
     }
 
-    if (live.products?.status !== "active") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((live as any).products?.status !== "active") {
       issues.push({
         code: "PRODUCT_INACTIVE",
-        message: `${cartItem.productName} is not active`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        message: `${(cartItem as any).productName} is not active`,
       });
     }
 
-    if (Number(cartItem.quantity || 0) > Number(live.quantity_in_stock || 0)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (
+      Number((cartItem as any).quantity || 0) >
+      Number((live as any).quantity_in_stock || 0)
+    ) {
       issues.push({
         code: "INSUFFICIENT_STOCK",
-        message: `Insufficient stock for ${cartItem.productName}`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        message: `Insufficient stock for ${(cartItem as any).productName}`,
       });
     }
 
-    if (Number(cartItem.unitPrice || 0) !== Number(live.price || 0)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (
+      Number((cartItem as any).unitPrice || 0) !==
+      Number((live as any).price || 0)
+    ) {
       issues.push({
         code: "PRICE_CHANGED",
-        message: `Price changed for ${cartItem.productName}`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        message: `Price changed for ${(cartItem as any).productName}`,
       });
     }
   }
 
-  const shippingMethods = (await getShippingMethods()).filter(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const shippingMethods = ((await getShippingMethods()) as any[]).filter(
     (item) => item.isActive,
   );
   if (payload.shippingMethodId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const selectedShipping = shippingMethods.find(
       (item) => item.id === payload.shippingMethodId,
     );
@@ -171,10 +267,12 @@ export async function revalidateCheckout(payload = {}) {
     }
   }
 
-  const paymentMethods = (await getPaymentMethods()).filter(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const paymentMethods = ((await getPaymentMethods()) as any[]).filter(
     (item) => item.isActive,
   );
   if (payload.paymentMethodId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const selectedPayment = paymentMethods.find(
       (item) => item.id === payload.paymentMethodId,
     );
@@ -187,9 +285,10 @@ export async function revalidateCheckout(payload = {}) {
   }
 
   const subtotalAmount = Number(cart.subtotal || 0);
-  let appliedDiscounts = [];
+  let appliedDiscounts: AppliedDiscount[] = [];
   if (payload.discountCode) {
-    const activeDiscounts = await listDiscountRows(store.id, "active");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const activeDiscounts = await listDiscountRows((store as any).id, "active");
     const discountResolution = resolveApplicableDiscounts(activeDiscounts, {
       subtotal: subtotalAmount,
       cartItemCount: cart.items.length,
@@ -206,7 +305,8 @@ export async function revalidateCheckout(payload = {}) {
       for (const rejected of discountResolution.rejected) {
         issues.push({
           code: "DISCOUNT_REJECTED",
-          message: `${rejected.code}: ${rejected.reason}`,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          message: `${(rejected as any).code}: ${(rejected as any).reason}`,
         });
       }
     }
@@ -230,12 +330,15 @@ export async function revalidateCheckout(payload = {}) {
       .toFixed(2),
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const selectedShippingMethod = shippingMethods.find(
     (item) => item.id === payload.shippingMethodId,
   );
-  const shippingAmount = Number(selectedShippingMethod?.baseRate || 0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const shippingAmount = Number((selectedShippingMethod as any)?.baseRate || 0);
 
-  const taxRules = await getTaxRules();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const taxRules = (await getTaxRules()) as any[];
   const matchingTaxRule = resolveMatchingTaxRule(taxRules, payload.country);
   const pricing = resolveTaxPricing({
     subtotalAmount,
@@ -245,9 +348,11 @@ export async function revalidateCheckout(payload = {}) {
     manualTaxAmount: 0,
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const storeAny = store as any;
   const currencyQuote = await getCurrencyConversionQuote({
-    baseCurrency: store.currency || store.currency_code || "USD",
-    displayCurrency: payload.displayCurrency || store.currency || "USD",
+    baseCurrency: storeAny.currency || storeAny.currency_code || "USD",
+    displayCurrency: payload.displayCurrency || storeAny.currency || "USD",
     subtotal: subtotalAmount,
     discountAmount,
     shippingAmount,
@@ -259,12 +364,16 @@ export async function revalidateCheckout(payload = {}) {
   return {
     ok: issues.length === 0,
     issues,
-    cart,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cart: cart as any,
     appliedDiscounts: appliedDiscounts.map((item) => ({
       id: item.id,
-      code: item.code,
-      title: item.title,
-      amount: Number(item.calculated_amount || 0),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      code: (item as any).code,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      title: (item as any).title,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      amount: Number((item as any).calculated_amount || 0),
     })),
     pricing: {
       subtotal: subtotalAmount,
@@ -280,7 +389,7 @@ export async function revalidateCheckout(payload = {}) {
   };
 }
 
-export async function getCheckoutRecoveryState() {
+export async function getCheckoutRecoveryState(): Promise<CheckoutRecoveryState> {
   const { authUser, store } = await getStoreContext();
   const cart = await ensureActiveCart(store.id);
   const checkoutSessionTable = await resolveCheckoutSessionTable();
@@ -334,7 +443,9 @@ export async function getCheckoutRecoveryState() {
   };
 }
 
-export async function saveCheckoutRecoveryState(payload = {}) {
+export async function saveCheckoutRecoveryState(
+  payload: Partial<CheckoutRecoveryState> & Record<string, unknown> = {},
+): Promise<CheckoutRecoveryState> {
   const { authUser, store } = await getStoreContext();
   const cart = await ensureActiveCart(store.id);
   const checkoutSessionTable = await resolveCheckoutSessionTable();
@@ -353,7 +464,8 @@ export async function saveCheckoutRecoveryState(payload = {}) {
   const existing = await getCheckoutRecoveryState();
   const nextState = normalizeCheckoutStep(payload.state || existing.state);
   if (!isValidCheckoutTransition(existing.state, nextState)) {
-    const transitionError = new Error(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const transitionError: any = new Error(
       `Invalid checkout transition from ${existing.state} to ${nextState}`,
     );
     transitionError.code = "CHECKOUT_TRANSITION_INVALID";
@@ -421,13 +533,13 @@ export async function saveCheckoutRecoveryState(payload = {}) {
     sessionId,
     state: nextState,
     status: nextStatus,
-    formData: dataPayload.form_data_json,
-    revalidation: dataPayload.revalidation_json,
+    formData: dataPayload.form_data_json as Record<string, unknown>,
+    revalidation: dataPayload.revalidation_json as RevalidateResult | null,
     lastError: dataPayload.last_error,
   };
 }
 
-export async function getCheckoutSnapshot() {
+export async function getCheckoutSnapshot(): Promise<CheckoutSnapshot> {
   const { store } = await getStoreContext();
   const [
     cart,
@@ -448,12 +560,17 @@ export async function getCheckoutSnapshot() {
   ]);
 
   return {
-    store: mapStoreSummary(store),
-    cart,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    store: mapStoreSummary(store as any),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cart: cart as any,
     discounts,
-    paymentMethods: paymentMethods.filter((item) => item.isActive),
-    shippingMethods: shippingMethods.filter((item) => item.isActive),
-    taxRules: taxRules.filter((item) => item.isActive),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    paymentMethods: (paymentMethods as any[]).filter((item) => item.isActive),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    shippingMethods: (shippingMethods as any[]).filter((item) => item.isActive),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    taxRules: (taxRules as any[]).filter((item) => item.isActive),
     recovery,
     currencySettings,
   };

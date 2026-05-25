@@ -1,10 +1,40 @@
 // Authentication & Profiles
+export interface PreviewProduct {
+  id: string;
+  name: string;
+  handle: string;
+  price: number;
+  currency?: string;
+  imageUrl: string | null;
+  status?: string;
+  description?: string;
+  variantId: string | null;
+  stock: number;
+}
+
+export interface TemplateProps {
+  config: {
+    texts: Record<string, string>;
+    colors: Record<string, string>;
+    images: Record<string, string>;
+    catalog: {
+      collectionId: string | null;
+      displayCount: number;
+      layout: string;
+    };
+  };
+  storeName: string;
+  products?: PreviewProduct[];
+  storeSlug?: string;
+  onAddToCart?: (product: PreviewProduct) => void;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
   phone: string | null;
-  status: 'active' | 'inactive' | string;
+  status: "active" | "inactive" | string;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -19,6 +49,10 @@ export interface StoreSummary {
   status: string;
   createdAt: string;
   updatedAt: string;
+  // NEW — website builder fields
+  isPublished: boolean;
+  subdomain: string | null;
+  onboardingCompletedAt: string | null;
 }
 
 export interface AuthSessionData {
@@ -61,7 +95,7 @@ export interface Product {
   isPriceWindowActive: boolean;
   quantity_in_stock: number;
   stock: number;
-  status: 'active' | 'draft' | 'archived';
+  status: "active" | "draft" | "archived";
   vendor: string | null;
   productType: string | null;
   seoTitle: string;

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * orderService — Order lifecycle, status machine, detail retrieval, and order creation from cart
  *
@@ -7,24 +6,179 @@
  * Depends on: supabaseClient, utils/errorUtils, storeService, taxService, shippingService, discountService, paymentService, inventoryService
  */
 
-import { supabase } from "./supabaseClient.js";
-import { normalizeError, isMissingColumnError } from "./utils/errorUtils.js";
-import { tableExists } from "./utils/dbUtils.js";
-import { getStoreContext, createOrderNumber, createInvoiceNumber } from "./storeService.js";
-import { getCart, ensureActiveCart } from "./cartService.js";
-import { getShippingMethods } from "./shippingService.js";
-import { getPaymentMethods, createTransactionEvent, loadTransactionEventsByTransactionIds } from "./paymentService.js";
-import { getTaxRules, resolveMatchingTaxRule, resolveTaxPricing, normalizeTaxBehavior } from "./taxService.js";
-import { getCurrencyConversionQuote } from "./currencyService.js";
-import { listDiscountRows, resolveApplicableDiscounts, calculateDiscountAmount, normalizeCodeList } from "./discountService.js";
-import { syncInventoryLevelSnapshot, recordStockMovement } from "./inventoryService.js";
-import { normalizeReturnStatus } from "./returnsService.js";
-import { invalidateAnalyticsReportCache } from "./analyticsService.js";
-import { saveCheckoutRecoveryState, revalidateCheckout } from "./checkoutService.js";
+import { invalidateAnalyticsReportCache } from "./analyticsService";
+import { ensureActiveCart, getCart } from "./cartService";
+import {
+  revalidateCheckout,
+  saveCheckoutRecoveryState,
+} from "./checkoutService";
+import { getCurrencyConversionQuote } from "./currencyService";
+import {
+  calculateDiscountAmount,
+  listDiscountRows,
+  normalizeCodeList,
+  resolveApplicableDiscounts,
+} from "./discountService";
+import { sendEmail } from "./emailService";
+import {
+  recordStockMovement,
+  syncInventoryLevelSnapshot,
+} from "./inventoryService";
+import {
+  createTransactionEvent,
+  getPaymentMethods,
+  loadTransactionEventsByTransactionIds,
+} from "./paymentService";
+import { normalizeReturnStatus } from "./returnsService";
+import { getShippingMethods } from "./shippingService";
+import {
+  createInvoiceNumber,
+  createOrderNumber,
+  getStoreContext,
+} from "./storeService";
+import { supabase } from "./supabaseClient";
+import {
+  getTaxRules,
+  normalizeTaxBehavior,
+  resolveMatchingTaxRule,
+  resolveTaxPricing,
+} from "./taxService";
+import { tableExists } from "./utils/dbUtils";
+import {
+  isMissingColumnError,
+  isMissingTableError,
+  normalizeError,
+} from "./utils/errorUtils";
 
-export async function createOrderFromCart(payload) {
+export interface OrderSummary {
+  id: string;
+  orderNumber: string;
+  order_number: string;
+  status: string;
+  lifecycleState: string | null;
+  totalAmount: number;
+  total: number;
+  total_price: number;
+  displayTotal: number;
+  displayCurrencyCode: string | null;
+  currencyCode: string | null;
+  customerName: string | null;
+  customer_name: string | null;
+  customerEmail: string | null;
+  paymentStatus: string;
+  fulfillmentStatus: string;
+  subscriptionId: string | null;
+  subscriptionStatus: string | null;
+  isSubscriptionRenewal: boolean;
+  subscriptionLabel: string | null;
+  createdAt: string;
+  created_at: string;
+  updatedAt: string | null;
+  updated_at: string | null;
+}
+
+export interface OrderDetail extends OrderSummary {
+  items: Array<{
+    id: string;
+    productTitle: string;
+    productName?: string;
+    variantTitle: string | null;
+    sku: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+  }>;
+  shippingAddress: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    addressLine1?: string;
+    city?: string;
+    postalCode?: string;
+    country?: string;
+    [key: string]: unknown;
+  } | null;
+  billingAddress: Record<string, unknown> | null;
+  note: string | null;
+  paymentStatus: string;
+  fulfillmentStatus: string;
+  subtotalAmount: number;
+  discountAmount: number;
+  taxAmount: number;
+  shippingAmount: number;
+  currencyCode: string;
+  displayCurrencyCode: string;
+  displaySubtotalAmount: number;
+  displayDiscountAmount: number;
+  displayShippingAmount: number;
+  displayTaxAmount: number;
+  displayTotalAmount: number;
+  currencySnapshot: {
+    baseCurrency: string;
+    displayCurrency: string;
+    fxRate: number;
+    fxSource: string;
+    fxConfidence: number;
+    fxAsOf: string | null;
+    usedFallback: boolean;
+  } | null;
+  subscriptionContext: {
+    subscriptionId: string;
+    status: string;
+    nextBillingAt: string | null;
+    planId: string | null;
+    planName: string;
+    isRenewal: boolean;
+    cycleIndex: number | null;
+    context: Record<string, unknown>;
+  } | null;
+  customerPhone: string | null;
+  updatedAt: string;
+  timeline: Array<{
+    id: string;
+    status: string;
+    note: string;
+    actorType: string | null;
+    createdAt: string;
+  }>;
+  internalNotes: Array<{
+    id: string;
+    note: string;
+    createdAt: string;
+  }>;
+  transactions: Array<Record<string, unknown>>;
+  shipments: Array<Record<string, unknown>>;
+  invoice: Record<string, unknown> | null;
+  returns: Array<Record<string, unknown>>;
+  refunds: Array<Record<string, unknown>>;
+}
+
+export interface CreateOrderPayload {
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  addressLine1?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
+  shippingMethodId?: string;
+  paymentMethodId?: string;
+  discountCode?: string | string[];
+  note?: string;
+  displayCurrency?: string;
+  checkoutState?: string;
+  formData?: Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+
+export async function createOrderFromCart(
+  payload: CreateOrderPayload,
+): Promise<{ id: string; orderNumber: string; currencyQuote: unknown }> {
   const { authUser, store } = await getStoreContext();
-  const activeState = normalizeCheckoutStep(payload.checkoutState || "review");
+  const activeState = String(payload.checkoutState || "review")
+    .trim()
+    .toLowerCase();
 
   await saveCheckoutRecoveryState({
     state: activeState,
@@ -44,7 +198,8 @@ export async function createOrderFromCart(payload) {
       note: "Revalidation failed before order creation",
     });
 
-    const err = new Error(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err: any = new Error(
       `Checkout revalidation failed: ${precheck.issues
         .map((item) => item.message)
         .join("; ")}`,
@@ -66,7 +221,7 @@ export async function createOrderFromCart(payload) {
     throw new Error("Cart is empty");
   }
 
-  let customerId = null;
+  let customerId: string | null = null;
   if (payload.customerEmail || payload.customerName) {
     const [firstName, ...rest] = String(
       payload.customerName || "Guest Customer",
@@ -108,8 +263,9 @@ export async function createOrderFromCart(payload) {
     }
   }
 
-  let appliedDiscount = null;
-  let appliedDiscounts = [];
+  let appliedDiscount: unknown = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let appliedDiscounts: any[] = [];
   if (payload.discountCode) {
     const discounts = await listDiscountRows(store.id, "active");
     const codes = normalizeCodeList(payload.discountCode);
@@ -173,7 +329,8 @@ export async function createOrderFromCart(payload) {
   const taxAmount = pricing.taxAmount;
   const totalAmount = pricing.totalAmount;
 
-  const currencyQuote = await getCurrencyConversionQuote({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const currencyQuote: any = await getCurrencyConversionQuote({
     baseCurrency: store.currency || store.currency_code || "USD",
     displayCurrency:
       payload.displayCurrency || store.currency || store.currency_code || "USD",
@@ -186,8 +343,10 @@ export async function createOrderFromCart(payload) {
   });
 
   for (const item of cart.items) {
-    if (item.quantity > item.stock) {
-      throw new Error(`Insufficient stock for ${item.productName}`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((item as any).quantity > (item as any).stock) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      throw new Error(`Insufficient stock for ${(item as any).productName}`);
     }
   }
 
@@ -227,7 +386,8 @@ export async function createOrderFromCart(payload) {
   }
 
   const { error: orderItemsError } = await supabase.from("order_items").insert(
-    cart.items.map((item) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cart.items.map((item: any) => ({
       order_id: order.id,
       product_variant_id: item.variantId,
       product_title: item.productName,
@@ -395,12 +555,14 @@ export async function createOrderFromCart(payload) {
   }
 
   for (const item of cart.items) {
-    const quantityBefore = Number(item.stock || 0);
-    const quantityAfter = quantityBefore - Number(item.quantity || 0);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cartItem = item as any;
+    const quantityBefore = Number(cartItem.stock || 0);
+    const quantityAfter = quantityBefore - Number(cartItem.quantity || 0);
 
     if (quantityAfter < 0) {
       throw new Error(
-        `Insufficient stock for SKU ${item.sku || item.variantId}`,
+        `Insufficient stock for SKU ${cartItem.sku || cartItem.variantId}`,
       );
     }
 
@@ -410,7 +572,7 @@ export async function createOrderFromCart(payload) {
         quantity_in_stock: quantityAfter,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", item.variantId)
+      .eq("id", cartItem.variantId)
       .eq("quantity_in_stock", quantityBefore)
       .select("id");
 
@@ -420,16 +582,16 @@ export async function createOrderFromCart(payload) {
 
     if (!(stockRows || []).length) {
       throw new Error(
-        `Stock for SKU ${item.sku || item.variantId} changed during checkout. Please retry.`,
+        `Stock for SKU ${cartItem.sku || cartItem.variantId} changed during checkout. Please retry.`,
       );
     }
 
     await recordStockMovement({
       storeId: store.id,
-      variantId: item.variantId,
+      variantId: cartItem.variantId,
       quantityBefore,
       quantityAfter,
-      quantityDelta: -Number(item.quantity || 0),
+      quantityDelta: -Number(cartItem.quantity || 0),
       reasonCode: "sale",
       note: `Order ${order.order_number}`,
       metadata: { orderId: order.id, orderNumber: order.order_number },
@@ -437,11 +599,11 @@ export async function createOrderFromCart(payload) {
 
     await syncInventoryLevelSnapshot({
       storeId: store.id,
-      variantId: item.variantId,
-      sku: item.sku,
-      variantTitle: item.variantName || item.variantTitle,
+      variantId: cartItem.variantId,
+      sku: cartItem.sku,
+      variantTitle: cartItem.variantName || cartItem.variantTitle,
       quantityAfter,
-      reorderLevel: Number(item.reorderLevel || 0),
+      reorderLevel: Number(cartItem.reorderLevel || 0),
     });
   }
 
@@ -460,13 +622,16 @@ export async function createOrderFromCart(payload) {
 
   if (appliedDiscounts.length) {
     for (const discount of appliedDiscounts) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: discountUpdateError } = await supabase
         .from("discounts")
         .update({
-          uses_count: Number(discount.uses_count || 0) + 1,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          uses_count: Number((discount as any).uses_count || 0) + 1,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", discount.id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .eq("id", (discount as any).id)
         .eq("store_id", store.id);
 
       if (discountUpdateError) {
@@ -488,6 +653,20 @@ export async function createOrderFromCart(payload) {
 
   await invalidateAnalyticsReportCache(store.id, "analytics_overview");
 
+  if (payload.customerEmail) {
+    sendEmail({
+      orderId: order.id,
+      recipient: payload.customerEmail,
+      subject: `Order #${order.order_number} confirmed — thank you!`,
+      template: "order_confirmation",
+      data: {
+        orderNumber: order.order_number,
+        customerName: payload.customerName ?? "Customer",
+        totalAmount,
+      },
+    }).catch(() => null);
+  }
+
   return {
     id: order.id,
     orderNumber: order.order_number,
@@ -495,7 +674,7 @@ export async function createOrderFromCart(payload) {
   };
 }
 
-const ORDER_STATUS_FLOW = {
+const ORDER_STATUS_FLOW: Record<string, string[]> = {
   pending: ["not_paid", "cancelled"],
   not_paid: ["need_ship", "cancelled", "failed_delivery"],
   need_ship: ["ongoing_shipped", "cancelled", "failed_delivery"],
@@ -505,7 +684,7 @@ const ORDER_STATUS_FLOW = {
   cancelled: [],
 };
 
-const PAYMENT_STATUS_FLOW = {
+const PAYMENT_STATUS_FLOW: Record<string, string[]> = {
   pending: ["authorized", "paid", "failed", "cancelled"],
   authorized: ["paid", "failed", "refunded"],
   paid: ["partially_refunded", "refunded"],
@@ -515,7 +694,7 @@ const PAYMENT_STATUS_FLOW = {
   cancelled: [],
 };
 
-const FULFILLMENT_STATUS_FLOW = {
+const FULFILLMENT_STATUS_FLOW: Record<string, string[]> = {
   unfulfilled: ["partial", "shipped", "fulfilled", "cancelled"],
   partial: ["shipped", "fulfilled", "cancelled"],
   shipped: ["delivered", "failed"],
@@ -525,7 +704,12 @@ const FULFILLMENT_STATUS_FLOW = {
   cancelled: [],
 };
 
-function canTransition(flow, from, to) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function canTransition(
+  flow: Record<string, string[]>,
+  from: unknown,
+  to: unknown,
+): boolean {
   const fromKey = String(from || "").toLowerCase();
   const toKey = String(to || "").toLowerCase();
 
@@ -538,11 +722,11 @@ function canTransition(flow, from, to) {
 }
 
 async function logOrderTimelineEvent(
-  orderIdValue,
-  statusValue,
-  authUserId,
-  note,
-) {
+  orderIdValue: string,
+  statusValue: string,
+  authUserId: string,
+  note?: string | null,
+): Promise<void> {
   const { error: timelineError } = await supabase
     .from("order_timeline")
     .insert({
@@ -558,7 +742,15 @@ async function logOrderTimelineEvent(
   }
 }
 
-async function logOrderStateEvent(payload) {
+async function logOrderStateEvent(payload: {
+  orderId: string;
+  actorId: string;
+  eventType: string;
+  fromValue?: string | null;
+  toValue?: string | null;
+  note?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
   if (!(await tableExists("order_state_events"))) {
     return;
   }
@@ -578,7 +770,15 @@ async function logOrderStateEvent(payload) {
   }
 }
 
-async function fetchOrderLifecycleSnapshot(orderIdValue, storeId) {
+async function fetchOrderLifecycleSnapshot(
+  orderIdValue: string,
+  storeId: string,
+): Promise<{
+  id: string;
+  status: string;
+  payment_status: string;
+  fulfillment_status: string;
+}> {
   let { data, error } = await supabase
     .from("orders")
     .select("id, status, payment_status, fulfillment_status")
@@ -615,7 +815,8 @@ async function fetchOrderLifecycleSnapshot(orderIdValue, storeId) {
   }
 
   if (!data) {
-    const err = new Error("Order not found");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err: any = new Error("Order not found");
     err.code = "ORDER_NOT_FOUND";
     throw err;
   }
@@ -623,7 +824,16 @@ async function fetchOrderLifecycleSnapshot(orderIdValue, storeId) {
   return data;
 }
 
-async function updateOrderLifecycle(orderIdValue, payload = {}) {
+async function updateOrderLifecycle(
+  orderIdValue: string,
+  payload: {
+    status?: string;
+    paymentStatus?: string;
+    fulfillmentStatus?: string;
+    note?: string;
+    internalNote?: string;
+  } = {},
+): Promise<unknown> {
   const { authUser, store } = await getStoreContext();
   const current = await fetchOrderLifecycleSnapshot(orderIdValue, store.id);
 
@@ -708,7 +918,8 @@ async function updateOrderLifecycle(orderIdValue, payload = {}) {
   }
 
   if (!updatedOrder) {
-    const err = new Error("Order not found");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err: any = new Error("Order not found");
     err.code = "ORDER_NOT_FOUND";
     throw err;
   }
@@ -798,7 +1009,10 @@ async function updateOrderLifecycle(orderIdValue, payload = {}) {
   };
 }
 
-export async function addOrderInternalNote(orderId, note) {
+export async function addOrderInternalNote(
+  orderId: string,
+  note: string,
+): Promise<unknown> {
   const text = String(note || "").trim();
   if (!text) {
     throw new Error("Internal note is required");
@@ -810,11 +1024,24 @@ export async function addOrderInternalNote(orderId, note) {
   });
 }
 
-export async function updateOrderLifecycleState(orderId, payload) {
+export async function updateOrderLifecycleState(
+  orderId: string,
+  payload: Record<string, unknown>,
+): Promise<unknown> {
   return updateOrderLifecycle(orderId, payload || {});
 }
 
-export function getOrderLifecycleOptions(current = {}) {
+export function getOrderLifecycleOptions(
+  current: {
+    status?: string;
+    paymentStatus?: string;
+    fulfillmentStatus?: string;
+  } = {},
+): {
+  status: string[];
+  paymentStatus: string[];
+  fulfillmentStatus: string[];
+} {
   const status = String(current.status || "").toLowerCase();
   const paymentStatus = String(current.paymentStatus || "").toLowerCase();
   const fulfillmentStatus = String(
@@ -840,7 +1067,7 @@ export function getOrderLifecycleOptions(current = {}) {
   };
 }
 
-export async function getOrderDetail(orderId) {
+export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
   const { store } = await getStoreContext();
   const hasOrderCurrencySnapshots = await tableExists(
     "order_currency_snapshots",
@@ -848,7 +1075,8 @@ export async function getOrderDetail(orderId) {
   const hasOrderSubscriptionContext = await tableExists(
     "order_subscription_context",
   );
-  let orderResponse = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let orderResponse: any = await supabase
     .from("orders")
     .select(
       "id, order_number, status, payment_status, fulfillment_status, subtotal_amount, discount_amount, tax_amount, shipping_amount, total_amount, currency_code, note, shipping_address, billing_address, created_at, updated_at, customers(first_name, last_name, email, phone)",
@@ -888,6 +1116,7 @@ export async function getOrderDetail(orderId) {
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [
     itemsResponse,
     timelineResponse,
@@ -898,7 +1127,7 @@ export async function getOrderDetail(orderId) {
     refundsResponse,
     currencySnapshotResponse,
     subscriptionContextResponse,
-  ] = await Promise.all([
+  ]: any[] = await Promise.all([
     supabase
       .from("order_items")
       .select(
@@ -1117,7 +1346,8 @@ export async function getOrderDetail(orderId) {
     : orderResponse.data.customers;
 
   const transactionIds = (transactionsResponse.data || []).map(
-    (item) => item.id,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (item: any) => item.id,
   );
   const transactionEventMap =
     await loadTransactionEventsByTransactionIds(transactionIds);
@@ -1125,7 +1355,9 @@ export async function getOrderDetail(orderId) {
   return {
     id: orderResponse.data.id,
     orderNumber: orderResponse.data.order_number,
+    order_number: orderResponse.data.order_number,
     status: orderResponse.data.status,
+    lifecycleState: null,
     paymentStatus: orderResponse.data.payment_status,
     fulfillmentStatus: orderResponse.data.fulfillment_status || "unfulfilled",
     subtotalAmount: Number(orderResponse.data.subtotal_amount || 0),
@@ -1171,14 +1403,22 @@ export async function getOrderDetail(orderId) {
     subscriptionContext: subscriptionContext
       ? {
           subscriptionId: subscriptionContext.subscription_id,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           status:
-            subscriptionContext.customer_subscriptions?.status || "active",
+            (subscriptionContext.customer_subscriptions as any)?.status ||
+            "active",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           nextBillingAt:
-            subscriptionContext.customer_subscriptions?.next_billing_at || null,
-          planId: subscriptionContext.customer_subscriptions?.plan_id || null,
+            (subscriptionContext.customer_subscriptions as any)
+              ?.next_billing_at || null,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          planId:
+            (subscriptionContext.customer_subscriptions as any)?.plan_id ||
+            null,
           planName:
-            subscriptionContext.customer_subscriptions?.subscription_plans
-              ?.name ||
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (subscriptionContext.customer_subscriptions as any)
+              ?.subscription_plans?.name ||
             subscriptionContext.context_json?.planName ||
             "Subscription",
           isRenewal: Boolean(subscriptionContext.is_renewal),
@@ -1201,24 +1441,41 @@ export async function getOrderDetail(orderId) {
     customerPhone:
       customer?.phone || orderResponse.data.shipping_address?.phone || null,
     createdAt: orderResponse.data.created_at,
+    created_at: orderResponse.data.created_at,
     updatedAt: orderResponse.data.updated_at,
-    items: (itemsResponse.data || []).map((item) => ({
+    updated_at: orderResponse.data.updated_at,
+    // OrderSummary alias fields
+    total: Number(orderResponse.data.total_amount || 0),
+    total_price: Number(orderResponse.data.total_amount || 0),
+    displayTotal: Number(
+      currencySnapshot?.total_display || orderResponse.data.total_amount || 0,
+    ),
+    customer_name:
+      [customer?.first_name, customer?.last_name].filter(Boolean).join(" ") ||
+      null,
+    subscriptionId: null,
+    subscriptionStatus: null,
+    isSubscriptionRenewal: false,
+    subscriptionLabel: null,
+    internalNotes: [],
+    items: (itemsResponse.data || []).map((item: any) => ({
       id: item.id,
       productTitle: item.product_title,
+      productName: item.product_title,
       variantTitle: item.variant_title,
       sku: item.sku,
       quantity: Number(item.quantity || 0),
       unitPrice: Number(item.unit_price || 0),
       lineTotal: Number(item.line_total || 0),
     })),
-    timeline: (timelineResponse.data || []).map((item) => ({
+    timeline: (timelineResponse.data || []).map((item: any) => ({
       id: item.id,
       status: item.status,
       note: item.note || "",
       actorType: item.actor_type,
       createdAt: item.created_at,
     })),
-    transactions: (transactionsResponse.data || []).map((item) => ({
+    transactions: (transactionsResponse.data || []).map((item: any) => ({
       id: item.id,
       amount: Number(item.amount || 0),
       capturedAmount: Number(item.captured_amount || 0),
@@ -1227,18 +1484,20 @@ export async function getOrderDetail(orderId) {
       providerStatus: item.provider_status || "",
       failureCode: item.failure_code || "",
       gatewayTransactionId: item.gateway_transaction_id || "",
-      paymentMethodName: item.payment_methods?.display_name || "-",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      paymentMethodName: (item.payment_methods as any)?.display_name || "-",
       attempts: transactionEventMap.get(item.id) || [],
       attemptCount: (transactionEventMap.get(item.id) || []).length,
       createdAt: item.created_at,
     })),
-    shipments: (shipmentsResponse.data || []).map((item) => ({
+    shipments: (shipmentsResponse.data || []).map((item: any) => ({
       id: item.id,
       trackingNumber: item.tracking_number || "",
       carrier: item.carrier || "",
       status: item.status,
       shippingCost: Number(item.shipping_cost || 0),
-      shippingMethodName: item.shipping_methods?.name || "-",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      shippingMethodName: (item.shipping_methods as any)?.name || "-",
       shippedAt: item.shipped_at,
       deliveredAt: item.delivered_at,
     })),
@@ -1262,7 +1521,7 @@ export async function getOrderDetail(orderId) {
           issuedAt: invoiceResponse.data.issued_at,
         }
       : null,
-    returns: (returnsResponse.data || []).map((item) => ({
+    returns: (returnsResponse.data || []).map((item: any) => ({
       id: item.id,
       rmaNumber: item.rma_number,
       reason: item.reason || "",
@@ -1275,7 +1534,7 @@ export async function getOrderDetail(orderId) {
       receivedAt: item.received_at,
       refundedAt: item.refunded_at,
     })),
-    refunds: (refundsResponse.data || []).map((item) => ({
+    refunds: (refundsResponse.data || []).map((item: any) => ({
       id: item.id,
       amount: Number(item.amount || 0),
       status: item.status,
@@ -1288,7 +1547,9 @@ export async function getOrderDetail(orderId) {
   };
 }
 
-export async function getOrders(status = "semua_orders") {
+export async function getOrders(
+  status = "semua_orders",
+): Promise<OrderSummary[]> {
   const { store } = await getStoreContext();
 
   let query = supabase
@@ -1395,28 +1656,40 @@ export async function getOrders(status = "semua_orders") {
       orderNumber: order.order_number,
       customer_name: customerName,
       customerName,
+      customerEmail: null,
+      lifecycleState: null,
       paymentStatus: order.payment_status,
       fulfillmentStatus: order.fulfillment_status || "unfulfilled",
       total_price: Number(order.total_amount || 0),
       total: Number(order.total_amount || 0),
+      totalAmount: Number(order.total_amount || 0),
       displayCurrencyCode:
         snapshotMap.get(order.id)?.display_currency || order.currency_code,
+      currencyCode: order.currency_code || null,
       displayTotal: Number(
         snapshotMap.get(order.id)?.total_display || order.total_amount || 0,
       ),
       subscriptionId: subscriptionMap.get(order.id)?.subscription_id || null,
       subscriptionStatus:
-        subscriptionMap.get(order.id)?.customer_subscriptions?.status || null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (subscriptionMap.get(order.id) as any)?.customer_subscriptions
+          ?.status || null,
       isSubscriptionRenewal: Boolean(subscriptionMap.get(order.id)?.is_renewal),
       subscriptionLabel:
-        subscriptionMap.get(order.id)?.context_json?.planName || null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (subscriptionMap.get(order.id) as any)?.context_json?.planName || null,
       status: order.status,
       created_at: order.created_at,
+      createdAt: order.created_at,
       updated_at: order.updated_at,
+      updatedAt: order.updated_at || null,
     };
   });
 }
 
-export async function updateOrderStatus(orderId, status) {
+export async function updateOrderStatus(
+  orderId: string,
+  status: string,
+): Promise<unknown> {
   return updateOrderLifecycle(orderId, { status });
 }

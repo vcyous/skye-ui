@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Alert,
   Button,
@@ -10,10 +9,12 @@ import {
 } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCart } from "../../context/CartContext.jsx";
-import { getProducts } from "../../services/api.js";
+import { useCart } from "../../context/CartContext";
+import { getProducts } from "../../services/api";
+import type { CartItemDetails } from "../../services/cartService";
+import type { Product } from "../../types";
 
-function formatCurrency(value) {
+function formatCurrency(value: number | null | undefined): string {
   return `$${Number(value || 0).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -30,8 +31,11 @@ export default function CartPage() {
     removeItem,
     isLoading,
   } = useCart();
-  const [products, setProducts] = useState([]);
-  const [notice, setNotice] = useState({ type: "", message: "" });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [notice, setNotice] = useState<{ type: string; message: string }>({
+    type: "",
+    message: "",
+  });
 
   useEffect(() => {
     Promise.all([refreshCart(), getProducts("active")])
@@ -44,7 +48,7 @@ export default function CartPage() {
       });
   }, [refreshCart]);
 
-  async function handleAdd(product) {
+  async function handleAdd(product: Product) {
     setNotice({ type: "", message: "" });
     try {
       await addItem({ variantId: product.variantId, quantity: 1 });
@@ -57,7 +61,7 @@ export default function CartPage() {
     }
   }
 
-  async function handleQuantityChange(record, value) {
+  async function handleQuantityChange(record: CartItemDetails, value: number) {
     setNotice({ type: "", message: "" });
     try {
       await updateItemQuantity(record.id, value);
@@ -69,7 +73,7 @@ export default function CartPage() {
     }
   }
 
-  async function handleRemove(record) {
+  async function handleRemove(record: CartItemDetails) {
     setNotice({ type: "", message: "" });
     try {
       await removeItem(record.id);

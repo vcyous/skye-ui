@@ -1,6 +1,12 @@
-// @ts-nocheck
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import {
   Alert,
+  Badge,
   Button,
   Card,
   Col,
@@ -14,9 +20,12 @@ import {
   Space,
   Spin,
   Table,
+  Tabs,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 import {
   createCollection,
@@ -25,11 +34,50 @@ import {
   getProducts,
   updateCollection,
   updateCollectionProducts,
-} from "../../services/api.js";
+} from "../../services/api";
+import type { Product } from "../../types";
 
-const collectionTypeOptions = [
-  { value: "manual", label: "Manual" },
-  { value: "smart", label: "Smart" },
+interface RuleCondition {
+  field: string;
+  operator: string;
+  value: string;
+}
+
+interface RuleSet {
+  match: "all" | "any";
+  conditions: RuleCondition[];
+}
+
+interface CollectionRecord {
+  id: string;
+  name: string;
+  urlHandle?: string;
+  description?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  collectionType: "manual" | "smart";
+  status: string;
+  rules?: RuleSet;
+  productIds?: string[];
+  productCount?: number;
+}
+
+interface CollectionFormValues {
+  name: string;
+  urlHandle?: string;
+  description?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  collectionType: "manual" | "smart";
+  status: string;
+  rules?: RuleSet;
+}
+
+const STATUS_TABS = [
+  { key: "all", label: "All" },
+  { key: "active", label: "Active" },
+  { key: "draft", label: "Draft" },
+  { key: "archived", label: "Archived" },
 ];
 
 const statusOptions = ["active", "draft", "inactive", "archived"].map(
@@ -62,14 +110,18 @@ const ruleOperatorOptions = [
 ];
 
 const matchModeOptions = [
-  { value: "all", label: "Match all rules" },
-  { value: "any", label: "Match any rule" },
+  { value: "all", label: "Products must match all conditions" },
+  { value: "any", label: "Products must match any condition" },
 ];
 
 function CollectionRuleBuilder({
   form,
   typeField = "collectionType",
   name = "rules",
+}: {
+  form: ReturnType<typeof Form.useForm>[0];
+  typeField?: string;
+  name?: string;
 }) {
   const collectionType = Form.useWatch(typeField, form);
 
@@ -78,25 +130,23 @@ function CollectionRuleBuilder({
       <Alert
         type="info"
         showIcon
-        message="Manual collection"
-        description="Use Assign Products to pick products manually after saving."
+        message="Manual collection — products are added manually"
+        description="After saving, use the Assign Products action to pick which products appear in this collection."
+        style={{ marginTop: 8 }}
       />
     );
   }
 
   return (
-    <Card
-      size="small"
-      title="Smart rules"
-      style={{ background: "#fafafa", marginBottom: 8 }}
-    >
+    <Card size="small" title="Conditions" style={{ marginTop: 8 }}>
       <Form.Item
         name={[name, "match"]}
-        label="Rule matching"
+        label="Products must match"
         initialValue="all"
-        rules={[{ required: true, message: "Select a match mode." }]}
+        rules={[{ required: true }]}
+        style={{ marginBottom: 12 }}
       >
-        <Select options={matchModeOptions} />
+        <Select options={matchModeOptions} style={{ width: 320 }} />
       </Form.Item>
 
       <Form.List name={[name, "conditions"]}>
@@ -107,7 +157,8 @@ function CollectionRuleBuilder({
                 <Col xs={24} md={7}>
                   <Form.Item
                     name={[field.name, "field"]}
-                    rules={[{ required: true, message: "Field required" }]}
+                    rules={[{ required: true, message: "Required" }]}
+                    style={{ marginBottom: 0 }}
                   >
                     <Select placeholder="Field" options={ruleFieldOptions} />
                   </Form.Item>
@@ -115,84 +166,75 @@ function CollectionRuleBuilder({
                 <Col xs={24} md={6}>
                   <Form.Item
                     name={[field.name, "operator"]}
-                    rules={[{ required: true, message: "Operator required" }]}
+                    rules={[{ required: true, message: "Required" }]}
+                    style={{ marginBottom: 0 }}
                   >
-                    <Select
-                      placeholder="Operator"
-                      options={ruleOperatorOptions}
-                    />
+                    <Select placeholder="Operator" options={ruleOperatorOptions} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={9}>
                   <Form.Item
                     name={[field.name, "value"]}
-                    rules={[{ required: true, message: "Value required" }]}
+                    rules={[{ required: true, message: "Required" }]}
+                    style={{ marginBottom: 0 }}
                   >
-                    <Input placeholder="Value (comma separated for list ops)" />
+                    <Input placeholder="Value" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={2}>
                   <Button danger onClick={() => remove(field.name)} block>
-                    Remove
+                    ✕
                   </Button>
                 </Col>
               </Row>
             ))}
-
             <Button
-              onClick={() =>
-                add({ field: "name", operator: "contains", value: "" })
-              }
+              icon={<PlusOutlined />}
+              onClick={() => add({ field: "name", operator: "contains", value: "" })}
+              type="dashed"
+              style={{ marginTop: 4 }}
             >
-              Add rule
+              Add condition
             </Button>
           </Space>
         )}
       </Form.List>
-
-      <Typography.Text type="secondary">
-        Smart rules are evaluated deterministically against current product
-        data.
-      </Typography.Text>
     </Card>
   );
 }
 
 export default function CollectionsPage() {
-  const [collections, setCollections] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [notice, setNotice] = useState({ type: "", message: "" });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isAssigning, setIsAssigning] = useState(false);
-  const [editingCollection, setEditingCollection] = useState(null);
-  const [assigningCollection, setAssigningCollection] = useState(null);
-  const [previewCollection, setPreviewCollection] = useState(null);
-  const [filters, setFilters] = useState({
-    status: "all",
-    collectionType: "all",
-    search: "",
-  });
+  const [collections, setCollections] = useState<CollectionRecord[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string>("");
+  const [notice, setNotice] = useState<{ type: string; message: string }>({ type: "", message: "" });
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
+  const [isAssigning, setIsAssigning] = useState<boolean>(false);
+  const [editingCollection, setEditingCollection] = useState<CollectionRecord | null>(null);
+  const [assigningCollection, setAssigningCollection] = useState<CollectionRecord | null>(null);
+  const [previewCollection, setPreviewCollection] = useState<CollectionRecord | null>(null);
+  const [statusTab, setStatusTab] = useState<string>("all");
+  const [search, setSearch] = useState<string>("");
 
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [assignForm] = Form.useForm();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
 
   const loadData = async () => {
     setLoadError("");
     setIsLoading(true);
     try {
       const [list, productList] = await Promise.all([
-        getCollections(filters),
+        getCollections({ status: "all", collectionType: "all", search: "" }),
         getProducts("all"),
       ]);
-      setCollections(list);
+      setCollections((list as CollectionRecord[]).map((c) => ({ ...c, rules: c.rules ?? undefined })));
       setProducts(productList);
-    } catch (err) {
-      setLoadError(err.message || "Failed to load collections.");
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load collections.");
     } finally {
       setIsLoading(false);
     }
@@ -200,25 +242,31 @@ export default function CollectionsPage() {
 
   useEffect(() => {
     loadData();
-  }, [filters.status, filters.collectionType, filters.search]);
+  }, []);
 
-  const collectionMetrics = useMemo(() => {
-    const smart = collections.filter(
-      (item) => item.collectionType === "smart",
-    ).length;
-    const manual = collections.length - smart;
-    const active = collections.filter(
-      (item) => item.status === "active",
-    ).length;
-    return {
-      total: collections.length,
-      smart,
-      manual,
-      active,
-    };
+  const visibleCollections = useMemo(() => {
+    let rows = [...collections];
+    if (statusTab !== "all") {
+      rows = rows.filter((c) => c.status === statusTab);
+    }
+    const term = search.trim().toLowerCase();
+    if (term) {
+      rows = rows.filter((c) =>
+        [c.name, c.description, c.urlHandle].join(" ").toLowerCase().includes(term),
+      );
+    }
+    return rows;
+  }, [collections, statusTab, search]);
+
+  const tabCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: collections.length };
+    for (const c of collections) {
+      counts[c.status] = (counts[c.status] || 0) + 1;
+    }
+    return counts;
   }, [collections]);
 
-  async function onCreate(values) {
+  async function onCreate(values: CollectionFormValues) {
     setNotice({ type: "", message: "" });
     setIsSubmitting(true);
     try {
@@ -227,19 +275,15 @@ export default function CollectionsPage() {
       setIsCreateModalOpen(false);
       await loadData();
       setNotice({ type: "success", message: "Collection created." });
-    } catch (err) {
-      setNotice({
-        type: "error",
-        message: err.message || "Failed to create collection.",
-      });
+    } catch (err: unknown) {
+      setNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to create collection." });
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  async function onUpdate(values) {
+  async function onUpdate(values: CollectionFormValues) {
     if (!editingCollection) return;
-
     setNotice({ type: "", message: "" });
     setIsUpdating(true);
     try {
@@ -247,54 +291,41 @@ export default function CollectionsPage() {
       setEditingCollection(null);
       await loadData();
       setNotice({ type: "success", message: "Collection updated." });
-    } catch (err) {
-      setNotice({
-        type: "error",
-        message: err.message || "Failed to update collection.",
-      });
+    } catch (err: unknown) {
+      setNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to update collection." });
     } finally {
       setIsUpdating(false);
     }
   }
 
-  async function onDelete(record) {
+  async function onDelete(record: CollectionRecord) {
     setNotice({ type: "", message: "" });
     try {
       await deleteCollection(record.id);
       await loadData();
       setNotice({ type: "success", message: "Collection deleted." });
-    } catch (err) {
-      setNotice({
-        type: "error",
-        message: err.message || "Failed to delete collection.",
-      });
+    } catch (err: unknown) {
+      setNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to delete collection." });
     }
   }
 
-  async function onAssign(values) {
+  async function onAssign(values: { productIds: string[] }) {
     if (!assigningCollection) return;
-
     setNotice({ type: "", message: "" });
     setIsAssigning(true);
     try {
-      await updateCollectionProducts(
-        assigningCollection.id,
-        values.productIds || [],
-      );
+      await updateCollectionProducts(assigningCollection.id, values.productIds || []);
       setAssigningCollection(null);
       await loadData();
-      setNotice({ type: "success", message: "Products assignment updated." });
-    } catch (err) {
-      setNotice({
-        type: "error",
-        message: err.message || "Failed to assign products.",
-      });
+      setNotice({ type: "success", message: "Products updated." });
+    } catch (err: unknown) {
+      setNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to assign products." });
     } finally {
       setIsAssigning(false);
     }
   }
 
-  function openEdit(record) {
+  function openEdit(record: CollectionRecord) {
     setEditingCollection(record);
     editForm.setFieldsValue({
       name: record.name,
@@ -307,66 +338,89 @@ export default function CollectionsPage() {
       rules:
         record.rules ||
         (record.collectionType === "smart"
-          ? {
-              match: "all",
-              conditions: [{ field: "name", operator: "contains", value: "" }],
-            }
+          ? { match: "all", conditions: [{ field: "name", operator: "contains", value: "" }] }
           : undefined),
     });
   }
 
-  function openAssign(record) {
+  function openAssign(record: CollectionRecord) {
     setAssigningCollection(record);
-    assignForm.setFieldsValue({
-      productIds: record.productIds || [],
-    });
+    assignForm.setFieldsValue({ productIds: record.productIds || [] });
   }
 
-  const columns = [
-    { title: "Name", dataIndex: "name", key: "name" },
-    { title: "Handle", dataIndex: "urlHandle", key: "urlHandle" },
+  const columns: ColumnsType<CollectionRecord> = [
+    {
+      title: "Title",
+      key: "name",
+      render: (_: unknown, record: CollectionRecord) => (
+        <Space direction="vertical" size={0}>
+          <Typography.Text strong style={{ fontSize: 13 }}>
+            {record.name}
+          </Typography.Text>
+          {record.urlHandle && (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              /{record.urlHandle}
+            </Typography.Text>
+          )}
+        </Space>
+      ),
+    },
+    {
+      title: "Products",
+      key: "productCount",
+      render: (_: unknown, record: CollectionRecord) => (
+        <Typography.Text style={{ fontSize: 13 }}>
+          {record.productCount ?? 0}
+        </Typography.Text>
+      ),
+    },
     {
       title: "Type",
-      dataIndex: "collectionType",
       key: "collectionType",
-      render: (value) =>
-        value === "smart" ? <Tag color="purple">smart</Tag> : <Tag>manual</Tag>,
+      render: (_, record: CollectionRecord) =>
+        record.collectionType === "smart" ? (
+          <Tag color="purple" style={{ fontSize: 12 }}>Smart</Tag>
+        ) : (
+          <Tag style={{ fontSize: 12 }}>Manual</Tag>
+        ),
     },
     {
       title: "Status",
-      dataIndex: "status",
       key: "status",
-      render: (value) => (
-        <Tag color={value === "active" ? "green" : "blue"}>{value}</Tag>
+      render: (_: unknown, record: CollectionRecord) => (
+        <Badge
+          status={record.status === "active" ? "success" : "default"}
+          text={<span style={{ textTransform: "capitalize", fontSize: 13 }}>{record.status}</span>}
+        />
       ),
     },
-    { title: "Products", dataIndex: "productCount", key: "productCount" },
     {
-      title: "Actions",
+      title: "",
       key: "actions",
-      render: (_, record) => (
-        <Space wrap>
+      width: 180,
+      render: (_: unknown, record: CollectionRecord) => (
+        <Space>
           {record.collectionType === "manual" ? (
             <Button size="small" onClick={() => openAssign(record)}>
-              Assign Products
+              Assign products
             </Button>
           ) : (
             <Button size="small" onClick={() => setPreviewCollection(record)}>
-              Preview Products
+              Preview
             </Button>
           )}
-          <Button size="small" onClick={() => openEdit(record)}>
-            Edit
-          </Button>
+          <Tooltip title="Edit">
+            <Button type="text" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
+          </Tooltip>
           <Popconfirm
             title="Delete this collection?"
             okText="Delete"
             cancelText="Cancel"
             onConfirm={() => onDelete(record)}
           >
-            <Button size="small" danger>
-              Delete
-            </Button>
+            <Tooltip title="Delete">
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -391,149 +445,107 @@ export default function CollectionsPage() {
           type="error"
           showIcon
           message="Unable to load collections"
-          description={
-            <Space direction="vertical">
-              <Typography.Text>{loadError}</Typography.Text>
-              <Button onClick={loadData}>Retry</Button>
-            </Space>
-          }
+          description={loadError}
+          action={<Button size="small" onClick={loadData}>Retry</Button>}
         />
       </Card>
     );
   }
 
   return (
-    <section style={{ display: "grid", gap: 16 }}>
-      <header>
-        <Typography.Title level={3} className="page-title">
+    <section style={{ display: "grid", gap: 0 }}>
+      {/* Page header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <Typography.Title level={4} style={{ margin: 0 }}>
           Collections
         </Typography.Title>
-        <Typography.Text className="page-subtitle">
-          Organize products with manual curation or deterministic smart rules.
-        </Typography.Text>
-      </header>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          Create collection
+        </Button>
+      </div>
 
-      {notice.message ? (
-        <Alert type={notice.type || "info"} message={notice.message} showIcon />
-      ) : null}
+      {notice.message && (
+        <Alert
+          type={notice.type as "success" | "error" | "info"}
+          message={notice.message}
+          showIcon
+          style={{ marginBottom: 12 }}
+          closable
+          onClose={() => setNotice({ type: "", message: "" })}
+        />
+      )}
 
-      <Row gutter={[12, 12]}>
-        <Col xs={12} md={6}>
-          <Card size="small" title="Total">
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              {collectionMetrics.total}
-            </Typography.Title>
-          </Card>
-        </Col>
-        <Col xs={12} md={6}>
-          <Card size="small" title="Manual">
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              {collectionMetrics.manual}
-            </Typography.Title>
-          </Card>
-        </Col>
-        <Col xs={12} md={6}>
-          <Card size="small" title="Smart">
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              {collectionMetrics.smart}
-            </Typography.Title>
-          </Card>
-        </Col>
-        <Col xs={12} md={6}>
-          <Card size="small" title="Active">
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              {collectionMetrics.active}
-            </Typography.Title>
-          </Card>
-        </Col>
-      </Row>
+      <Card bodyStyle={{ padding: 0 }}>
+        {/* Status tabs */}
+        <div style={{ borderBottom: "1px solid #f0f0f0", paddingLeft: 16 }}>
+          <Tabs
+            activeKey={statusTab}
+            onChange={setStatusTab}
+            size="small"
+            items={STATUS_TABS.map((tab) => ({
+              key: tab.key,
+              label: (
+                <span>
+                  {tab.label}
+                  {tabCounts[tab.key] != null && (
+                    <span style={{ marginLeft: 6, color: "#999", fontSize: 12 }}>
+                      {tabCounts[tab.key]}
+                    </span>
+                  )}
+                </span>
+              ),
+            }))}
+          />
+        </div>
 
-      <Card title="Collection Filters">
-        <Row gutter={12}>
-          <Col xs={24} md={8}>
-            <Input
-              placeholder="Search by name or description"
-              value={filters.search}
-              onChange={(event) =>
-                setFilters((prev) => ({ ...prev, search: event.target.value }))
+        {/* Search bar */}
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0" }}>
+          <Input
+            prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+            placeholder="Search collections"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            allowClear
+            style={{ width: 280 }}
+          />
+        </div>
+
+        {visibleCollections.length === 0 ? (
+          <div style={{ padding: 48 }}>
+            <Empty
+              description={
+                <Space direction="vertical" size={4}>
+                  <Typography.Text strong>No collections yet</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                    Create collections to group products for your storefront.
+                  </Typography.Text>
+                </Space>
               }
-            />
-          </Col>
-          <Col xs={24} md={6}>
-            <Select
-              style={{ width: "100%" }}
-              value={filters.status}
-              options={[
-                { value: "all", label: "All statuses" },
-                ...statusOptions,
-              ]}
-              onChange={(value) =>
-                setFilters((prev) => ({ ...prev, status: value }))
-              }
-            />
-          </Col>
-          <Col xs={24} md={6}>
-            <Select
-              style={{ width: "100%" }}
-              value={filters.collectionType}
-              options={[
-                { value: "all", label: "All types" },
-                ...collectionTypeOptions,
-              ]}
-              onChange={(value) =>
-                setFilters((prev) => ({ ...prev, collectionType: value }))
-              }
-            />
-          </Col>
-          <Col xs={24} md={4}>
-            <Button
-              block
-              onClick={() =>
-                setFilters({ status: "all", collectionType: "all", search: "" })
-              }
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
             >
-              Reset
-            </Button>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card
-        title="Collection List"
-        extra={
-          <Button type="primary" onClick={() => setIsCreateModalOpen(true)}>
-            Create Collection
-          </Button>
-        }
-      >
-        {collections.length === 0 ? (
-          <Empty description="No collections yet. Create your first collection to improve product discovery.">
-            <Button
-              type="primary"
-              onClick={() => {
-                form.setFieldsValue({
-                  name: "Featured Products",
-                  collectionType: "manual",
-                  status: "active",
-                });
-                setIsCreateModalOpen(true);
-              }}
-            >
-              Start with a template
-            </Button>
-          </Empty>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateModalOpen(true)}>
+                Create collection
+              </Button>
+            </Empty>
+          </div>
         ) : (
           <Table
             rowKey="id"
             columns={columns}
-            dataSource={collections}
-            pagination={{ pageSize: 8 }}
+            dataSource={visibleCollections}
+            pagination={{ pageSize: 20, showSizeChanger: false, showTotal: (total) => `${total} collections` }}
+            size="middle"
           />
         )}
       </Card>
 
+      {/* Create collection modal */}
       <Modal
-        title="Create Collection"
+        title="Create collection"
         open={isCreateModalOpen}
         onOk={() => form.submit()}
         onCancel={() => {
@@ -543,6 +555,7 @@ export default function CollectionsPage() {
         confirmLoading={isSubmitting}
         destroyOnClose
         width={860}
+        okText="Save collection"
       >
         <Form
           form={form}
@@ -552,68 +565,59 @@ export default function CollectionsPage() {
           initialValues={{
             collectionType: "manual",
             status: "draft",
-            rules: {
-              match: "all",
-              conditions: [{ field: "name", operator: "contains", value: "" }],
-            },
+            rules: { match: "all", conditions: [{ field: "name", operator: "contains", value: "" }] },
           }}
         >
-          <Row gutter={12}>
+          <Row gutter={16}>
+            <Col xs={24} md={16}>
+              <Card size="small" style={{ marginBottom: 12 }}>
+                <Form.Item name="name" label="Title" rules={[{ required: true, message: "Title is required." }]} style={{ marginBottom: 12 }}>
+                  <Input placeholder="Summer Launch" size="large" />
+                </Form.Item>
+                <Form.Item name="description" label="Description" style={{ marginBottom: 0 }}>
+                  <Input.TextArea rows={3} placeholder="Optional collection description" />
+                </Form.Item>
+              </Card>
+
+              <Card size="small" title="Collection type" style={{ marginBottom: 12 }}>
+                <Form.Item name="collectionType" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                  <Select
+                    options={[
+                      { value: "manual", label: "Manual — add products one by one" },
+                      { value: "smart", label: "Automated — products added by conditions" },
+                    ]}
+                  />
+                </Form.Item>
+                <CollectionRuleBuilder form={form} />
+              </Card>
+
+              <Card size="small" title="Search engine listing">
+                <Form.Item name="urlHandle" label="URL handle">
+                  <Input prefix="collections/" placeholder="summer-launch" />
+                </Form.Item>
+                <Form.Item name="seoTitle" label="Page title">
+                  <Input placeholder="SEO title" maxLength={70} showCount />
+                </Form.Item>
+                <Form.Item name="seoDescription" label="Meta description" style={{ marginBottom: 0 }}>
+                  <Input.TextArea rows={3} placeholder="SEO description" maxLength={160} showCount />
+                </Form.Item>
+              </Card>
+            </Col>
+
             <Col xs={24} md={8}>
-              <Form.Item
-                name="name"
-                label="Name"
-                rules={[{ required: true, message: "Name is required." }]}
-              >
-                <Input placeholder="Summer Launch" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={5}>
-              <Form.Item
-                name="collectionType"
-                label="Type"
-                rules={[{ required: true }]}
-              >
-                <Select options={collectionTypeOptions} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={5}>
-              <Form.Item
-                name="status"
-                label="Status"
-                rules={[{ required: true }]}
-              >
-                <Select options={statusOptions} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item name="description" label="Description">
-                <Input placeholder="Optional description" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item name="urlHandle" label="URL Handle">
-                <Input placeholder="summer-launch" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item name="seoTitle" label="SEO Title">
-                <Input placeholder="Collection SEO title" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item name="seoDescription" label="SEO Description">
-                <Input placeholder="Collection SEO description" />
-              </Form.Item>
+              <Card size="small" title="Status">
+                <Form.Item name="status" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                  <Select options={statusOptions} />
+                </Form.Item>
+              </Card>
             </Col>
           </Row>
-
-          <CollectionRuleBuilder form={form} />
         </Form>
       </Modal>
 
+      {/* Edit collection modal */}
       <Modal
-        title="Edit Collection"
+        title="Edit collection"
         open={Boolean(editingCollection)}
         onCancel={() => setEditingCollection(null)}
         onOk={() => editForm.submit()}
@@ -623,62 +627,60 @@ export default function CollectionsPage() {
         width={860}
       >
         <Form form={editForm} layout="vertical" onFinish={onUpdate}>
-          <Row gutter={12}>
+          <Row gutter={16}>
+            <Col xs={24} md={16}>
+              <Card size="small" style={{ marginBottom: 12 }}>
+                <Form.Item name="name" label="Title" rules={[{ required: true }]} style={{ marginBottom: 12 }}>
+                  <Input size="large" />
+                </Form.Item>
+                <Form.Item name="description" label="Description" style={{ marginBottom: 0 }}>
+                  <Input.TextArea rows={3} />
+                </Form.Item>
+              </Card>
+
+              <Card size="small" title="Collection type" style={{ marginBottom: 12 }}>
+                <Form.Item name="collectionType" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                  <Select
+                    options={[
+                      { value: "manual", label: "Manual — add products one by one" },
+                      { value: "smart", label: "Automated — products added by conditions" },
+                    ]}
+                  />
+                </Form.Item>
+                <CollectionRuleBuilder form={editForm} />
+              </Card>
+
+              <Card size="small" title="Search engine listing">
+                <Form.Item name="urlHandle" label="URL handle">
+                  <Input prefix="collections/" />
+                </Form.Item>
+                <Form.Item name="seoTitle" label="Page title">
+                  <Input maxLength={70} showCount />
+                </Form.Item>
+                <Form.Item name="seoDescription" label="Meta description" style={{ marginBottom: 0 }}>
+                  <Input.TextArea rows={3} maxLength={160} showCount />
+                </Form.Item>
+              </Card>
+            </Col>
+
             <Col xs={24} md={8}>
-              <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={8}>
-              <Form.Item name="urlHandle" label="URL Handle">
-                <Input placeholder="summer-launch" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={5}>
-              <Form.Item
-                name="collectionType"
-                label="Type"
-                rules={[{ required: true }]}
-              >
-                <Select options={collectionTypeOptions} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={3}>
-              <Form.Item
-                name="status"
-                label="Status"
-                rules={[{ required: true }]}
-              >
-                <Select options={statusOptions} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={8}>
-              <Form.Item name="description" label="Description">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="seoTitle" label="SEO Title">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="seoDescription" label="SEO Description">
-                <Input />
-              </Form.Item>
+              <Card size="small" title="Status">
+                <Form.Item name="status" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                  <Select options={statusOptions} />
+                </Form.Item>
+              </Card>
             </Col>
           </Row>
-
-          <CollectionRuleBuilder form={editForm} />
         </Form>
       </Modal>
 
+      {/* Assign products modal */}
       <Modal
-        title="Assign Products"
+        title={`Assign products — ${assigningCollection?.name}`}
         open={Boolean(assigningCollection)}
         onCancel={() => setAssigningCollection(null)}
         onOk={() => assignForm.submit()}
-        okText="Save assignment"
+        okText="Save"
         confirmLoading={isAssigning}
         destroyOnClose
       >
@@ -687,6 +689,7 @@ export default function CollectionsPage() {
             <Select
               mode="multiple"
               optionFilterProp="label"
+              placeholder="Search and select products"
               options={products.map((item) => ({
                 value: item.id,
                 label: `${item.name} (${item.sku})`,
@@ -696,39 +699,27 @@ export default function CollectionsPage() {
         </Form>
       </Modal>
 
+      {/* Smart collection preview modal */}
       <Modal
-        title="Smart Collection Preview"
+        title={`Preview — ${previewCollection?.name}`}
         open={Boolean(previewCollection)}
         onCancel={() => setPreviewCollection(null)}
-        footer={
-          <Button onClick={() => setPreviewCollection(null)} type="primary">
-            Close
-          </Button>
-        }
-        width={840}
+        footer={<Button type="primary" onClick={() => setPreviewCollection(null)}>Close</Button>}
+        width={700}
         destroyOnClose
       >
-        <Typography.Paragraph>
-          <strong>{previewCollection?.name || "Collection"}</strong> currently
-          matches {previewCollection?.productCount || 0} products.
-        </Typography.Paragraph>
-
+        <Typography.Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
+          This collection matches {previewCollection?.productCount ?? 0} products based on your conditions.
+        </Typography.Text>
         <Table
           size="small"
           rowKey="id"
-          dataSource={products.filter((item) =>
-            (previewCollection?.productIds || []).includes(item.id),
-          )}
-          pagination={{ pageSize: 6 }}
+          dataSource={products.filter((item) => (previewCollection?.productIds || []).includes(item.id))}
+          pagination={{ pageSize: 8 }}
           columns={[
             { title: "Name", dataIndex: "name", key: "name" },
             { title: "SKU", dataIndex: "sku", key: "sku" },
-            {
-              title: "Status",
-              dataIndex: "status",
-              key: "status",
-              render: (value) => <Tag>{value}</Tag>,
-            },
+            { title: "Status", dataIndex: "status", key: "status", render: (v: string) => <Tag>{v}</Tag> },
           ]}
         />
       </Modal>

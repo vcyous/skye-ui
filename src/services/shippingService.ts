@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * shippingService — Shipping methods, zones, shipment lifecycle, and fulfillment
  *
@@ -7,12 +6,70 @@
  * Depends on: supabaseClient, utils/errorUtils, storeService
  */
 
-import { getStoreContext } from "./storeService.js";
-import { supabase } from "./supabaseClient.js";
-import { tableExists } from "./utils/dbUtils.js";
-import { isMissingColumnError, normalizeError } from "./utils/errorUtils.js";
+import { sendEmail } from "./emailService";
+import { getStoreContext } from "./storeService";
+import { supabase } from "./supabaseClient";
+import { tableExists } from "./utils/dbUtils";
+import { isMissingColumnError, normalizeError } from "./utils/errorUtils";
 
-export async function getShippingMethods() {
+export interface ShippingZone {
+  id: string;
+  name: string;
+  countryCode: string;
+  regionCode: string;
+  postalCodePattern: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+export interface ShippingMethod {
+  id: string;
+  name: string;
+  shippingType: string;
+  baseRate: number;
+  config: Record<string, unknown>;
+  isActive: boolean;
+  zones: ShippingZone[];
+  createdAt: string;
+}
+
+export interface Shipment {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  shippingMethodId: string | null;
+  shippingMethodName: string;
+  carrier: string | null;
+  trackingNumber: string | null;
+  status: string;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+}
+
+export interface FulfillmentItem {
+  id: string;
+  productTitle: string;
+  variantTitle: string | null;
+  sku: string;
+  orderedQty: number;
+  allocatedQty: number;
+  remainingQty: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
+export interface CreateShipmentPayload {
+  orderId: string;
+  carrier?: string;
+  trackingNumber?: string;
+  note?: string;
+  shippingMethodId?: string;
+  status?: string;
+  items: Array<{ orderItemId: string; quantity: number }>;
+}
+
+export async function getShippingMethods(): Promise<ShippingMethod[]> {
   const { store } = await getStoreContext();
   const { data, error } = await supabase
     .from("shipping_methods")
@@ -48,14 +105,16 @@ export async function getShippingMethods() {
 
     zonesByMethod = (links || []).reduce((acc, link) => {
       const bucket = acc.get(link.shipping_method_id) || [];
-      if (link.shipping_zones) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sz = link.shipping_zones as any;
+      if (sz) {
         bucket.push({
-          id: link.shipping_zones.id,
-          name: link.shipping_zones.zone_name,
-          countryCode: link.shipping_zones.country_code || "",
-          regionCode: link.shipping_zones.region_code || "",
-          postalCodePattern: link.shipping_zones.postal_code_pattern || "",
-          isActive: Boolean(link.shipping_zones.is_active),
+          id: sz.id,
+          name: sz.zone_name,
+          countryCode: sz.country_code || "",
+          regionCode: sz.region_code || "",
+          postalCodePattern: sz.postal_code_pattern || "",
+          isActive: Boolean(sz.is_active),
         });
       }
       acc.set(link.shipping_method_id, bucket);
@@ -75,7 +134,7 @@ export async function getShippingMethods() {
   }));
 }
 
-export async function getShippingZones() {
+export async function getShippingZones(): Promise<ShippingZone[]> {
   const { store } = await getStoreContext();
   if (!(await tableExists("shipping_zones"))) {
     return [];
@@ -104,7 +163,9 @@ export async function getShippingZones() {
   }));
 }
 
-export async function createShippingZone(payload) {
+export async function createShippingZone(
+  payload: Partial<ShippingZone> & { name: string },
+): Promise<{ ok: boolean }> {
   const { store } = await getStoreContext();
   if (!(await tableExists("shipping_zones"))) {
     throw new Error(
@@ -128,7 +189,10 @@ export async function createShippingZone(payload) {
   return { ok: true };
 }
 
-export async function updateShippingZone(zoneId, payload) {
+export async function updateShippingZone(
+  zoneId: string,
+  payload: Partial<ShippingZone>,
+): Promise<{ ok: boolean }> {
   const { store } = await getStoreContext();
   if (!(await tableExists("shipping_zones"))) {
     throw new Error(
@@ -156,7 +220,9 @@ export async function updateShippingZone(zoneId, payload) {
   return { ok: true };
 }
 
-export async function deleteShippingZone(zoneId) {
+export async function deleteShippingZone(
+  zoneId: string,
+): Promise<{ ok: boolean }> {
   const { store } = await getStoreContext();
   if (!(await tableExists("shipping_zones"))) {
     return { ok: true };
@@ -175,7 +241,13 @@ export async function deleteShippingZone(zoneId) {
   return { ok: true };
 }
 
-export async function createShippingMethod(payload) {
+export async function createShippingMethod(
+  payload: Partial<ShippingMethod> & {
+    name: string;
+    shippingType: string;
+    zoneIds?: string[];
+  },
+): Promise<{ ok: boolean }> {
   const { store } = await getStoreContext();
   const { data: method, error } = await supabase
     .from("shipping_methods")
@@ -217,7 +289,10 @@ export async function createShippingMethod(payload) {
   return { ok: true };
 }
 
-export async function updateShippingMethod(shippingMethodId, payload) {
+export async function updateShippingMethod(
+  shippingMethodId: string,
+  payload: Partial<ShippingMethod> & { zoneIds?: string[] },
+): Promise<{ ok: boolean }> {
   const { store } = await getStoreContext();
   const { error } = await supabase
     .from("shipping_methods")
@@ -265,7 +340,9 @@ export async function updateShippingMethod(shippingMethodId, payload) {
   return { ok: true };
 }
 
-export async function getOrderFulfillmentItems(orderId) {
+export async function getOrderFulfillmentItems(
+  orderId: string,
+): Promise<FulfillmentItem[]> {
   const { store } = await getStoreContext();
   const [orderItemsResult, shipmentItemsResult] = await Promise.all([
     supabase
@@ -290,7 +367,8 @@ export async function getOrderFulfillmentItems(orderId) {
   }
 
   const allocatedMap = (shipmentItemsResult.data || []).reduce((acc, row) => {
-    const status = row.shipments?.status;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const status = (row.shipments as any)?.status;
     if (status === "failed") {
       return acc;
     }
@@ -318,7 +396,10 @@ export async function getOrderFulfillmentItems(orderId) {
   });
 }
 
-async function syncOrderFulfillmentFromShipments(orderId, storeId) {
+async function syncOrderFulfillmentFromShipments(
+  orderId: string,
+  storeId: string,
+): Promise<{ fulfillmentStatus: string; orderStatus: string }> {
   const [orderItemsResult, shipmentItemsResult] = await Promise.all([
     supabase.from("order_items").select("id, quantity").eq("order_id", orderId),
     supabase
@@ -343,7 +424,8 @@ async function syncOrderFulfillmentFromShipments(orderId, storeId) {
   let totalShipped = 0;
   for (const row of shipmentItemsResult.data || []) {
     const qty = Number(row.quantity || 0);
-    const status = row.shipments?.status;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const status = (row.shipments as any)?.status;
     if (status === "delivered") {
       totalDelivered += qty;
       totalShipped += qty;
@@ -396,16 +478,18 @@ async function syncOrderFulfillmentFromShipments(orderId, storeId) {
   return { fulfillmentStatus, orderStatus };
 }
 
-export async function getShipments() {
+export async function getShipments(): Promise<Shipment[]> {
   const { store } = await getStoreContext();
 
-  let { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any, error: any;
+  ({ data, error } = await supabase
     .from("shipments")
     .select(
       "id, order_id, shipping_method_id, tracking_number, carrier, status, shipped_at, delivered_at, created_at, orders!inner(id, store_id, order_number), shipping_methods(id, name)",
     )
     .eq("orders.store_id", store.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }));
 
   if (error && isMissingColumnError(error, "shipped_at")) {
     const fallback = await supabase
@@ -423,12 +507,14 @@ export async function getShipments() {
     throw normalizeError(error);
   }
 
-  return (data || []).map((item) => ({
+  return (data || []).map((item: any) => ({
     id: item.id,
     orderId: item.order_id,
-    orderNumber: item.orders?.order_number || item.order_id,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    orderNumber: (item.orders as any)?.order_number || item.order_id,
     shippingMethodId: item.shipping_method_id,
-    shippingMethodName: item.shipping_methods?.name || "-",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    shippingMethodName: (item.shipping_methods as any)?.name || "-",
     trackingNumber: item.tracking_number || "-",
     carrier: item.carrier || "-",
     status: item.status || "pending",
@@ -438,7 +524,9 @@ export async function getShipments() {
   }));
 }
 
-export async function createShipment(payload) {
+export async function createShipment(
+  payload: CreateShipmentPayload,
+): Promise<{ id: string; ok: boolean }> {
   const { store } = await getStoreContext();
 
   const orderId = payload.orderId;
@@ -454,10 +542,6 @@ export async function createShipment(payload) {
 
   if (!orderId) {
     throw new Error("Order is required");
-  }
-
-  if (!shippingMethodId) {
-    throw new Error("Shipping method is required");
   }
 
   if (!items.length) {
@@ -479,26 +563,28 @@ export async function createShipment(payload) {
     throw new Error("Order not found");
   }
 
-  const { data: shippingMethod, error: methodError } = await supabase
-    .from("shipping_methods")
-    .select("id")
-    .eq("id", shippingMethodId)
-    .eq("store_id", store.id)
-    .maybeSingle();
+  if (shippingMethodId) {
+    const { data: shippingMethod, error: methodError } = await supabase
+      .from("shipping_methods")
+      .select("id")
+      .eq("id", shippingMethodId)
+      .eq("store_id", store.id)
+      .maybeSingle();
 
-  if (methodError) {
-    throw normalizeError(methodError);
-  }
+    if (methodError) {
+      throw normalizeError(methodError);
+    }
 
-  if (!shippingMethod) {
-    throw new Error("Shipping method not found");
+    if (!shippingMethod) {
+      throw new Error("Shipping method not found");
+    }
   }
 
   const nextStatus = payload.status || "pending";
   const nowIso = new Date().toISOString();
   const shipmentInsert = {
     order_id: orderId,
-    shipping_method_id: shippingMethodId,
+    shipping_method_id: shippingMethodId || null,
     tracking_number: payload.trackingNumber || null,
     carrier: payload.carrier || null,
     status: nextStatus,
@@ -507,18 +593,19 @@ export async function createShipment(payload) {
     delivered_at: nextStatus === "delivered" ? nowIso : null,
   };
 
-  let { data: shipment, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let { data: shipment, error } = (await supabase
     .from("shipments")
     .insert(shipmentInsert)
     .select("id, order_id")
-    .single();
+    .single()) as any;
 
   if (error && isMissingColumnError(error, "shipped_at")) {
     const fallback = await supabase
       .from("shipments")
       .insert({
         order_id: orderId,
-        shipping_method_id: shippingMethodId,
+        shipping_method_id: shippingMethodId || null,
         tracking_number: payload.trackingNumber || null,
         carrier: payload.carrier || null,
         status: nextStatus,
@@ -549,10 +636,42 @@ export async function createShipment(payload) {
 
   await syncOrderFulfillmentFromShipments(orderId, store.id);
 
+  // Send shipping notification email (non-blocking)
+  try {
+    const { data: orderRow } = await supabase
+      .from("orders")
+      .select("order_number, customers(email)")
+      .eq("id", orderId)
+      .single();
+
+    const orderNumber = orderRow?.order_number ?? "";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const customerEmail = (orderRow?.customers as any)?.email ?? null;
+
+    if (customerEmail) {
+      sendEmail({
+        orderId,
+        recipient: customerEmail,
+        subject: `Your order #${orderNumber} has shipped`,
+        template: "shipping_notification",
+        data: {
+          orderNumber,
+          trackingNumber: payload.trackingNumber,
+          carrier: payload.carrier,
+        },
+      }).catch(() => null);
+    }
+  } catch {
+    // Non-blocking — don't fail shipment creation
+  }
+
   return { id: shipment.id, ok: true };
 }
 
-export async function updateShipmentStatus(shipmentId, status) {
+export async function updateShipmentStatus(
+  shipmentId: string,
+  status: string,
+): Promise<{ ok: boolean }> {
   const { store } = await getStoreContext();
   const nextStatus = String(status || "pending")
     .trim()
@@ -607,7 +726,9 @@ export async function updateShipmentStatus(shipmentId, status) {
   return { ok: true };
 }
 
-export async function deleteShippingMethod(shippingMethodId) {
+export async function deleteShippingMethod(
+  shippingMethodId: string,
+): Promise<{ ok: boolean }> {
   const { store } = await getStoreContext();
   const { error } = await supabase
     .from("shipping_methods")

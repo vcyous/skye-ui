@@ -1,11 +1,11 @@
 import {
   createContext,
+  ReactNode,
   useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
-  ReactNode,
 } from "react";
 import {
   fetchProfile,
@@ -18,7 +18,7 @@ import {
   setAuthFailureHandler,
   updateProfile,
 } from "../services/api";
-import { UserProfile, StoreSummary, AuthSessionData } from "../types";
+import { AuthSessionData, StoreSummary, UserProfile } from "../types";
 
 export interface AuthContextType {
   user: UserProfile | null;
@@ -37,6 +37,7 @@ export interface AuthContextType {
   selectStore: (storeId: string) => StoreSummary | null;
   hasRole: (requiredRoles: string | string[]) => boolean;
   canAccessResource: (resource: string) => boolean;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -169,12 +170,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasRole = useCallback(
     (requiredRoles: string | string[]) => {
       if (!currentRole) return false;
-      const roleHierarchy: Record<string, number> = { owner: 4, admin: 3, manager: 2, staff: 1 };
+      const roleHierarchy: Record<string, number> = {
+        owner: 4,
+        admin: 3,
+        manager: 2,
+        staff: 1,
+      };
       const rolesArray = Array.isArray(requiredRoles)
         ? requiredRoles
         : [requiredRoles];
       const currentRoleLevel = roleHierarchy[currentRole] || 0;
-      return rolesArray.some((role) => (roleHierarchy[role] || 0) <= currentRoleLevel);
+      return rolesArray.some(
+        (role) => (roleHierarchy[role] || 0) <= currentRoleLevel,
+      );
     },
     [currentRole],
   );
@@ -205,6 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       selectStore,
       hasRole,
       canAccessResource,
+      refreshSession: restoreSession,
     }),
     [
       user,
@@ -222,6 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       selectStore,
       hasRole,
       canAccessResource,
+      restoreSession,
     ],
   );
 

@@ -48,6 +48,15 @@ export default function ProtectedRoute({
     return <Navigate to="/select-store" replace />;
   }
 
+  // Onboarding guard — redirect to /onboarding if not yet completed
+  if (
+    store &&
+    !store.onboardingCompletedAt &&
+    location.pathname !== "/onboarding"
+  ) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   // Role-based access control
   if (requiredRoles && !hasRole(requiredRoles)) {
     // Return custom fallback or default access denied screen
