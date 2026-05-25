@@ -28,7 +28,6 @@ import {
 } from "@ant-design/icons";
 import {
   App as AntApp,
-  theme as antdTheme,
   Avatar,
   Badge,
   Button,
@@ -57,40 +56,62 @@ import PublicOnlyRoute from "./components/auth/PublicOnlyRoute.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { useLocalization } from "./context/LocalizationContext.jsx";
 
-const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
-const CartPage = lazy(() => import("./pages/CartPage.jsx"));
-const CheckoutPage = lazy(() => import("./pages/CheckoutPage.jsx"));
-const DiscountsPage = lazy(() => import("./pages/DiscountsPage.jsx"));
-const CollectionsPage = lazy(() => import("./pages/CollectionsPage.jsx"));
-const InventoryPage = lazy(() => import("./pages/InventoryPage.jsx"));
-const LoginPage = lazy(() => import("./pages/LoginPage.jsx"));
-const PaymentsPage = lazy(() => import("./pages/PaymentsPage.jsx"));
-const OrdersPage = lazy(() => import("./pages/OrdersPage.jsx"));
-const OrderDetailPage = lazy(() => import("./pages/OrderDetailPage.jsx"));
-const ProfilePage = lazy(() => import("./pages/ProfilePage.jsx"));
-const ProductsPage = lazy(() => import("./pages/ProductsPage.jsx"));
-const RegisterPage = lazy(() => import("./pages/RegisterPage.jsx"));
-const ReturnsPage = lazy(() => import("./pages/ReturnsPage.jsx"));
-const ShippingPage = lazy(() => import("./pages/ShippingPage.jsx"));
-const StorePage = lazy(() => import("./pages/StorePage.jsx"));
-const TaxPage = lazy(() => import("./pages/TaxPage.jsx"));
-const CustomersPage = lazy(() => import("./pages/CustomersPage.jsx"));
-const CampaignsPage = lazy(() => import("./pages/CampaignsPage.jsx"));
-const AbandonedCartsPage = lazy(() => import("./pages/AbandonedCartsPage.jsx"));
-const ContentPagesPage = lazy(() => import("./pages/ContentPagesPage.jsx"));
-const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage.jsx"));
-const LocalizationPage = lazy(() => import("./pages/LocalizationPage.jsx"));
-const MultiCurrencyPage = lazy(() => import("./pages/MultiCurrencyPage.jsx"));
-const SubscriptionsPage = lazy(() => import("./pages/SubscriptionsPage.jsx"));
-const B2bCompaniesPage = lazy(() => import("./pages/B2bCompaniesPage.jsx"));
-const WholesalePriceListsPage = lazy(
-  () => import("./pages/WholesalePriceListsPage.jsx"),
+const LoginPage = lazy(() => import("./pages/auth/LoginPage.jsx"));
+const RegisterPage = lazy(() => import("./pages/auth/RegisterPage.jsx"));
+
+const DashboardPage = lazy(() => import("./pages/overview/DashboardPage.jsx"));
+const AnalyticsPage = lazy(() => import("./pages/overview/AnalyticsPage.jsx"));
+
+const ProductsPage = lazy(() => import("./pages/catalog/ProductsPage.jsx"));
+const CollectionsPage = lazy(
+  () => import("./pages/catalog/CollectionsPage.jsx"),
 );
-const IntegrationsPage = lazy(() => import("./pages/IntegrationsPage.jsx"));
-const WebhooksPage = lazy(() => import("./pages/WebhooksPage.jsx"));
-const AutomationsPage = lazy(() => import("./pages/AutomationsPage.jsx"));
-const AuditPage = lazy(() => import("./pages/AuditPage.jsx"));
-const SecurityPage = lazy(() => import("./pages/SecurityPage.jsx"));
+const InventoryPage = lazy(() => import("./pages/catalog/InventoryPage.jsx"));
+const DiscountsPage = lazy(() => import("./pages/catalog/DiscountsPage.jsx"));
+const CampaignsPage = lazy(() => import("./pages/catalog/CampaignsPage.jsx"));
+const ContentPagesPage = lazy(
+  () => import("./pages/catalog/ContentPagesPage.jsx"),
+);
+
+const CartPage = lazy(() => import("./pages/sales/CartPage.jsx"));
+const AbandonedCartsPage = lazy(
+  () => import("./pages/sales/AbandonedCartsPage.jsx"),
+);
+const CheckoutPage = lazy(() => import("./pages/sales/CheckoutPage.jsx"));
+const OrdersPage = lazy(() => import("./pages/sales/OrdersPage.jsx"));
+const OrderDetailPage = lazy(() => import("./pages/sales/OrderDetailPage.jsx"));
+const SubscriptionsPage = lazy(
+  () => import("./pages/sales/SubscriptionsPage.jsx"),
+);
+const CustomersPage = lazy(() => import("./pages/sales/CustomersPage.jsx"));
+const PaymentsPage = lazy(() => import("./pages/sales/PaymentsPage.jsx"));
+const ReturnsPage = lazy(() => import("./pages/sales/ReturnsPage.jsx"));
+
+const ShippingPage = lazy(() => import("./pages/operations/ShippingPage.jsx"));
+const TaxPage = lazy(() => import("./pages/operations/TaxPage.jsx"));
+
+const B2bCompaniesPage = lazy(() => import("./pages/b2b/B2bCompaniesPage.jsx"));
+const WholesalePriceListsPage = lazy(
+  () => import("./pages/b2b/WholesalePriceListsPage.jsx"),
+);
+const IntegrationsPage = lazy(() => import("./pages/b2b/IntegrationsPage.jsx"));
+const WebhooksPage = lazy(() => import("./pages/b2b/WebhooksPage.jsx"));
+
+const AutomationsPage = lazy(
+  () => import("./pages/automation/AutomationsPage.jsx"),
+);
+
+const SecurityPage = lazy(() => import("./pages/security/SecurityPage.jsx"));
+const AuditPage = lazy(() => import("./pages/security/AuditPage.jsx"));
+
+const StorePage = lazy(() => import("./pages/settings/StorePage.jsx"));
+const LocalizationPage = lazy(
+  () => import("./pages/settings/LocalizationPage.jsx"),
+);
+const MultiCurrencyPage = lazy(
+  () => import("./pages/settings/MultiCurrencyPage.jsx"),
+);
+const ProfilePage = lazy(() => import("./pages/settings/ProfilePage.jsx"));
 
 const menuSections = [
   {
@@ -222,18 +243,6 @@ function AppLayout() {
       section.children.some((item) => item.to === location.pathname),
     )?.key || "overview";
   const [openKeys, setOpenKeys] = useState([defaultOpenSection]);
-  const [colorMode, setColorMode] = useState(() => {
-    if (typeof window === "undefined") {
-      return "light";
-    }
-
-    return localStorage.getItem("skye-theme") || "light";
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", colorMode);
-    localStorage.setItem("skye-theme", colorMode);
-  }, [colorMode]);
 
   useEffect(() => {
     setMobileNavOpen(false);
@@ -325,12 +334,7 @@ function AppLayout() {
   return (
     <ConfigProvider
       theme={{
-        algorithm:
-          colorMode === "dark"
-            ? antdTheme.darkAlgorithm
-            : antdTheme.defaultAlgorithm,
         token: {
-          colorPrimary: "#006c9c",
           borderRadius: 12,
           fontFamily: "Manrope, sans-serif",
         },
@@ -392,15 +396,6 @@ function AppLayout() {
                       }),
                     )}
                   />
-                  <Button
-                    onClick={() =>
-                      setColorMode((prev) =>
-                        prev === "light" ? "dark" : "light",
-                      )
-                    }
-                  >
-                    {colorMode === "light" ? "Dark mode" : "Light mode"}
-                  </Button>
                   <Avatar className="app-user-avatar">
                     {String(user?.email || "U")
                       .slice(0, 1)

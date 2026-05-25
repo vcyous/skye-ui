@@ -68,11 +68,9 @@ export {
 export {
   createCollection,
   deleteCollection,
-  evaluateCollectionRuleMatch,
   getCollections,
   updateCollection,
   updateCollectionProducts,
-  validateCollectionRules,
 } from "./collectionService.js";
 
 export {
@@ -108,7 +106,6 @@ export {
 
 export {
   createMarketingCampaign,
-  deleteMarketingCampaign,
   getMarketingCampaignAnalytics,
   getMarketingCampaigns,
   linkCampaignCoupons,

@@ -6,12 +6,19 @@
  * Depends on: supabaseClient, utils/errorUtils, utils/slugUtils, utils/dbUtils, storeService, productService
  */
 
-import { supabase } from "./supabaseClient.js";
-import { normalizeError, isMissingColumnError, isMissingTableError } from "./utils/errorUtils.js";
-import { normalizeSeoHandle, validateSeoMetadataFields } from "./utils/slugUtils.js";
-import { assertUniqueHandle } from "./utils/dbUtils.js";
-import { getStoreContext } from "./storeService.js";
 import { getProducts } from "./productService.js";
+import { getStoreContext } from "./storeService.js";
+import { supabase } from "./supabaseClient.js";
+import { assertUniqueHandle } from "./utils/dbUtils.js";
+import {
+  isMissingColumnError,
+  isMissingTableError,
+  normalizeError,
+} from "./utils/errorUtils.js";
+import {
+  normalizeSeoHandle,
+  validateSeoMetadataFields,
+} from "./utils/slugUtils.js";
 
 const COLLECTION_RULE_FIELDS = new Set([
   "name",
