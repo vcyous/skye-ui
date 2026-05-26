@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * inventoryService — Inventory levels, stock movements, adjustments, and CSV operations
  *

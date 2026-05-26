@@ -23,7 +23,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(values);
-      const redirectPath = location.state?.from || "/";
+      const redirectPath = location.state?.from || "/dashboard";
       navigate(redirectPath, { replace: true });
     } catch (err) {
       setSubmitError(err.message || "Login failed. Please try again.");

@@ -42,7 +42,7 @@ export default function OnboardingPage() {
     try {
       await completeOnboarding(values);
       await refreshSession();
-      navigate("/store/website-builder", { replace: true });
+      navigate("/dashboard/store/website-builder", { replace: true });
     } catch (err) {
       message.error(err.message || "Failed to launch store. Please try again.");
     } finally {

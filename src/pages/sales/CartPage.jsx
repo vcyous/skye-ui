@@ -178,7 +178,7 @@ export default function CartPage() {
             <Button
               type="primary"
               disabled={!cart.items.length}
-              onClick={() => navigate("/checkout")}
+              onClick={() => navigate("/dashboard/checkout")}
             >
               Proceed to Checkout
             </Button>

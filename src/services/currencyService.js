@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * currencyService — Multi-currency settings, FX rate snapshots, and conversion quotes
  *

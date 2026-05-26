@@ -77,14 +77,16 @@ export default function AppLayout() {
       .find(
         (item) =>
           location.pathname === item.to ||
-          (item.to !== "/" && location.pathname.startsWith(`${item.to}/`)),
-      )?.to ?? "/";
+          (item.to !== "/dashboard" &&
+            location.pathname.startsWith(`${item.to}/`)),
+      )?.to ?? "/dashboard";
 
   const currentRouteLabel =
     flatNavItems.find(
       (item) =>
         location.pathname === item.to ||
-        (item.to !== "/" && location.pathname.startsWith(`${item.to}/`)),
+        (item.to !== "/dashboard" &&
+          location.pathname.startsWith(`${item.to}/`)),
     )?.label ?? "Dashboard";
 
   const sidebar = (
@@ -126,45 +128,45 @@ export default function AppLayout() {
           <Suspense fallback={<PageFallback />}>
             <Routes>
               {/* MVP 1 — active routes */}
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/products" element={<ProductsPage />} />
-              <Route path="/collections" element={<CollectionsPage />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/orders" element={<OrdersPage />} />
-              <Route path="/orders/:orderId" element={<OrderDetailPage />} />
-              <Route path="/shipping" element={<ShippingPage />} />
+              <Route index element={<DashboardPage />} />
+              <Route path="products" element={<ProductsPage />} />
+              <Route path="collections" element={<CollectionsPage />} />
+              <Route path="cart" element={<CartPage />} />
+              <Route path="checkout" element={<CheckoutPage />} />
+              <Route path="orders" element={<OrdersPage />} />
+              <Route path="orders/:orderId" element={<OrderDetailPage />} />
+              <Route path="shipping" element={<ShippingPage />} />
               <Route
-                path="/store/website-builder"
+                path="store/website-builder"
                 element={<WebsiteBuilderPage />}
               />
-              <Route path="/store" element={<StorePage />} />
-              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="store" element={<StorePage />} />
+              <Route path="profile" element={<ProfilePage />} />
 
               {/* Coming soon — not yet in MVP 1 */}
-              <Route path="/analytics" element={<ComingSoonPage />} />
-              <Route path="/inventory" element={<ComingSoonPage />} />
-              <Route path="/discounts" element={<ComingSoonPage />} />
-              <Route path="/campaigns" element={<ComingSoonPage />} />
-              <Route path="/content-pages" element={<ComingSoonPage />} />
-              <Route path="/abandoned-carts" element={<ComingSoonPage />} />
-              <Route path="/subscriptions" element={<ComingSoonPage />} />
-              <Route path="/customers" element={<ComingSoonPage />} />
-              <Route path="/payments" element={<ComingSoonPage />} />
-              <Route path="/returns" element={<ComingSoonPage />} />
-              <Route path="/tax" element={<ComingSoonPage />} />
-              <Route path="/b2b-companies" element={<ComingSoonPage />} />
+              <Route path="analytics" element={<ComingSoonPage />} />
+              <Route path="inventory" element={<ComingSoonPage />} />
+              <Route path="discounts" element={<ComingSoonPage />} />
+              <Route path="campaigns" element={<ComingSoonPage />} />
+              <Route path="content-pages" element={<ComingSoonPage />} />
+              <Route path="abandoned-carts" element={<ComingSoonPage />} />
+              <Route path="subscriptions" element={<ComingSoonPage />} />
+              <Route path="customers" element={<ComingSoonPage />} />
+              <Route path="payments" element={<ComingSoonPage />} />
+              <Route path="returns" element={<ComingSoonPage />} />
+              <Route path="tax" element={<ComingSoonPage />} />
+              <Route path="b2b-companies" element={<ComingSoonPage />} />
               <Route
-                path="/wholesale-price-lists"
+                path="wholesale-price-lists"
                 element={<ComingSoonPage />}
               />
-              <Route path="/integrations" element={<ComingSoonPage />} />
-              <Route path="/webhooks" element={<ComingSoonPage />} />
-              <Route path="/automations" element={<ComingSoonPage />} />
-              <Route path="/security" element={<ComingSoonPage />} />
-              <Route path="/audit" element={<ComingSoonPage />} />
-              <Route path="/localization" element={<ComingSoonPage />} />
-              <Route path="/multi-currency" element={<ComingSoonPage />} />
+              <Route path="integrations" element={<ComingSoonPage />} />
+              <Route path="webhooks" element={<ComingSoonPage />} />
+              <Route path="automations" element={<ComingSoonPage />} />
+              <Route path="security" element={<ComingSoonPage />} />
+              <Route path="audit" element={<ComingSoonPage />} />
+              <Route path="localization" element={<ComingSoonPage />} />
+              <Route path="multi-currency" element={<ComingSoonPage />} />
             </Routes>
           </Suspense>
         </div>

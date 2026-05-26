@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * analyticsService — Dashboard KPIs, overview reports, metric dictionary, and report cache
  *

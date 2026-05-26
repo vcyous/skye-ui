@@ -1,6 +1,6 @@
 import { App as AntApp, ConfigProvider } from "antd";
 import { lazy, Suspense } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
 import PublicOnlyRoute from "./components/auth/PublicOnlyRoute.jsx";
 import PageFallback from "./components/ui/PageFallback";
@@ -27,6 +27,7 @@ const StorefrontCheckoutPage = lazy(
 const StorefrontOrderConfirmationPage = lazy(
   () => import("./pages/storefront/StorefrontOrderConfirmationPage.jsx"),
 );
+const MarketingPage = lazy(() => import("./pages/marketing/MarketingPage.jsx"));
 
 export default function App() {
   return (
@@ -34,6 +35,8 @@ export default function App() {
       <AntApp>
         <Suspense fallback={<PageFallback />}>
           <Routes>
+            <Route path="/" element={<MarketingPage />} />
+            <Route path="/landing" element={<Navigate to="/" replace />} />
             <Route path="/preview" element={<StorefrontPreviewPage />} />
             <Route
               path="/storefront/product/:handle"
@@ -77,7 +80,7 @@ export default function App() {
             />
 
             <Route
-              path="/*"
+              path="/dashboard/*"
               element={
                 <ProtectedRoute>
                   <AppLayout />

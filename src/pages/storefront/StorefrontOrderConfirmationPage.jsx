@@ -51,7 +51,7 @@ export default function StorefrontOrderConfirmationPage() {
             <Button type="primary" onClick={() => navigate("/storefront")}>
               Continue Shopping
             </Button>
-            <Button onClick={() => navigate("/orders")}>
+            <Button onClick={() => navigate("/dashboard/orders")}>
               View Orders (Admin)
             </Button>
           </Space>

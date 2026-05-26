@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * discountService — Discount CRUD, validation, overlap detection, and outcome preview
  *

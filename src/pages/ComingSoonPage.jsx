@@ -30,7 +30,11 @@ export default function ComingSoonPage() {
             >
               Coming Soon
             </Tag>
-            <Button type="primary" size="large" onClick={() => navigate("/")}>
+            <Button
+              type="primary"
+              size="large"
+              onClick={() => navigate("/dashboard")}
+            >
               Back to Dashboard
             </Button>
           </Space>

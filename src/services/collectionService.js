@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * collectionService — Collection CRUD, smart rule evaluation, and product assignment
  *

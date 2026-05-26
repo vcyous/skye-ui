@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Card, Col, Row, Typography } from "antd";
 import {
   Bar,

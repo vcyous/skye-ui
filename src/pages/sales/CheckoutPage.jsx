@@ -270,7 +270,7 @@ export default function CheckoutPage() {
           description="Cart is empty. Add products before checkout."
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         >
-          <Button type="primary" onClick={() => navigate("/cart")}>
+          <Button type="primary" onClick={() => navigate("/dashboard/cart")}>
             Go to Cart
           </Button>
         </Empty>

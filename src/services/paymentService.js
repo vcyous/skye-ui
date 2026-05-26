@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * paymentService — Payment methods, transactions, and status lifecycle management
  *

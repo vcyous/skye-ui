@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * localizationService — Locale settings, translation management, and fallback event recording
  *

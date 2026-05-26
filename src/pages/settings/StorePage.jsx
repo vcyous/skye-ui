@@ -257,7 +257,7 @@ export default function StorePage() {
         <Button
           type="primary"
           icon={<LayoutOutlined />}
-          onClick={() => navigate("/store/website-builder")}
+          onClick={() => navigate("/dashboard/store/website-builder")}
         >
           Open website builder
         </Button>
@@ -690,7 +690,7 @@ export default function StorePage() {
             extra={
               <Button
                 size="small"
-                onClick={() => navigate("/store/website-builder")}
+                onClick={() => navigate("/dashboard/store/website-builder")}
               >
                 Manage
               </Button>

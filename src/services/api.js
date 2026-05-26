@@ -89,16 +89,6 @@ export {
 } from "./collectionService";
 
 export {
-  createContentPage,
-  deleteContentPage,
-  getContentPagePreview,
-  getContentPages,
-  getSeoOverview,
-  publishContentPage,
-  updateContentPage,
-} from "./contentService";
-
-export {
   adjustInventory,
   exportInventoryCsv,
   getInventoryItems,
@@ -106,27 +96,6 @@ export {
   getLowStockAlerts,
   importInventoryCsv,
 } from "./inventoryService";
-
-export {
-  calculateDiscountAmount,
-  createDiscount,
-  deleteDiscount,
-  getDiscounts,
-  normalizeCodeList,
-  previewDiscountOutcome,
-  resolveApplicableDiscounts,
-  updateDiscount,
-  validateDiscountPayload,
-} from "./discountService";
-
-export {
-  createMarketingCampaign,
-  getMarketingCampaignAnalytics,
-  getMarketingCampaigns,
-  linkCampaignCoupons,
-  setMarketingCampaignStatus,
-  updateMarketingCampaign,
-} from "./campaignService";
 
 export {
   createPaymentMethod,
@@ -154,18 +123,6 @@ export {
 } from "./shippingService";
 
 export {
-  createTaxRule,
-  deleteTaxRule,
-  getTaxRules,
-  normalizeTaxBehavior,
-  resolveMatchingTaxRule,
-  resolveTaxPricing,
-  updateTaxRule,
-} from "./taxService";
-
-export { getInvoices } from "./invoiceService";
-
-export {
   createReturnRequest,
   getRefunds,
   getReturns,
@@ -185,51 +142,12 @@ export {
 } from "./orderService";
 
 export {
-  addCustomerEngagementNote,
-  createCustomer,
-  createCustomerSegment,
-  deleteCustomer,
-  deleteCustomerSegment,
-  evaluateCustomerSegmentFilter,
-  getCustomers,
-  getCustomerSegments,
-  getCustomerTimeline,
-  normalizeCustomerSegmentFilter,
-  previewCustomerSegment,
-  updateCustomer,
-  updateCustomerSegment,
-} from "./customerService";
-
-export {
-  createSubscription,
-  createSubscriptionPlan,
-  deleteSubscriptionPlan,
-  getSubscriptionPlans,
-  getSubscriptions,
-  processRecurringSubscriptionBilling,
-  updateSubscriptionPlan,
-  updateSubscriptionStatus,
-} from "./subscriptionService";
-
-export {
   addToCart,
   ensureActiveCart,
   getCart,
   removeCartItem,
   updateCartItemQuantity,
 } from "./cartService";
-
-export {
-  createRecoveryMessageTemplate,
-  detectAbandonedCarts,
-  getAbandonedCartPerformance,
-  getAbandonedCartRecoveries,
-  getRecoveryMessageTemplates,
-  sendAbandonedCartRecoveryMessage,
-  updateAbandonedCartMessageStatus,
-  updateAbandonedCartRecoveryStatus,
-  updateRecoveryMessageTemplate,
-} from "./abandonedCartService";
 
 export {
   getCheckoutRecoveryState,
@@ -271,9 +189,3 @@ export {
   updateLocalizationSettings,
   upsertLocalizationTranslation,
 } from "./localizationService";
-
-export * from "./auditService";
-export * from "./automationService";
-export * from "./b2bWholesaleService";
-export * from "./integrationService";
-export * from "./webhookService";
