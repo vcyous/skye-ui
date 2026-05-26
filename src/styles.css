@@ -1,3 +1,71 @@
+/* ── Skye Design System tokens ──────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --paper:           #FBF5D6;
+  --paper-deep:      #F2E59E;
+  --white:           #FFFFFF;
+
+  /* Ink */
+  --ink:             #1A1812;
+  --ink-2:           #4A453B;
+  --ink-3:           #8A8478;
+  --ink-4:           #C5BFB1;
+
+  /* Lines */
+  --line:            rgba(26, 24, 18, 0.08);
+  --line-strong:     rgba(26, 24, 18, 0.16);
+
+  /* Brand — Horizon (yellow primary) */
+  --horizon:         #F5D24A;
+  --horizon-hover:   #E8C228;
+  --horizon-press:   #D5AE16;
+  --horizon-soft:    #FCF4C9;
+  --horizon-ink:     #5C4B0A;
+
+  /* Brand — Sunset (amber accent) */
+  --sunset:          #E8A823;
+  --sunset-soft:     #FCF0D2;
+  --sunset-ink:      #5C4108;
+
+  /* Semantic */
+  --sage:            #3F7053;
+  --sage-soft:       #DDEADF;
+  --sage-ink:        #1F3D2A;
+  --ember:           #C8442A;
+  --ember-soft:      #F8DDD3;
+  --ember-ink:       #6E1E0F;
+  --amber:           #C28E1A;
+  --amber-soft:      #F5E9C8;
+  --amber-ink:       #5C4108;
+
+  /* Radii */
+  --r-xs:   4px;
+  --r-sm:   8px;
+  --r-md:   12px;
+  --r-lg:   16px;
+  --r-xl:   20px;
+  --r-full: 999px;
+
+  /* Warm shadows */
+  --shadow-sm:
+    0 1px 0 rgba(26, 24, 18, 0.04),
+    0 1px 2px rgba(26, 24, 18, 0.06);
+  --shadow-md:
+    0 1px 0 rgba(26, 24, 18, 0.04),
+    0 4px 12px rgba(26, 24, 18, 0.06),
+    0 2px 4px rgba(26, 24, 18, 0.04);
+  --shadow-lg:
+    0 1px 0 rgba(26, 24, 18, 0.04),
+    0 16px 32px rgba(26, 24, 18, 0.08),
+    0 4px 8px rgba(26, 24, 18, 0.04);
+  --shadow-xl:
+    0 1px 0 rgba(26, 24, 18, 0.04),
+    0 28px 56px rgba(26, 24, 18, 0.10),
+    0 8px 16px rgba(26, 24, 18, 0.06);
+  --paper-deep: #F2E59E;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
 * {
   box-sizing: border-box;
 }
@@ -5,13 +73,13 @@
 body {
   margin: 0;
   min-height: 100vh;
-  color: #111827;
-  font-family: "Manrope", sans-serif;
-  background-color: #EDF4F2;
+  color: var(--ink);
+  font-family: 'Sora', system-ui, sans-serif;
+  background-color: var(--paper);
   background-image: radial-gradient(
     circle at 0% 0%,
-    rgba(13, 92, 83, 0.06) 0,
-    rgba(237, 244, 242, 0) 32%
+    rgba(245, 210, 74, 0.08) 0,
+    rgba(251, 245, 214, 0) 32%
   );
   background-repeat: no-repeat;
   background-attachment: fixed;
@@ -21,7 +89,7 @@ h1,
 h2,
 h3 {
   margin: 0;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: 'Sora', system-ui, sans-serif;
 }
 
 @keyframes authFloat {
@@ -33,14 +101,15 @@ h3 {
   }
 }
 
+/* ── App shell ───────────────────────────────────────────────────────────── */
 .app-shell {
   min-height: 100vh;
   background: transparent;
 }
 
 .app-sider {
-  border-right: 1px solid #D1DBDB;
-  background: rgba(255, 255, 255, 0.9) !important;
+  border-right: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.92) !important;
   backdrop-filter: blur(12px);
   padding: 22px 14px;
   position: sticky !important;
@@ -60,14 +129,14 @@ h3 {
 .app-logo-mark {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #0D5C53, #073A33);
-  color: #fff;
+  background: linear-gradient(135deg, var(--sunset), var(--amber));
+  color: var(--ink);
   font-size: 0.82rem;
   font-weight: 800;
-  box-shadow: 0 4px 12px rgba(13, 92, 83, 0.25);
+  box-shadow: 0 4px 12px rgba(232, 168, 35, 0.28);
 }
 
 .app-logo-title {
@@ -75,10 +144,11 @@ h3 {
 }
 
 .app-logo-subtitle {
-  color: #6B7280;
+  color: var(--ink-3);
   font-size: 0.82rem;
 }
 
+/* ── Navigation ──────────────────────────────────────────────────────────── */
 .app-menu {
   border-inline-end: 0 !important;
   background: transparent !important;
@@ -86,26 +156,26 @@ h3 {
 
 .app-menu .ant-menu-item {
   margin-inline: 4px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   height: 42px;
   line-height: 42px;
 }
 
 .app-menu .ant-menu-submenu {
   margin-inline: 4px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
 }
 
 .app-menu .ant-menu-submenu-title {
   height: 42px !important;
   line-height: 42px !important;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-weight: 700;
-  color: #073A33;
+  color: var(--ink);
 }
 
 .app-menu .ant-menu-submenu-open > .ant-menu-submenu-title {
-  background: #E8F3F1;
+  background: var(--horizon-soft);
 }
 
 .app-menu .ant-menu-sub {
@@ -118,13 +188,13 @@ h3 {
 }
 
 .app-menu .ant-menu-item-selected {
-  background: #E8F3F1 !important;
+  background: var(--horizon-soft) !important;
 }
 
 .app-sider-footer {
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1px solid #D1DBDB;
+  border-top: 1px solid var(--line);
 }
 
 .app-user-email {
@@ -133,6 +203,7 @@ h3 {
   word-break: break-all;
 }
 
+/* ── Content area ────────────────────────────────────────────────────────── */
 .app-content {
   padding: 18px;
   display: flex;
@@ -144,10 +215,10 @@ h3 {
 .app-topbar {
   margin-bottom: 16px;
   flex-shrink: 0;
-  border-radius: 12px !important;
-  border: 1px solid #D1DBDB;
-  background: #ffffff;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  border-radius: var(--r-md) !important;
+  border: 1px solid var(--line-strong);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
 }
 
 .app-topbar .ant-card-body {
@@ -157,7 +228,7 @@ h3 {
 .app-kicker {
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #0D5C53;
+  color: var(--horizon-ink);
   font-weight: 700;
   font-size: 0.78rem;
 }
@@ -167,12 +238,12 @@ h3 {
 }
 
 .app-topbar-subtitle {
-  color: #6B7280;
+  color: var(--ink-3);
   font-size: 0.85rem;
 }
 
 .app-user-avatar {
-  background: linear-gradient(135deg, #0A4A42, #0D5C53) !important;
+  background: linear-gradient(135deg, var(--ink-2), var(--ink)) !important;
 }
 
 .app-content-scroll {
@@ -192,8 +263,8 @@ h3 {
 }
 
 .app-content-scroll .ant-card {
-  border-radius: 12px;
-  border: 1px solid #D1DBDB;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
 }
 
 .app-content-scroll .ant-table-wrapper,
@@ -206,8 +277,9 @@ h3 {
   padding-top: 8px;
 }
 
+/* ── Page primitives ─────────────────────────────────────────────────────── */
 .page-fallback {
-  color: #6B7280;
+  color: var(--ink-3);
 }
 
 .page-title {
@@ -215,9 +287,10 @@ h3 {
 }
 
 .page-subtitle {
-  color: #6B7280;
+  color: var(--ink-3);
 }
 
+/* ── Auth pages ──────────────────────────────────────────────────────────── */
 .auth-page {
   position: relative;
   min-height: 100vh;
@@ -231,8 +304,8 @@ h3 {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 20%, rgba(13, 92, 83, 0.15), transparent 42%),
-    radial-gradient(circle at 80% 85%, rgba(21, 128, 61, 0.1), transparent 36%);
+    radial-gradient(circle at 20% 20%, rgba(245, 210, 74, 0.18), transparent 42%),
+    radial-gradient(circle at 80% 85%, rgba(232, 168, 35, 0.12), transparent 36%);
   animation: authFloat 9s ease-in-out infinite alternate;
 }
 
@@ -247,7 +320,7 @@ h3 {
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #0D5C53;
+  color: var(--horizon-ink);
   font-weight: 800;
   font-size: 0.84rem;
 }
@@ -256,6 +329,7 @@ h3 {
   margin: 14px 0 0;
 }
 
+/* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .app-sider {
     display: none;
