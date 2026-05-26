@@ -2,13 +2,21 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const isProduction = import.meta.env.PROD;
 
-const fallbackUrl = "http://localhost";
-const fallbackAnonKey = "missing-anon-key";
+if (!supabaseUrl || !supabasePublishableKey) {
+  const message =
+    "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in your environment.";
+  if (isProduction) {
+    throw new Error(message);
+  }
+  // eslint-disable-next-line no-console
+  console.warn(`[supabase] ${message} Using inert client for dev only.`);
+}
 
 export const supabase = createClient(
-  supabaseUrl || fallbackUrl,
-  supabasePublishableKey || fallbackAnonKey,
+  supabaseUrl || "http://localhost",
+  supabasePublishableKey || "missing-anon-key",
   {
     auth: {
       persistSession: true,
@@ -24,4 +32,8 @@ export function assertSupabaseConfigured() {
       "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.",
     );
   }
+}
+
+export function isSupabaseConfigured() {
+  return Boolean(supabaseUrl && supabasePublishableKey);
 }

@@ -1,5 +1,4 @@
 import {
-  ArrowUpOutlined,
   BoxPlotOutlined,
   DollarOutlined,
   ShoppingCartOutlined,
@@ -14,7 +13,6 @@ import {
   Row,
   Space,
   Spin,
-  Statistic,
   Tag,
   Typography,
 } from "antd";
@@ -22,62 +20,11 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLocalization } from "../../context/LocalizationContext";
 import { getDashboardSummary, getOrders } from "../../services/api";
+import KpiCard from "../../shared/ui/KpiCard";
 
 const DashboardCharts = lazy(
   () => import("../../components/DashboardCharts.jsx"),
 );
-
-function KpiCard({ title, value, delta, icon, color }) {
-  return (
-    <Card styles={{ body: { padding: "16px 20px" } }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-        }}
-      >
-        <div>
-          <Typography.Text
-            type="secondary"
-            style={{ fontSize: 13, display: "block", marginBottom: 6 }}
-          >
-            {title}
-          </Typography.Text>
-          <Statistic
-            value={value}
-            valueStyle={{ fontSize: 24, fontWeight: 700, color: "var(--ink)" }}
-          />
-
-          {delta && (
-            <Space size={4} style={{ marginTop: 4 }}>
-              <ArrowUpOutlined style={{ color: "var(--sage)", fontSize: 11 }} />
-              <Typography.Text style={{ fontSize: 12, color: "var(--sage)" }}>
-                {delta} vs last period
-              </Typography.Text>
-            </Space>
-          )}
-        </div>
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 10,
-            background: color,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--white)",
-            fontSize: 18,
-            flexShrink: 0,
-          }}
-        >
-          {icon}
-        </div>
-      </div>
-    </Card>
-  );
-}
 
 export default function DashboardPage() {
   const { formatCurrency, formatNumber } = useLocalization();

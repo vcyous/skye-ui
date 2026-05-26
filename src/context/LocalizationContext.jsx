@@ -7,6 +7,11 @@ import {
   useState,
 } from "react";
 import {
+  formatCurrency as formatCurrencyShared,
+  formatDate as formatDateShared,
+  formatNumber as formatNumberShared,
+} from "../shared/format";
+import {
   getCurrencySettings,
   getLocalizationSettings,
   getLocalizationTranslations,
@@ -206,22 +211,18 @@ export function LocalizationProvider({ children }) {
     }
 
     function formatCurrency(value, currencyCode = settings.currencyCode) {
-      return new Intl.NumberFormat(activeLocale, {
-        style: "currency",
-        currency: currencyCode || "IDR",
-      }).format(Number(value || 0));
+      return formatCurrencyShared(value, {
+        currency: currencyCode || activeCurrency || "USD",
+        locale: activeLocale,
+      });
     }
 
     function formatNumber(value) {
-      return new Intl.NumberFormat(activeLocale).format(Number(value || 0));
+      return formatNumberShared(value, { locale: activeLocale });
     }
 
     function formatDate(value, options = { dateStyle: "medium" }) {
-      if (!value) {
-        return "-";
-      }
-      const parsed = value instanceof Date ? value : new Date(value);
-      return new Intl.DateTimeFormat(activeLocale, options).format(parsed);
+      return formatDateShared(value, { locale: activeLocale, ...options });
     }
 
     return {

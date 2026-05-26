@@ -1,16 +1,10 @@
-/**
- * api.ts — Barrel re-export for all Skye service modules
- *
- * This file exists solely for backward compatibility with page imports.
- * Do not add business logic here. Add it to the appropriate service file.
- */
-
 export { setAccessToken, setAuthFailureHandler } from "./authTokenUtils";
 
 export { sendEmail } from "./emailService";
 export {
   supabase as api,
   assertSupabaseConfigured,
+  isSupabaseConfigured,
   supabase,
 } from "./supabaseClient";
 
@@ -89,25 +83,6 @@ export {
 } from "./collectionService";
 
 export {
-  adjustInventory,
-  exportInventoryCsv,
-  getInventoryItems,
-  getInventoryMovements,
-  getLowStockAlerts,
-  importInventoryCsv,
-} from "./inventoryService";
-
-export {
-  createPaymentMethod,
-  deletePaymentMethod,
-  getPaymentMethods,
-  getTransactions,
-  getTransactionStatusOptions,
-  updatePaymentMethod,
-  updateTransactionStatus,
-} from "./paymentService";
-
-export {
   createShipment,
   createShippingMethod,
   createShippingZone,
@@ -121,15 +96,6 @@ export {
   updateShippingMethod,
   updateShippingZone,
 } from "./shippingService";
-
-export {
-  createReturnRequest,
-  getRefunds,
-  getReturns,
-  getReturnStatusOptions,
-  processRefund,
-  updateReturnStatus,
-} from "./returnsService";
 
 export {
   addOrderInternalNote,
@@ -156,36 +122,20 @@ export {
   saveCheckoutRecoveryState,
 } from "./checkoutService";
 
-export {
-  addUtcDays,
-  calculateDeltaPercent,
-  getAnalyticsMetricDictionary,
-  getAnalyticsOverviewReport,
-  getDashboardSummary,
-  invalidateAnalyticsReportCache,
-  startOfUtcDay,
-} from "./analyticsService";
+export { getDashboardSummary } from "./analyticsService";
 
 export {
-  CURRENCY_MINOR_UNITS,
-  getCurrencyConversionQuote,
-  getCurrencyRateSnapshots,
   getCurrencySettings,
   normalizeCurrencyCode,
   roundCurrencyAmount,
   SUPPORTED_CURRENCIES,
-  updateCurrencySettings,
-  upsertCurrencyRateSnapshot,
 } from "./currencyService";
 
 export {
-  deleteLocalizationTranslation,
-  getLocalizationMissingTranslations,
   getLocalizationSettings,
   getLocalizationTranslations,
   normalizeLocaleCode,
   recordLocalizationFallbackEvent,
   SUPPORTED_LOCALES,
   updateLocalizationSettings,
-  upsertLocalizationTranslation,
 } from "./localizationService";

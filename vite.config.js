@@ -22,8 +22,8 @@ export default defineConfig({
               return "router";
             }
 
-            if (id.includes("axios")) {
-              return "network";
+            if (id.includes("@supabase")) {
+              return "supabase";
             }
 
             if (

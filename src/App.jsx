@@ -3,7 +3,7 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
 import PublicOnlyRoute from "./components/auth/PublicOnlyRoute.jsx";
-import PageFallback from "./components/ui/PageFallback";
+import PageFallback from "./shared/ui/PageFallback";
 import AppLayout from "./layouts/admin";
 import skyeTheme from "./lib/theme";
 

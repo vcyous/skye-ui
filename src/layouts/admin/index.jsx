@@ -1,7 +1,7 @@
 import { Drawer, Grid, Layout } from "antd";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import PageFallback from "../../components/ui/PageFallback";
+import PageFallback from "../../shared/ui/PageFallback";
 import { useAuth } from "../../context/AuthContext.jsx";
 import ComingSoonPage from "../../pages/ComingSoonPage";
 import { flatNavItems, navSections } from "./navConfig";
@@ -11,18 +11,18 @@ import Topbar from "./Topbar";
 const DashboardPage = lazy(
   () => import("../../pages/overview/DashboardPage.jsx"),
 );
-const ProductsPage = lazy(() => import("../../pages/catalog/ProductsPage.jsx"));
+const ProductsPage = lazy(() => import("../../features/products/ProductsPage.jsx"));
 const CollectionsPage = lazy(
-  () => import("../../pages/catalog/CollectionsPage.jsx"),
+  () => import("../../features/collections/CollectionsPage.jsx"),
 );
 const CartPage = lazy(() => import("../../pages/sales/CartPage.jsx"));
 const CheckoutPage = lazy(() => import("../../pages/sales/CheckoutPage.jsx"));
 const OrdersPage = lazy(() => import("../../pages/sales/OrdersPage.jsx"));
 const OrderDetailPage = lazy(
-  () => import("../../pages/sales/OrderDetailPage.jsx"),
+  () => import("../../features/orders/OrderDetailPage.jsx"),
 );
 const ShippingPage = lazy(
-  () => import("../../pages/operations/ShippingPage.jsx"),
+  () => import("../../features/shipping/ShippingPage.jsx"),
 );
 const WebsiteBuilderPage = lazy(
   () => import("../../components/website-builder/WebsiteBuilderPage.jsx"),
