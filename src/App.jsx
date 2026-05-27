@@ -12,8 +12,16 @@ const RegisterPage = lazy(() => import("./pages/auth/RegisterPage.jsx"));
 const OnboardingPage = lazy(
   () => import("./pages/onboarding/OnboardingPage.jsx"),
 );
-const StorefrontPreviewPage = lazy(
-  () => import("./pages/storefront/StorefrontPreviewPage.jsx"),
+const MarketingPage = lazy(() => import("./pages/marketing/MarketingPage.jsx"));
+
+const StorefrontLayout = lazy(
+  () => import("./pages/storefront/StorefrontLayout.jsx"),
+);
+const StorefrontHomePage = lazy(
+  () => import("./pages/storefront/StorefrontHomePage.jsx"),
+);
+const StorefrontCatalogPage = lazy(
+  () => import("./pages/storefront/StorefrontCatalogPage.jsx"),
 );
 const StorefrontProductPage = lazy(
   () => import("./pages/storefront/StorefrontProductPage.jsx"),
@@ -27,7 +35,6 @@ const StorefrontCheckoutPage = lazy(
 const StorefrontOrderConfirmationPage = lazy(
   () => import("./pages/storefront/StorefrontOrderConfirmationPage.jsx"),
 );
-const MarketingPage = lazy(() => import("./pages/marketing/MarketingPage.jsx"));
 
 export default function App() {
   return (
@@ -36,20 +43,18 @@ export default function App() {
         <Routes>
           <Route path="/" element={<MarketingPage />} />
           <Route path="/landing" element={<Navigate to="/" replace />} />
-          <Route path="/preview" element={<StorefrontPreviewPage />} />
-          <Route
-            path="/storefront/product/:handle"
-            element={<StorefrontProductPage />}
-          />
-          <Route path="/storefront/cart" element={<StorefrontCartPage />} />
-          <Route
-            path="/storefront/checkout"
-            element={<StorefrontCheckoutPage />}
-          />
-          <Route
-            path="/storefront/order-confirmed/:orderId"
-            element={<StorefrontOrderConfirmationPage />}
-          />
+
+          {/* Public storefront — /s/:slug/* */}
+          <Route path="/s/:slug" element={<StorefrontLayout />}>
+            <Route index element={<StorefrontHomePage />} />
+            <Route path="katalog" element={<StorefrontCatalogPage />} />
+            <Route path="p/:handle" element={<StorefrontProductPage />} />
+            <Route path="keranjang" element={<StorefrontCartPage />} />
+            <Route path="checkout" element={<StorefrontCheckoutPage />} />
+            <Route path="order/:orderId" element={<StorefrontOrderConfirmationPage />} />
+          </Route>
+
+          {/* Auth */}
           <Route
             path="/login"
             element={
@@ -74,6 +79,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Merchant dashboard */}
           <Route
             path="/dashboard/*"
             element={

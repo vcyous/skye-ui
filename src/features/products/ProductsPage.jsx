@@ -1,15 +1,16 @@
-import { Download, Plus, Upload } from "lucide-react";
+import { useEffect } from "react";
 import { useState } from "react";
-import { useCart } from "../../context/CartContext";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import ProductFormModal from "./components/ProductFormModal";
 import ProductsFilterBar from "./components/ProductsFilterBar";
 import ProductsTable from "./components/ProductsTable";
 import { useProducts } from "./hooks/useProducts";
 
+const PAGE_SIZE = 10;
+
 export default function ProductsPage() {
-  const { addItem } = useCart();
   const {
     visibleProducts,
     tabCounts,
@@ -19,122 +20,140 @@ export default function ProductsPage() {
     setStatus,
     search,
     setSearch,
-    sortBy,
-    setSortBy,
+    category,
+    setCategory,
     selectedRowKeys,
     setSelectedRowKeys,
-    submitError,
-    setSubmitError,
-    notice,
-    setNotice,
     isSubmitting,
-    isUpdating,
     isBulkBusy,
-    loadProducts,
     createNew,
     update,
     remove,
     bulkUpdateStatus,
     bulkRemove,
     uploadImage,
+    notice,
+    setNotice,
+    submitError,
+    setSubmitError,
   } = useProducts();
 
+  const [page, setPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  async function handleAddToCart(product) {
-    setSubmitError("");
-    setNotice("");
-    try {
-      await addItem({ variantId: product.variantId ?? "", quantity: 1 });
-      setNotice(`Added ${product.name} to cart.`);
-    } catch (err) {
-      setSubmitError(
-        err instanceof Error ? err.message : "Failed to add product to cart.",
-      );
+  // Show toasts for notices/errors
+  useEffect(() => {
+    if (notice) {
+      toast.success(notice);
+      setNotice("");
     }
-  }
+  }, [notice, setNotice]);
+
+  useEffect(() => {
+    if (submitError) {
+      toast.error(submitError);
+      setSubmitError("");
+    }
+  }, [submitError, setSubmitError]);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [search, status, category]);
+
+  const totalPages = Math.max(1, Math.ceil(visibleProducts.length / PAGE_SIZE));
+  const pagedProducts = visibleProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   async function handleCreate(values, mediaUrls) {
     const ok = await createNew(values, mediaUrls);
     if (ok) setIsCreateOpen(false);
-    return ok;
   }
 
-  async function handleEditSubmit(values, mediaUrls) {
-    if (!editingProduct) return false;
+  async function handleUpdate(values, mediaUrls) {
+    if (!editingProduct) return;
     const ok = await update(editingProduct.id, values, mediaUrls);
     if (ok) setEditingProduct(null);
-    return ok;
   }
 
-  const isEmpty = visibleProducts.length === 0 && !isLoading;
-
   return (
-    <section className="grid gap-0">
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="text-xl font-semibold">Products</h4>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Upload className="size-4 mr-2" />
-            Import
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="size-4 mr-2" />
-            Export
-          </Button>
-          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="size-4 mr-2" />
-            Add product
-          </Button>
-        </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Produk</h2>
       </div>
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="overflow-hidden p-0">
         <ProductsFilterBar
           status={status}
           onStatusChange={setStatus}
           tabCounts={tabCounts}
           search={search}
           onSearchChange={setSearch}
-          sortBy={sortBy}
-          onSortByChange={setSortBy}
+          category={category}
+          onCategoryChange={setCategory}
           selectedCount={selectedRowKeys.length}
           isBulkBusy={isBulkBusy}
           onBulkStatusChange={bulkUpdateStatus}
           onBulkDelete={bulkRemove}
+          onAdd={() => setIsCreateOpen(true)}
         />
 
-        {isEmpty ? (
-          <div className="grid place-items-center p-12 text-muted-foreground">
-            <div className="flex flex-col items-center gap-2">
-              <p className="font-medium text-foreground">No products found</p>
-              <p className="text-sm">
-                Add your first product to start building your catalog.
-              </p>
-              <Button
-                size="sm"
-                className="mt-2"
-                onClick={() => setIsCreateOpen(true)}
-              >
-                <Plus className="size-4 mr-2" />
-                Add product
-              </Button>
-            </div>
+        {isLoading ? (
+          <div className="p-4 flex flex-col gap-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
           </div>
+        ) : loadError ? (
+          <div className="p-6 text-center text-sm text-destructive">{loadError}</div>
         ) : (
           <ProductsTable
-            products={visibleProducts}
-            isLoading={isLoading}
+            products={pagedProducts}
             selectedRowKeys={selectedRowKeys}
-            onSelectionChange={setSelectedRowKeys}
+            onSelectRow={setSelectedRowKeys}
+            onSelectAll={setSelectedRowKeys}
             onEdit={setEditingProduct}
-            onAddToCart={handleAddToCart}
             onDelete={remove}
           />
         )}
+
+        {!isLoading && !loadError && visibleProducts.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t text-sm text-muted-foreground">
+            <span>
+              {Math.min((page - 1) * PAGE_SIZE + 1, visibleProducts.length)}–
+              {Math.min(page * PAGE_SIZE, visibleProducts.length)} dari{" "}
+              {visibleProducts.length} produk
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                className="px-2 py-1 rounded hover:bg-accent disabled:opacity-40"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                ←
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  className={`px-2.5 py-1 rounded text-sm ${p === page ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+                  onClick={() => setPage(p)}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                className="px-2 py-1 rounded hover:bg-accent disabled:opacity-40"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                →
+              </button>
+            </div>
+          </div>
+        )}
       </Card>
 
+      {/* Create modal */}
       <ProductFormModal
         mode="create"
         open={isCreateOpen}
@@ -145,15 +164,16 @@ export default function ProductsPage() {
         onUploadImage={uploadImage}
       />
 
+      {/* Edit modal */}
       <ProductFormModal
         mode="edit"
-        open={Boolean(editingProduct)}
+        open={!!editingProduct}
         product={editingProduct}
-        isSubmitting={isUpdating}
-        onSubmit={handleEditSubmit}
+        isSubmitting={isSubmitting}
+        onSubmit={handleUpdate}
         onCancel={() => setEditingProduct(null)}
         onUploadImage={uploadImage}
       />
-    </section>
+    </div>
   );
 }

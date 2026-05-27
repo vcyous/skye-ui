@@ -1,5 +1,4 @@
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,133 +22,105 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { formatCurrency } from "../../../shared/format";
-import { STATUS_COLOR } from "../constants";
+import { STATUS_LABEL } from "../constants";
 
-const STATUS_BADGE_VARIANT = {
-  active: "default",
-  draft: "secondary",
-  inactive: "outline",
-  archived: "secondary",
-};
+function formatRp(value) {
+  return `Rp ${Number(value || 0).toLocaleString("id-ID")}`;
+}
 
-function ProductRow({ record, isSelected, onSelect, onEdit, onAddToCart, onDelete }) {
-  const qty = record.quantity_in_stock ?? record.stock ?? 0;
-  const isOutOfStock = Number(qty) === 0;
+function StatusBadge({ status }) {
+  const classes = {
+    active: "bg-emerald-100 text-emerald-800 hover:bg-emerald-100",
+    draft: "bg-muted text-muted-foreground",
+    archived: "bg-red-100 text-red-800 hover:bg-red-100",
+  };
+  return (
+    <Badge className={classes[status] ?? classes.draft}>
+      {STATUS_LABEL[status] ?? status}
+    </Badge>
+  );
+}
 
+function StockCell({ stock }) {
+  const qty = Number(stock ?? 0);
+  const cls =
+    qty === 0
+      ? "text-destructive font-medium"
+      : qty <= 3
+        ? "text-amber-600 font-medium"
+        : "";
+  return <span className={`text-sm ${cls}`}>{qty}</span>;
+}
+
+function ProductRow({ record, isSelected, onSelect, onEdit, onDelete }) {
   return (
     <TableRow data-state={isSelected ? "selected" : undefined}>
-      <TableCell>
+      <TableCell className="w-10">
         <Checkbox
           checked={isSelected}
           onCheckedChange={onSelect}
-          aria-label={`Select ${record.name}`}
+          aria-label={`Pilih ${record.name}`}
         />
       </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-3">
-          <Avatar className="size-10 rounded-md">
-            <AvatarImage src={record.mediaUrls?.[0]} className="object-cover" />
-            <AvatarFallback className="rounded-md text-xs">
-              {record.name?.[0]?.toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium">{record.name}</span>
-            {record.vendor && (
-              <span className="text-xs text-muted-foreground">{record.vendor}</span>
-            )}
-          </div>
-        </div>
-      </TableCell>
-      <TableCell>
-        <Badge variant={STATUS_BADGE_VARIANT[record.status] ?? "secondary"}>
-          <span className="capitalize">{record.status}</span>
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <span
-          className={`text-sm ${isOutOfStock ? "text-destructive" : ""}`}
-        >
-          {isOutOfStock ? "Out of stock" : `${qty} in stock`}
-        </span>
+      <TableCell className="w-12">
+        <Avatar className="size-10 rounded-md">
+          <AvatarImage
+            src={record.media_urls?.[0]}
+            className="object-cover"
+          />
+          <AvatarFallback className="rounded-md text-xs">
+            {String(record.name || "?")[0].toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
       </TableCell>
       <TableCell>
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm">{formatCurrency(Number(record.price))}</span>
-          {record.compareAtPrice && (
-            <span className="text-xs text-muted-foreground line-through">
-              {formatCurrency(Number(record.compareAtPrice))}
-            </span>
+          <span className="text-sm font-medium leading-tight">{record.name}</span>
+          {record.category && (
+            <span className="text-xs text-muted-foreground">{record.category}</span>
           )}
         </div>
       </TableCell>
+      <TableCell className="text-sm">{formatRp(record.price)}</TableCell>
       <TableCell>
-        <span className="text-sm text-muted-foreground">
-          {record.productType || "—"}
-        </span>
+        <StockCell stock={record.stock} />
+      </TableCell>
+      <TableCell>
+        <StatusBadge status={record.status} />
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                onClick={() => onEdit(record)}
-              >
-                <Pencil className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Edit</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                onClick={() => onAddToCart(record)}
-              >
-                <Plus className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Add to cart</TooltipContent>
-          </Tooltip>
-
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-8"
+            onClick={() => onEdit(record)}
+            aria-label="Edit"
+          >
+            <Pencil className="size-3.5" />
+          </Button>
           <AlertDialog>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </AlertDialogTrigger>
-              </TooltipTrigger>
-              <TooltipContent>Delete</TooltipContent>
-            </Tooltip>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-8 text-destructive hover:text-destructive"
+                aria-label="Hapus"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete this product?</AlertDialogTitle>
+                <AlertDialogTitle>Hapus produk?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone.
+                  Produk "{record.name}" akan dihapus permanen.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
                 <AlertDialogAction onClick={() => onDelete(record)}>
-                  Delete
+                  Hapus
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -162,109 +133,64 @@ function ProductRow({ record, isSelected, onSelect, onEdit, onAddToCart, onDelet
 
 export default function ProductsTable({
   products,
-  isLoading,
   selectedRowKeys,
-  onSelectionChange,
+  onSelectRow,
+  onSelectAll,
   onEdit,
-  onAddToCart,
   onDelete,
 }) {
-  const [page, setPage] = useState(1);
-  const pageSize = 20;
-  const totalPages = Math.ceil(products.length / pageSize);
-  const paged = products.slice((page - 1) * pageSize, page * pageSize);
-
   const allSelected =
-    paged.length > 0 && paged.every((r) => selectedRowKeys.includes(r.id));
-  const someSelected = paged.some((r) => selectedRowKeys.includes(r.id));
-
-  function toggleAll(checked) {
-    if (checked) {
-      const merged = Array.from(new Set([...selectedRowKeys, ...paged.map((r) => r.id)]));
-      onSelectionChange(merged);
-    } else {
-      onSelectionChange(selectedRowKeys.filter((k) => !paged.find((r) => r.id === k)));
-    }
-  }
-
-  function toggleRow(id, checked) {
-    if (checked) {
-      onSelectionChange([...selectedRowKeys, id]);
-    } else {
-      onSelectionChange(selectedRowKeys.filter((k) => k !== id));
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="grid place-items-center p-12 text-muted-foreground">
-        <Loader2 className="size-6 animate-spin" />
-      </div>
-    );
-  }
+    products.length > 0 && products.every((p) => selectedRowKeys.includes(p.id));
+  const someSelected = selectedRowKeys.length > 0 && !allSelected;
 
   return (
-    <div>
-      <Table>
-        <TableHeader>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-10">
+            <Checkbox
+              checked={allSelected}
+              indeterminate={someSelected}
+              onCheckedChange={() =>
+                onSelectAll(allSelected ? [] : products.map((p) => p.id))
+              }
+              aria-label="Pilih semua"
+            />
+          </TableHead>
+          <TableHead className="w-12">Foto</TableHead>
+          <TableHead>Nama Produk</TableHead>
+          <TableHead>Harga</TableHead>
+          <TableHead>Stok</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="w-20">Aksi</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {products.length === 0 ? (
           <TableRow>
-            <TableHead className="w-10">
-              <Checkbox
-                checked={allSelected}
-                ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
-                onCheckedChange={toggleAll}
-                aria-label="Select all"
-              />
-            </TableHead>
-            <TableHead>Product</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Inventory</TableHead>
-            <TableHead>Price</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead className="w-28" />
+            <TableCell colSpan={7} className="text-center py-10 text-muted-foreground text-sm">
+              Belum ada produk
+            </TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paged.map((record) => (
+        ) : (
+          products.map((product) => (
             <ProductRow
-              key={record.id}
-              record={record}
-              isSelected={selectedRowKeys.includes(record.id)}
-              onSelect={(checked) => toggleRow(record.id, checked)}
+              key={product.id}
+              record={product}
+              isSelected={selectedRowKeys.includes(product.id)}
+              onSelect={(checked) => {
+                if (checked) {
+                  onSelectRow([...selectedRowKeys, product.id]);
+                } else {
+                  onSelectRow(selectedRowKeys.filter((k) => k !== product.id));
+                }
+              }}
               onEdit={onEdit}
-              onAddToCart={onAddToCart}
               onDelete={onDelete}
             />
-          ))}
-        </TableBody>
-      </Table>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t text-sm text-muted-foreground">
-          <span>{products.length} products</span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              Previous
-            </Button>
-            <span>
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page === totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+          ))
+        )}
+      </TableBody>
+    </Table>
   );
 }

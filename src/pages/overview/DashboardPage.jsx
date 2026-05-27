@@ -1,273 +1,262 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Box, DollarSign, Loader2, ShoppingBag, ShoppingCart } from "lucide-react";
+import {
+  Box,
+  ClipboardList,
+  DollarSign,
+  Loader2,
+  ShoppingBag,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "../../context/AuthContext";
 import { useLocalization } from "../../context/LocalizationContext";
-import { getDashboardSummary, getOrders } from "../../services/api";
-import KpiCard from "../../shared/ui/KpiCard";
+import { supabase } from "../../services/api";
 
-const DashboardCharts = lazy(
-  () => import("../../components/DashboardCharts.jsx"),
-);
+function StatCard({ title, value, icon, sub, subColor = "text-muted-foreground" }) {
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-muted-foreground">{title}</span>
+          <span className="text-muted-foreground">{icon}</span>
+        </div>
+        <div className="text-2xl font-bold">{value}</div>
+        {sub && (
+          <div className={`text-xs mt-1 ${subColor}`}>{sub}</div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+const QUICK_ACTIONS = [
+  { label: "Tambah produk", to: "/dashboard/products", desc: "Perluas katalog kamu" },
+  { label: "Lihat semua order", to: "/dashboard/orders", desc: "Kelola order masuk" },
+  { label: "Kustomisasi tema", to: "/dashboard/theme", desc: "Edit tampilan toko" },
+  { label: "Pengaturan toko", to: "/dashboard/settings", desc: "Domain & info toko" },
+];
 
 export default function DashboardPage() {
-  const { formatCurrency, formatNumber } = useLocalization();
-  const [state, setState] = useState({ loading: true, data: null, error: "" });
+  const { store } = useAuth();
+  const { formatCurrency } = useLocalization();
+
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    todayRevenue: 0,
+    todayOrders: 0,
+    totalProducts: 0,
+    pendingCount: 0,
+  });
   const [pendingOrders, setPendingOrders] = useState([]);
 
   useEffect(() => {
-    getDashboardSummary()
-      .then((data) => setState({ loading: false, data, error: "" }))
-      .catch((err) =>
-        setState({
-          loading: false,
-          data: null,
-          error: err instanceof Error ? err.message : "Failed",
-        }),
+    if (!store?.id) return;
+    loadStats(store.id);
+  }, [store?.id]);
+
+  async function loadStats(storeId) {
+    setLoading(true);
+    try {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayIso = todayStart.toISOString();
+
+      const [ordersToday, productsCount, pendingResult] = await Promise.all([
+        supabase
+          .from("orders")
+          .select("total, status")
+          .eq("store_id", storeId)
+          .gte("created_at", todayIso),
+        supabase
+          .from("products")
+          .select("id", { count: "exact", head: true })
+          .eq("store_id", storeId),
+        supabase
+          .from("orders")
+          .select("id, order_number, buyer_name, status, total")
+          .eq("store_id", storeId)
+          .eq("status", "baru")
+          .order("created_at", { ascending: false })
+          .limit(5),
+      ]);
+
+      const todayRevenue = (ordersToday.data || []).reduce(
+        (sum, o) => sum + Number(o.total || 0),
+        0,
       );
-    getOrders("need_ship")
-      .then((rows) => setPendingOrders(rows))
-      .catch(() => null);
-  }, []);
 
-  if (state.loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center gap-2 p-4">
-          <Loader2 className="size-4 animate-spin text-muted-foreground" />
-          <span className="text-sm">Loading dashboard...</span>
-        </CardContent>
-      </Card>
-    );
+      setStats({
+        todayRevenue,
+        todayOrders: (ordersToday.data || []).length,
+        totalProducts: productsCount.count || 0,
+        pendingCount: (pendingResult.data || []).length,
+      });
+      setPendingOrders(pendingResult.data || []);
+    } catch {
+      // silently fail — placeholders stay at 0
+    } finally {
+      setLoading(false);
+    }
   }
 
-  if (state.error || !state.data) {
+  if (loading) {
     return (
-      <Card>
-        <CardContent className="p-4">{state.error || "No data"}</CardContent>
-      </Card>
+      <div className="flex items-center gap-2 p-6">
+        <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Memuat dashboard…</span>
+      </div>
     );
   }
-
-  const { data } = state;
-
-  const totalPipeline =
-    (data.topStatuses?.not_paid || 0) +
-    (data.topStatuses?.need_ship || 0) +
-    (data.topStatuses?.ongoing_shipped || 0);
-
-  const shippedShare = totalPipeline
-    ? Math.round(
-        ((data.topStatuses?.ongoing_shipped || 0) / totalPipeline) * 100,
-      )
-    : 0;
-
-  const trendSeries = [
-    { day: "Sun", sales: Number(data.todaysSales) * 0.56 },
-    { day: "Mon", sales: Number(data.todaysSales) * 0.69 },
-    { day: "Tue", sales: Number(data.todaysSales) * 0.73 },
-    { day: "Wed", sales: Number(data.todaysSales) * 0.82 },
-    { day: "Thu", sales: Number(data.todaysSales) * 0.94 },
-    { day: "Fri", sales: Number(data.todaysSales) * 1.06 },
-    { day: "Sat", sales: Number(data.todaysSales) },
-  ];
-
-  const statusSeries = [
-    { name: "Not paid", value: data.topStatuses?.not_paid || 0, fill: "#d97706" },
-    { name: "Need ship", value: data.topStatuses?.need_ship || 0, fill: "#eab308" },
-    {
-      name: "Ongoing shipped",
-      value: data.topStatuses?.ongoing_shipped || 0,
-      fill: "#059669",
-    },
-  ];
-
-  const pipelineStages = [
-    { label: "Awaiting payment", count: data.topStatuses?.not_paid || 0, color: "bg-amber-500" },
-    { label: "Ready to ship", count: data.topStatuses?.need_ship || 0, color: "bg-yellow-500" },
-    { label: "In transit", count: data.topStatuses?.ongoing_shipped || 0, color: "bg-emerald-500" },
-  ];
-
-  const quickActions = [
-    { label: "Add a product", to: "/products", desc: "Expand your catalog" },
-    { label: "Create a collection", to: "/collections", desc: "Organize products" },
-    { label: "View orders", to: "/orders", desc: "Manage order lifecycle" },
-    {
-      label: "Customize your store",
-      to: "/store/website-builder",
-      desc: "Edit your storefront",
-    },
-  ];
 
   return (
-    <section className="grid gap-4">
+    <section className="grid gap-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Overview</h2>
+          <h2 className="text-xl font-semibold">Beranda</h2>
           <p className="text-xs text-muted-foreground">
-            Today —{" "}
-            {new Date().toLocaleDateString("en-US", {
+            {new Date().toLocaleDateString("id-ID", {
               weekday: "long",
-              month: "long",
               day: "numeric",
+              month: "long",
               year: "numeric",
             })}
           </p>
         </div>
         <div className="flex gap-2">
-          <Link to="/orders">
-            <Button variant="outline">View orders</Button>
+          <Link to="/dashboard/orders">
+            <Button variant="outline" size="sm">Lihat order</Button>
           </Link>
-          <Link to="/products">
-            <Button>Add product</Button>
+          <Link to="/dashboard/products">
+            <Button size="sm">+ Produk</Button>
           </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          title="Total sales today"
-          value={formatCurrency(data.todaysSales)}
-          delta="+12.4%"
-          icon={<DollarSign className="size-5" />}
-          color="#059669"
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <StatCard
+          title="Pendapatan hari ini"
+          value={formatCurrency(stats.todayRevenue)}
+          icon={<DollarSign className="size-4" />}
+          sub={stats.todayOrders > 0 ? `dari ${stats.todayOrders} order` : "Belum ada order"}
         />
-        <KpiCard
-          title="Gross revenue"
-          value={formatCurrency(data.grossRevenue)}
-          delta="+8.1%"
-          icon={<ShoppingCart className="size-5" />}
-          color="#0f172a"
+        <StatCard
+          title="Order hari ini"
+          value={stats.todayOrders}
+          icon={<ShoppingBag className="size-4" />}
         />
-        <KpiCard
-          title="Total orders"
-          value={formatNumber(data.orders || 0)}
-          delta="+5.3%"
-          icon={<ShoppingBag className="size-5" />}
-          color="#f59e0b"
+        <StatCard
+          title="Total produk"
+          value={stats.totalProducts}
+          icon={<Box className="size-4" />}
         />
-        <KpiCard
-          title="Products"
-          value={formatNumber(data.products || 0)}
-          icon={<Box className="size-5" />}
-          color="#d97706"
+        <StatCard
+          title="Perlu diproses"
+          value={stats.pendingCount}
+          icon={<ClipboardList className="size-4" />}
+          sub={stats.pendingCount > 0 ? "Order menunggu konfirmasi" : "Semua order terproses"}
+          subColor={stats.pendingCount > 0 ? "text-amber-600" : "text-emerald-600"}
         />
       </div>
 
       {pendingOrders.length > 0 && (
         <Card className="border-amber-300 bg-amber-50">
           <CardContent className="p-4">
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">
-                  Action needed
+                  Perlu tindakan
                 </Badge>
-                <span className="font-semibold text-amber-900">
-                  {pendingOrders.length} order
-                  {pendingOrders.length > 1 ? "s" : ""} waiting to ship
+                <span className="font-semibold text-amber-900 text-sm">
+                  {pendingOrders.length} order menunggu
                 </span>
               </div>
-              <Link to="/orders">
-                <Button variant="ghost" size="sm" className="text-amber-900">
-                  View all →
+              <Link to="/dashboard/orders">
+                <Button variant="ghost" size="sm" className="text-amber-900 h-auto py-1">
+                  Lihat semua →
                 </Button>
               </Link>
             </div>
-            <ul className="space-y-1">
+            <ul className="space-y-2">
               {pendingOrders.slice(0, 3).map((order) => (
                 <li
                   key={order.id}
-                  className="flex items-center justify-between py-1"
+                  className="flex items-center justify-between rounded border border-amber-200 bg-white px-3 py-2"
                 >
-                  <span className="text-sm">
-                    #{order.orderNumber} — {order.customerName ?? "Guest"}
-                  </span>
-                  <Link to={`/orders/${order.id}`}>
-                    <Button size="sm">Ship now</Button>
+                  <div>
+                    <span className="text-sm font-medium">
+                      {order.order_number}
+                    </span>
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      — {order.buyer_name || "Tamu"}
+                    </span>
+                  </div>
+                  <Link to={`/dashboard/orders`}>
+                    <Button size="sm" variant="outline">Proses</Button>
                   </Link>
                 </li>
               ))}
             </ul>
-            {pendingOrders.length > 3 && (
-              <Link to="/orders">
-                <span className="text-xs text-muted-foreground">
-                  + {pendingOrders.length - 3} more orders
-                </span>
-              </Link>
-            )}
           </CardContent>
         </Card>
       )}
 
-      <Suspense
-        fallback={
-          <Card>
-            <CardContent className="flex items-center gap-2 p-4">
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-              <span className="text-sm">Loading charts...</span>
-            </CardContent>
-          </Card>
-        }
-      >
-        <DashboardCharts
-          todaysSales={data.todaysSales}
-          trendSeries={trendSeries}
-          statusSeries={statusSeries}
-          shippedShare={shippedShare}
-        />
-      </Suspense>
-
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Order pipeline</CardTitle>
-            <Link to="/orders">
-              <Button variant="ghost" size="sm">
-                View all
-              </Button>
-            </Link>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Aksi cepat</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            {pipelineStages.map((item, i) => (
-              <div
-                key={item.label}
-                className={`flex items-center justify-between px-5 py-3 ${
-                  i > 0 ? "border-t" : ""
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className={`size-2 rounded-full ${item.color}`} />
-                  <span className="text-sm">{item.label}</span>
-                </div>
-                <span className="text-sm font-semibold">{item.count}</span>
-              </div>
-            ))}
+          <CardContent className="pt-0">
+            <div className="flex flex-col gap-2">
+              {QUICK_ACTIONS.map((action) => (
+                <Link to={action.to} key={action.to}>
+                  <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:border-foreground/30 hover:bg-accent/40">
+                    <div>
+                      <p className="text-sm font-medium">{action.label}</p>
+                      <p className="text-xs text-muted-foreground">{action.desc}</p>
+                    </div>
+                    <span className="text-muted-foreground text-sm">→</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Quick actions</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Info toko</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-2">
-              {quickActions.map((action) => (
-                <Link to={action.to} key={action.to}>
-                  <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:border-foreground/40">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold">
-                        {action.label}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {action.desc}
-                      </span>
-                    </div>
-                    <span className="text-muted-foreground">→</span>
-                  </div>
-                </Link>
-              ))}
+          <CardContent className="pt-0 space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Nama toko</span>
+              <span className="font-medium">{store?.name || "—"}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Status</span>
+              <Badge
+                className={
+                  store?.isPublished
+                    ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
+                    : "bg-muted text-muted-foreground"
+                }
+              >
+                {store?.isPublished ? "Published" : "Draft"}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Subdomain</span>
+              <span className="font-mono text-xs">
+                {store?.slug ? `${store.slug}.skye.shop` : "—"}
+              </span>
+            </div>
+            <div className="pt-1">
+              <Link to="/dashboard/settings">
+                <Button variant="outline" size="sm" className="w-full">
+                  Kelola pengaturan
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

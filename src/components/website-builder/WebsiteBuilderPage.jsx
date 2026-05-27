@@ -1,370 +1,253 @@
-import { Loader2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Check, ExternalLink, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "../../context/AuthContext";
-import {
-  getCatalogOptions,
-  getProductsForPreview,
-  toggleStorePublish,
-} from "../../services/api";
-import BuilderGallery from "./BuilderGallery";
-import BuilderPanel from "./BuilderPanel";
-import { CelebrationModal, PublishModal } from "./BuilderPublishModals";
-import BuilderRail from "./BuilderRail";
-import BuilderStage from "./BuilderStage";
-import BuilderTopbar from "./BuilderTopbar";
-import { useTemplateBuilder } from "./useTemplateBuilder";
-import "./WebsiteBuilderPage.css";
+import { supabase } from "../../services/api";
 
-export default function WebsiteBuilderPage() {
-  const { store, refreshSession } = useAuth();
-  const {
-    state,
-    activeTemplate,
-    isLoading,
-    isSaving,
-    selectTemplate,
-    setViewMode,
-    updateText,
-    updateColor,
-    updateImage,
-    updateCatalog,
-    resetConfig,
-  } = useTemplateBuilder();
-
-  const [view, setView] = useState("gallery");
-  const [activePanel, setActivePanel] = useState(null);
-  const [isPublished, setIsPublished] = useState(false);
-  const [subdomain, setSubdomain] = useState(null);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [catalogOptions, setCatalogOptions] = useState([]);
-  const [previewProducts, setPreviewProducts] = useState([]);
-  const [changeCount, setChangeCount] = useState(0);
-  const [showPublishModal, setShowPublishModal] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [showResetDialog, setShowResetDialog] = useState(false);
-  const [showSwitchDialog, setShowSwitchDialog] = useState(false);
-  const [pendingSwitchId, setPendingSwitchId] = useState(null);
-  const hasAutoSwitched = useRef(false);
-  const prevIsSaving = useRef(false);
-
-  useEffect(() => {
-    setIsPublished(store?.isPublished ?? false);
-    setSubdomain(store?.subdomain ?? null);
-  }, [store]);
-
-  useEffect(() => {
-    if (!isLoading && activeTemplate && !hasAutoSwitched.current) {
-      hasAutoSwitched.current = true;
-      setView("editor");
-    }
-  }, [isLoading, activeTemplate]);
-
-  useEffect(() => {
-    if (prevIsSaving.current && !isSaving) {
-      setChangeCount(0);
-    }
-    prevIsSaving.current = isSaving;
-  }, [isSaving]);
-
-  useEffect(() => {
-    getCatalogOptions()
-      .then(setCatalogOptions)
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (isLoading) return;
-    getProductsForPreview(
-      state.config.catalog?.collectionId ?? null,
-      state.config.catalog?.displayCount ?? 6,
-    )
-      .then(setPreviewProducts)
-      .catch(() => {});
-  }, [
-    state.config.catalog?.collectionId,
-    state.config.catalog?.displayCount,
-    isLoading,
-  ]);
-
-  function trackChange() {
-    setChangeCount((c) => c + 1);
-  }
-
-  function handleUpdateText(key, value) {
-    updateText(key, value);
-    trackChange();
-  }
-
-  function handleUpdateColor(key, value) {
-    updateColor(key, value);
-    trackChange();
-  }
-
-  function handleUpdateImage(key, url) {
-    updateImage(key, url);
-    trackChange();
-  }
-
-  function handleUpdateCatalog(patch) {
-    updateCatalog(patch);
-    trackChange();
-  }
-
-  function handlePublishToggle() {
-    if (isPublished) {
-      void runPublishToggle();
-    } else {
-      setShowPublishModal(true);
-    }
-  }
-
-  async function runPublishToggle() {
-    setIsPublishing(true);
-    try {
-      const wasPublished = isPublished;
-      const result = await toggleStorePublish(!isPublished);
-      setIsPublished((prev) => !prev);
-      setSubdomain(result.subdomain);
-      await refreshSession();
-      if (wasPublished) {
-        toast.success("Store unpublished");
-      } else {
-        setShowPublishModal(false);
-        setShowCelebration(true);
-      }
-    } catch (err) {
-      toast.error(err.message || "Failed to update publish status");
-    } finally {
-      setIsPublishing(false);
-    }
-  }
-
-  function handlePreview() {
-    const slug = store?.handle;
-    if (slug)
-      window.open(`/preview?store=${slug}`, "_blank", "noopener,noreferrer");
-  }
-
-  function handleReset() {
-    setShowResetDialog(true);
-  }
-
-  function confirmReset() {
-    resetConfig();
-    setChangeCount(0);
-    setShowResetDialog(false);
-  }
-
-  function handleUseTemplate(id) {
-    if (id === state.selectedTemplateId) {
-      setView("editor");
-      return;
-    }
-    setPendingSwitchId(id);
-    setShowSwitchDialog(true);
-  }
-
-  function confirmSwitch() {
-    if (pendingSwitchId) {
-      selectTemplate(pendingSwitchId);
-      setChangeCount(0);
-      setView("editor");
-    }
-    setShowSwitchDialog(false);
-    setPendingSwitchId(null);
-  }
-
-  function handleSwitchTemplateFromPanel(id) {
-    if (id === state.selectedTemplateId) return;
-    setPendingSwitchId(id);
-    setShowSwitchDialog(true);
-  }
-
-  function handleEditSection(key) {
-    setActivePanel((prev) => (prev === key ? null : key));
-  }
-
-  function handleOpenTheme() {
-    setActivePanel((prev) => (prev === "theme" ? null : "theme"));
-  }
+function TemplateThumbnail({ config }) {
+  const primary = config?.primaryColor || "#1a1a1a";
+  const accent = config?.accent || "#3d5af1";
+  const radius = Number(config?.borderRadius ?? 8);
+  const heading = config?.fontHeading || "Inter";
 
   return (
-    <div className="builder-shell">
-      <BuilderTopbar
-        view={view}
-        templateName={activeTemplate?.name ?? ""}
-        isPublished={isPublished}
-        isSaving={isSaving}
-        isPublishing={isPublishing}
-        changeCount={changeCount}
-        viewMode={state.viewMode}
-        onViewModeChange={setViewMode}
-        onNavigateToGallery={() => {
-          setActivePanel(null);
-          setView("gallery");
-        }}
-        onPreview={handlePreview}
-        onReset={handleReset}
-        onPublishToggle={handlePublishToggle}
-        onOpenTheme={handleOpenTheme}
-      />
+    <div
+      className="h-32 w-full flex flex-col justify-between p-3 overflow-hidden"
+      style={{ background: "linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%)" }}
+    >
+      <div className="flex items-center justify-between">
+        <div
+          className="h-2 w-12 rounded-sm"
+          style={{ background: primary }}
+        />
+        <div className="flex gap-1">
+          <div className="h-1.5 w-3 rounded-sm bg-muted-foreground/40" />
+          <div className="h-1.5 w-3 rounded-sm bg-muted-foreground/40" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        <div
+          className="h-3 w-3/4 rounded-sm"
+          style={{ background: primary, fontFamily: heading }}
+        />
+        <div className="h-1.5 w-1/2 rounded-sm bg-muted-foreground/30" />
+      </div>
+      <div className="grid grid-cols-2 gap-1">
+        <div
+          className="h-6 bg-white border"
+          style={{ borderRadius: radius }}
+        />
+        <div
+          className="h-6 border"
+          style={{ background: accent, borderRadius: radius }}
+        />
+      </div>
+    </div>
+  );
+}
 
-      {isPublished && subdomain && (
-        <div className="builder-live-banner">
-          <span style={{ fontSize: 13 }}>
-            Your store is live at{" "}
-            <a
-              href={`https://${subdomain}.skye.id`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium underline"
-            >
-              {subdomain}.skye.id
-            </a>
+function TemplateCard({ template, isSelected, isActive, onSelect }) {
+  const config = template.default_config || {};
+  const primary = config.primaryColor || "#1a1a1a";
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(template)}
+      className={`relative text-left rounded-lg overflow-hidden border-2 transition-all ${
+        isSelected
+          ? "border-primary shadow-md"
+          : "border-border hover:border-muted-foreground/40"
+      }`}
+    >
+      {isSelected && (
+        <div className="absolute top-2 right-2 z-10 size-6 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+          <Check className="size-3.5" />
+        </div>
+      )}
+      {isActive && !isSelected && (
+        <div className="absolute top-2 right-2 z-10">
+          <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+            Aktif
+          </Badge>
+        </div>
+      )}
+
+      <TemplateThumbnail config={config} />
+
+      <div className="p-3 bg-card">
+        <div className="flex items-center gap-2 mb-1">
+          <div
+            className="size-3 rounded-full shrink-0"
+            style={{ background: primary }}
+          />
+          <h3 className="text-sm font-semibold truncate">{template.name}</h3>
+        </div>
+        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+          {template.description}
+        </p>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="px-1.5 py-0.5 bg-muted rounded text-[10px]">
+            radius {config.borderRadius || 0}px
+          </span>
+          <span className="px-1.5 py-0.5 bg-muted rounded text-[10px] capitalize">
+            {config.cardStyle || "flat"}
           </span>
         </div>
-      )}
+      </div>
+    </button>
+  );
+}
+
+export default function WebsiteBuilderPage() {
+  const { store } = useAuth();
+  const [templates, setTemplates] = useState([]);
+  const [activeTheme, setActiveTheme] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isApplying, setIsApplying] = useState(false);
+
+  useEffect(() => {
+    if (!store?.id) return;
+    loadData(store.id);
+  }, [store?.id]);
+
+  async function loadData(storeId) {
+    setIsLoading(true);
+    try {
+      const [tplRes, thRes] = await Promise.all([
+        supabase
+          .from("templates")
+          .select("slug, name, description, default_config, display_order")
+          .eq("is_active", true)
+          .order("display_order"),
+        supabase
+          .from("themes")
+          .select("template_slug, config_json, is_published")
+          .eq("store_id", storeId)
+          .maybeSingle(),
+      ]);
+
+      if (tplRes.error) throw tplRes.error;
+      const tpls = tplRes.data || [];
+      setTemplates(tpls);
+
+      const theme = thRes.data;
+      setActiveTheme(theme);
+      const activeTpl = tpls.find((t) => t.slug === theme?.template_slug);
+      setSelected(activeTpl || tpls[0] || null);
+    } catch (err) {
+      toast.error(err?.message || "Gagal memuat template");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleApply() {
+    if (!selected || !store?.id) return;
+    setIsApplying(true);
+    try {
+      const payload = {
+        store_id: store.id,
+        template_slug: selected.slug,
+        config_json: selected.default_config || {},
+        is_published: true,
+      };
+
+      const { error } = await supabase
+        .from("themes")
+        .upsert(payload, { onConflict: "store_id" });
+
+      if (error) throw error;
+
+      setActiveTheme({ ...payload });
+      toast.success(`Template "${selected.name}" diterapkan`);
+    } catch (err) {
+      toast.error(err?.message || "Gagal menerapkan template");
+    } finally {
+      setIsApplying(false);
+    }
+  }
+
+  const hasChanged = selected && selected.slug !== activeTheme?.template_slug;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">Tema Toko</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Pilih template untuk tampilan storefront. Klik kartu untuk memilih, lalu klik "Terapkan Template".
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          {store?.slug && (
+            <a
+              href={`/s/${store.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="sm">
+                <ExternalLink className="size-3.5 mr-1.5" />
+                Lihat Toko
+              </Button>
+            </a>
+          )}
+          <Button
+            size="sm"
+            disabled={!hasChanged || isApplying}
+            onClick={handleApply}
+          >
+            {isApplying && <Loader2 className="size-3.5 mr-1.5 animate-spin" />}
+            Terapkan Template
+          </Button>
+        </div>
+      </div>
 
       {isLoading ? (
-        <div className="flex flex-1 items-center justify-center">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-60 w-full rounded-lg" />
+          ))}
         </div>
-      ) : view === "gallery" ? (
-        <BuilderGallery
-          selectedId={state.selectedTemplateId}
-          onUseTemplate={handleUseTemplate}
-        />
       ) : (
-        <div className="builder-editor">
-          <BuilderRail
-            activePanel={activePanel}
-            onEditSection={handleEditSection}
-          />
-
-          <BuilderStage
-            viewMode={state.viewMode}
-            activeTemplate={activeTemplate}
-            config={state.config}
-            storeName={store?.name ?? "My Store"}
-            products={previewProducts}
-            subdomain={subdomain}
-          />
-
-          <BuilderPanel
-            activePanel={activePanel}
-            config={state.config}
-            catalogOptions={catalogOptions}
-            storeName={store?.name ?? ""}
-            subdomain={subdomain}
-            activeTemplateId={state.selectedTemplateId}
-            onClose={() => setActivePanel(null)}
-            onSwitchTemplate={handleSwitchTemplateFromPanel}
-            onUpdateText={handleUpdateText}
-            onUpdateColor={handleUpdateColor}
-            onUpdateImage={handleUpdateImage}
-            onUpdateCatalog={handleUpdateCatalog}
-          />
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {templates.map((tpl) => (
+            <TemplateCard
+              key={tpl.slug}
+              template={tpl}
+              isSelected={selected?.slug === tpl.slug}
+              isActive={activeTheme?.template_slug === tpl.slug}
+              onSelect={setSelected}
+            />
+          ))}
         </div>
       )}
 
-      {showResetDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-6"
-          onClick={() => setShowResetDialog(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-xl bg-card p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-bold mb-2">Reset customizations?</h3>
-            <p className="text-sm text-muted-foreground mb-5">
-              This will restore all text, colors, and images to their template
-              defaults.
+      {selected && (
+        <Card>
+          <CardContent className="p-4">
+            <h4 className="text-sm font-semibold mb-2">Token JSON</h4>
+            <p className="text-xs text-muted-foreground mb-3">
+              Token ini akan disimpan ke database dan diterapkan sebagai CSS variables di storefront.
             </p>
-            <div className="flex gap-2 justify-end">
-              <button
-                type="button"
-                className="builder-modal-btn builder-modal-btn--secondary"
-                style={{ flex: "initial", padding: "0 16px", height: 36 }}
-                onClick={() => setShowResetDialog(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="builder-modal-btn builder-modal-btn--primary"
-                style={{
-                  flex: "initial",
-                  padding: "0 16px",
-                  height: 36,
-                  background: "#dc2626",
-                }}
-                onClick={confirmReset}
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-        </div>
+            <pre className="text-xs bg-muted p-3 rounded font-mono overflow-x-auto">
+{JSON.stringify(
+  {
+    template: selected.slug,
+    ...selected.default_config,
+  },
+  null,
+  2,
+)}
+            </pre>
+          </CardContent>
+        </Card>
       )}
-
-      {showSwitchDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-6"
-          onClick={() => setShowSwitchDialog(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-xl bg-card p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-bold mb-2">Switch template?</h3>
-            <p className="text-sm text-muted-foreground mb-5">
-              Switching resets your text and image customisations. Catalog
-              settings are kept.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button
-                type="button"
-                className="builder-modal-btn builder-modal-btn--secondary"
-                style={{ flex: "initial", padding: "0 16px", height: 36 }}
-                onClick={() => setShowSwitchDialog(false)}
-              >
-                Keep current
-              </button>
-              <button
-                type="button"
-                className="builder-modal-btn builder-modal-btn--primary"
-                style={{
-                  flex: "initial",
-                  padding: "0 16px",
-                  height: 36,
-                  background: "#dc2626",
-                }}
-                onClick={confirmSwitch}
-              >
-                Switch template
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <PublishModal
-        open={showPublishModal}
-        isPublishing={isPublishing}
-        storeName={store?.name ?? ""}
-        subdomain={subdomain}
-        onConfirm={runPublishToggle}
-        onClose={() => setShowPublishModal(false)}
-      />
-
-      <CelebrationModal
-        open={showCelebration}
-        storeName={store?.name ?? ""}
-        subdomain={subdomain}
-        onClose={() => setShowCelebration(false)}
-      />
     </div>
   );
 }

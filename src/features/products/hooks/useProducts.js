@@ -10,34 +10,24 @@ import {
 } from "../../../services/api";
 import { toProductPayload } from "../productMapper";
 
-function readErrorMessage(err, fallback) {
-  return err instanceof Error ? err.message : fallback;
-}
-
-function applyFilters(products, search, sortBy) {
+function applyFilters(products, search, category) {
   const keyword = search.trim().toLowerCase();
   let rows = [...products];
+
   if (keyword) {
-    rows = rows.filter((product) => {
-      const haystack = [
-        product.name,
-        product.sku,
-        product.description,
-        ...(product.tags || []),
-      ]
+    rows = rows.filter((p) => {
+      const haystack = [p.name, p.category, p.description, ...(p.tags || [])]
+        .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return haystack.includes(keyword);
     });
   }
-  rows.sort((a, b) => {
-    if (sortBy === "price_high") return Number(b.price || 0) - Number(a.price || 0);
-    if (sortBy === "price_low") return Number(a.price || 0) - Number(b.price || 0);
-    if (sortBy === "stock_high") return Number(b.stock || 0) - Number(a.stock || 0);
-    if (sortBy === "name_asc")
-      return String(a.name || "").localeCompare(String(b.name || ""));
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
+
+  if (category && category !== "all") {
+    rows = rows.filter((p) => p.category === category);
+  }
+
   return rows;
 }
 
@@ -48,12 +38,11 @@ export function useProducts() {
 
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("newest");
+  const [category, setCategory] = useState("all");
 
   const [submitError, setSubmitError] = useState("");
   const [notice, setNotice] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
   const [isBulkBusy, setIsBulkBusy] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
 
@@ -64,7 +53,7 @@ export function useProducts() {
       const list = await getProducts(status);
       setProducts(list);
     } catch (err) {
-      setLoadError(readErrorMessage(err, "Failed to load products."));
+      setLoadError(err instanceof Error ? err.message : "Gagal memuat produk.");
     } finally {
       setIsLoading(false);
     }
@@ -75,8 +64,8 @@ export function useProducts() {
   }, [loadProducts]);
 
   const visibleProducts = useMemo(
-    () => applyFilters(products, search, sortBy),
-    [products, search, sortBy],
+    () => applyFilters(products, search, category),
+    [products, search, category],
   );
 
   const tabCounts = useMemo(() => {
@@ -95,10 +84,10 @@ export function useProducts() {
       try {
         await createProduct(toProductPayload(values, mediaUrls));
         await loadProducts();
-        setNotice("Product created successfully.");
+        setNotice("Produk berhasil dibuat.");
         return true;
       } catch (err) {
-        setSubmitError(readErrorMessage(err, "Failed to create product."));
+        setSubmitError(err instanceof Error ? err.message : "Gagal membuat produk.");
         return false;
       } finally {
         setIsSubmitting(false);
@@ -109,19 +98,19 @@ export function useProducts() {
 
   const update = useCallback(
     async (productId, values, mediaUrls) => {
-      setIsUpdating(true);
+      setIsSubmitting(true);
       setSubmitError("");
       setNotice("");
       try {
         await updateProduct(productId, toProductPayload(values, mediaUrls));
         await loadProducts();
-        setNotice("Product updated.");
+        setNotice("Produk diperbarui.");
         return true;
       } catch (err) {
-        setSubmitError(readErrorMessage(err, "Failed to update product."));
+        setSubmitError(err instanceof Error ? err.message : "Gagal memperbarui produk.");
         return false;
       } finally {
-        setIsUpdating(false);
+        setIsSubmitting(false);
       }
     },
     [loadProducts],
@@ -134,9 +123,9 @@ export function useProducts() {
       try {
         await deleteProduct(product.id);
         await loadProducts();
-        setNotice("Product deleted.");
+        setNotice("Produk dihapus.");
       } catch (err) {
-        setSubmitError(readErrorMessage(err, "Failed to delete product."));
+        setSubmitError(err instanceof Error ? err.message : "Gagal menghapus produk.");
       }
     },
     [loadProducts],
@@ -152,9 +141,9 @@ export function useProducts() {
         const result = await bulkUpdateProductStatus(selectedRowKeys, nextStatus);
         await loadProducts();
         setSelectedRowKeys([]);
-        setNotice(`${result.updatedCount} products updated to ${nextStatus}.`);
+        setNotice(`${result.updatedCount} produk diperbarui.`);
       } catch (err) {
-        setSubmitError(readErrorMessage(err, "Failed bulk status update."));
+        setSubmitError(err instanceof Error ? err.message : "Gagal update massal.");
       } finally {
         setIsBulkBusy(false);
       }
@@ -171,20 +160,18 @@ export function useProducts() {
       const result = await bulkDeleteProducts(selectedRowKeys);
       await loadProducts();
       setSelectedRowKeys([]);
-      setNotice(`${result.deletedCount} products deleted.`);
+      setNotice(`${result.deletedCount} produk dihapus.`);
     } catch (err) {
-      setSubmitError(readErrorMessage(err, "Failed bulk delete."));
+      setSubmitError(err instanceof Error ? err.message : "Gagal hapus massal.");
     } finally {
       setIsBulkBusy(false);
     }
   }, [loadProducts, selectedRowKeys]);
 
   const uploadImage = useCallback(async (file) => {
-    const tempId = `temp-${Date.now()}`;
     try {
-      return await uploadProductImage(file, tempId);
-    } catch (err) {
-      setSubmitError(readErrorMessage(err, "Image upload failed."));
+      return await uploadProductImage(file, `temp-${Date.now()}`);
+    } catch {
       return null;
     }
   }, []);
@@ -199,8 +186,8 @@ export function useProducts() {
     setStatus,
     search,
     setSearch,
-    sortBy,
-    setSortBy,
+    category,
+    setCategory,
     selectedRowKeys,
     setSelectedRowKeys,
     submitError,
@@ -208,7 +195,6 @@ export function useProducts() {
     notice,
     setNotice,
     isSubmitting,
-    isUpdating,
     isBulkBusy,
     loadProducts,
     createNew,

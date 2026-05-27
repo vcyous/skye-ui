@@ -1,60 +1,36 @@
-function parseListString(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+function parseTagsString(value) {
+  if (Array.isArray(value)) return value.map((t) => t.trim()).filter(Boolean);
+  return String(value || "").split(",").map((t) => t.trim()).filter(Boolean);
 }
 
 function toNullableNumber(value) {
   return value == null || value === "" ? null : Number(value);
 }
 
-function datetimeLocalToIso(value) {
-  if (!value) return null;
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}
-
-function isoToDatetimeLocal(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 export function toProductPayload(values, mediaUrls) {
   return {
-    ...values,
-    price: Number(values.price),
+    name: values.name,
+    description: values.description || null,
+    price: Number(values.price || 0),
     compareAtPrice: toNullableNumber(values.compareAtPrice),
-    costPrice: toNullableNumber(values.costPrice),
-    priceStartAt: datetimeLocalToIso(values.priceStartAt),
-    priceEndAt: datetimeLocalToIso(values.priceEndAt),
-    stock: Number(values.stock),
-    tags: parseListString(values.tags),
-    mediaUrls,
+    category: values.category || null,
+    tags: parseTagsString(values.tags),
+    status: values.status || "draft",
+    stock: Number(values.stock || 0),
+    mediaUrls: mediaUrls || [],
   };
 }
 
 export function toProductFormValues(product) {
   if (!product) return {};
   return {
-    name: product.name,
-    urlHandle: product.urlHandle || "",
-    vendor: product.vendor || "",
-    productType: product.productType || "",
-    sku: product.sku,
+    name: product.name || "",
     description: product.description || "",
-    tags: (product.tags || []).join(", "),
-    seoTitle: product.seoTitle || "",
-    seoDescription: product.seoDescription || "",
-    status: product.status,
     price: Number(product.price || 0),
-    compareAtPrice: toNullableNumber(product.compareAtPrice),
-    costPrice: toNullableNumber(product.costPrice),
-    priceStartAt: isoToDatetimeLocal(product.priceStartAt),
-    priceEndAt: isoToDatetimeLocal(product.priceEndAt),
+    compareAtPrice: product.compare_at_price != null ? Number(product.compare_at_price) : "",
+    category: product.category || "",
+    tags: Array.isArray(product.tags) ? product.tags.join(", ") : (product.tags || ""),
+    status: product.status || "draft",
     stock: Number(product.stock || 0),
   };
 }

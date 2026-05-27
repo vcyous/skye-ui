@@ -1,253 +1,45 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useContext, useMemo } from "react";
 import {
   formatCurrency as formatCurrencyShared,
   formatDate as formatDateShared,
   formatNumber as formatNumberShared,
 } from "../shared/format";
-import {
-  getCurrencySettings,
-  getLocalizationSettings,
-  getLocalizationTranslations,
-  recordLocalizationFallbackEvent,
-  updateLocalizationSettings,
-} from "../services/api";
-
-const LOCAL_STORAGE_KEY = "skye-active-locale";
-const LOCAL_STORAGE_CURRENCY_KEY = "skye-active-currency";
-
-const BASE_TRANSLATIONS = {
-  en: {
-    "app.workspace": "Workspace",
-    "app.commerceControl": "Commerce control center",
-    "app.liveOps": "Live Ops",
-    "app.realtimeSync": "Realtime sync",
-    "app.logout": "Logout",
-    "app.language": "Language",
-    "app.loading": "Loading...",
-    "localization.title": "Localization",
-    "localization.subtitle":
-      "Manage languages, fallback strategy, and translation coverage.",
-  },
-  id: {
-    "app.workspace": "Ruang kerja",
-    "app.commerceControl": "Pusat kendali commerce",
-    "app.liveOps": "Operasi langsung",
-    "app.realtimeSync": "Sinkronisasi realtime",
-    "app.logout": "Keluar",
-    "app.language": "Bahasa",
-    "app.loading": "Memuat...",
-    "localization.title": "Lokalisasi",
-    "localization.subtitle":
-      "Kelola bahasa, strategi fallback, dan cakupan terjemahan.",
-  },
-};
 
 const LocalizationContext = createContext(null);
 
+const LOCALE = "id";
+const CURRENCY = "IDR";
+const TIMEZONE = "Asia/Jakarta";
+
 export function LocalizationProvider({ children }) {
-  const [isReady, setIsReady] = useState(false);
-  const [settings, setSettings] = useState({
-    defaultLocale: "id",
-    fallbackLocale: "en",
-    enabledLocales: ["id", "en"],
-    currencyCode: "IDR",
-    timezone: "Asia/Jakarta",
-  });
-  const [currencySettings, setCurrencySettings] = useState({
-    baseCurrency: "IDR",
-    fallbackCurrency: "IDR",
-    enabledCurrencies: ["IDR", "USD"],
-    roundingPolicy: "half_up",
-  });
-  const [activeLocale, setActiveLocale] = useState("id");
-  const [activeCurrency, setActiveCurrency] = useState("IDR");
-  const [translations, setTranslations] = useState({});
-  const missingLogRef = useRef(new Set());
-
-  const fallbackLocale = settings.fallbackLocale || "en";
-
-  async function loadTranslations(locale, fallback) {
-    const [activeRows, fallbackRows] = await Promise.all([
-      getLocalizationTranslations({ locale, namespace: "admin" }),
-      fallback && fallback !== locale
-        ? getLocalizationTranslations({ locale: fallback, namespace: "admin" })
-        : Promise.resolve([]),
-    ]);
-
-    const activeMap = activeRows.reduce((acc, row) => {
-      acc[row.translationKey] = row.translationValue;
-      return acc;
-    }, {});
-
-    const fallbackMap = fallbackRows.reduce((acc, row) => {
-      acc[row.translationKey] = row.translationValue;
-      return acc;
-    }, {});
-
-    setTranslations({
-      active: activeMap,
-      fallback: fallbackMap,
-    });
-  }
-
-  async function refreshLocalization() {
-    setIsReady(false);
-    const [nextSettings, nextCurrencySettings] = await Promise.all([
-      getLocalizationSettings(),
-      getCurrencySettings(),
-    ]);
-    const storedLocale = localStorage.getItem(LOCAL_STORAGE_KEY);
-    const storedCurrency = localStorage.getItem(LOCAL_STORAGE_CURRENCY_KEY);
-    const resolvedLocale = nextSettings.enabledLocales.includes(storedLocale)
-      ? storedLocale
-      : nextSettings.defaultLocale;
-    const resolvedCurrency = (
-      nextCurrencySettings.enabledCurrencies || []
-    ).includes(storedCurrency)
-      ? storedCurrency
-      : nextCurrencySettings.baseCurrency;
-
-    setSettings(nextSettings);
-    setCurrencySettings(nextCurrencySettings);
-    setActiveLocale(resolvedLocale);
-    setActiveCurrency(resolvedCurrency);
-    await loadTranslations(resolvedLocale, nextSettings.fallbackLocale);
-    setIsReady(true);
-  }
-
-  async function setLocale(nextLocale, persist = false) {
-    const normalized = String(nextLocale || "").trim();
-    if (!normalized) {
-      return;
-    }
-
-    localStorage.setItem(LOCAL_STORAGE_KEY, normalized);
-    setActiveLocale(normalized);
-    await loadTranslations(normalized, settings.fallbackLocale);
-
-    if (persist) {
-      const updated = await updateLocalizationSettings({
-        defaultLocale: normalized,
-        fallbackLocale: settings.fallbackLocale,
-        enabledLocales: settings.enabledLocales,
-      });
-      setSettings(updated);
-    }
-  }
-
-  async function setCurrency(nextCurrency) {
-    const normalized = String(nextCurrency || "")
-      .trim()
-      .toUpperCase();
-    if (!normalized) {
-      return;
-    }
-
-    localStorage.setItem(LOCAL_STORAGE_CURRENCY_KEY, normalized);
-    setActiveCurrency(normalized);
-  }
-
-  useEffect(() => {
-    refreshLocalization().catch(() => setIsReady(true));
-  }, []);
-
   const value = useMemo(() => {
-    function t(key, fallbackText = "") {
-      const normalizedKey = String(key || "").trim();
-      if (!normalizedKey) {
-        return fallbackText;
-      }
-
-      if (translations.active?.[normalizedKey]) {
-        return translations.active[normalizedKey];
-      }
-
-      if (translations.fallback?.[normalizedKey]) {
-        const eventKey = `${activeLocale}|${normalizedKey}|fallback`;
-        if (!missingLogRef.current.has(eventKey)) {
-          missingLogRef.current.add(eventKey);
-          recordLocalizationFallbackEvent({
-            locale: activeLocale,
-            fallbackLocale,
-            namespace: "admin",
-            translationKey: normalizedKey,
-            contextPath:
-              typeof window !== "undefined" ? window.location.pathname : null,
-          }).catch(() => {});
-        }
-        return translations.fallback[normalizedKey];
-      }
-
-      const base = BASE_TRANSLATIONS[activeLocale]?.[normalizedKey];
-      if (base) {
-        return base;
-      }
-
-      const fallbackBase = BASE_TRANSLATIONS[fallbackLocale]?.[normalizedKey];
-      if (fallbackBase) {
-        const eventKey = `${activeLocale}|${normalizedKey}|base-fallback`;
-        if (!missingLogRef.current.has(eventKey)) {
-          missingLogRef.current.add(eventKey);
-          recordLocalizationFallbackEvent({
-            locale: activeLocale,
-            fallbackLocale,
-            namespace: "admin",
-            translationKey: normalizedKey,
-            contextPath:
-              typeof window !== "undefined" ? window.location.pathname : null,
-          }).catch(() => {});
-        }
-        return fallbackBase;
-      }
-
-      return fallbackText || normalizedKey;
+    function t(_key, fallbackText = "") {
+      return fallbackText || _key || "";
     }
 
-    function formatCurrency(value, currencyCode = settings.currencyCode) {
-      return formatCurrencyShared(value, {
-        currency: currencyCode || activeCurrency || "USD",
-        locale: activeLocale,
-      });
+    function formatCurrency(value) {
+      return formatCurrencyShared(value, { currency: CURRENCY, locale: LOCALE });
     }
 
     function formatNumber(value) {
-      return formatNumberShared(value, { locale: activeLocale });
+      return formatNumberShared(value, { locale: LOCALE });
     }
 
     function formatDate(value, options = { dateStyle: "medium" }) {
-      return formatDateShared(value, { locale: activeLocale, ...options });
+      return formatDateShared(value, { locale: LOCALE, ...options });
     }
 
     return {
-      isReady,
-      settings,
-      currencySettings,
-      activeLocale,
-      activeCurrency,
+      isReady: true,
+      activeLocale: LOCALE,
+      activeCurrency: CURRENCY,
+      timezone: TIMEZONE,
       t,
-      setLocale,
-      setCurrency,
-      refreshLocalization,
       formatCurrency,
       formatNumber,
       formatDate,
     };
-  }, [
-    activeCurrency,
-    activeLocale,
-    currencySettings,
-    fallbackLocale,
-    isReady,
-    settings,
-    translations,
-  ]);
+  }, []);
 
   return (
     <LocalizationContext.Provider value={value}>

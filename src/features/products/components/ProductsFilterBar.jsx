@@ -1,5 +1,4 @@
-import { Search } from "lucide-react";
-import { useState } from "react";
+import { Plus, Search } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +26,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BULK_STATUS_ACTIONS, SORT_OPTIONS, STATUS_TABS } from "../constants";
+import { BULK_STATUS_ACTIONS, STATUS_TABS } from "../constants";
+
+const CATEGORY_OPTIONS = [
+  { value: "all", label: "Semua kategori" },
+  { value: "Atasan", label: "Atasan" },
+  { value: "Bawahan", label: "Bawahan" },
+  { value: "Dress", label: "Dress" },
+  { value: "Outer", label: "Outer" },
+  { value: "Aksesoris", label: "Aksesoris" },
+];
 
 export default function ProductsFilterBar({
   status,
@@ -35,12 +43,13 @@ export default function ProductsFilterBar({
   tabCounts,
   search,
   onSearchChange,
-  sortBy,
-  onSortByChange,
+  category,
+  onCategoryChange,
   selectedCount,
   isBulkBusy,
   onBulkStatusChange,
   onBulkDelete,
+  onAdd,
 }) {
   return (
     <>
@@ -51,12 +60,12 @@ export default function ProductsFilterBar({
               <TabsTrigger
                 key={tab.key}
                 value={tab.key}
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2 text-sm"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2.5 text-sm"
               >
                 {tab.label}
                 {tabCounts[tab.key] != null && (
                   <span className="ml-1.5 text-xs text-muted-foreground">
-                    {tabCounts[tab.key]}
+                    ({tabCounts[tab.key]})
                   </span>
                 )}
               </TabsTrigger>
@@ -66,22 +75,22 @@ export default function ProductsFilterBar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b">
-        <div className="relative">
+        <div className="relative w-60">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="Search products"
+            placeholder="Cari produk..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9 w-64"
+            className="pl-9"
           />
         </div>
 
-        <Select value={sortBy} onValueChange={onSortByChange}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
+        <Select value={category || "all"} onValueChange={onCategoryChange}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Kategori" />
           </SelectTrigger>
           <SelectContent>
-            {SORT_OPTIONS.map((opt) => (
+            {CATEGORY_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>
@@ -89,57 +98,56 @@ export default function ProductsFilterBar({
           </SelectContent>
         </Select>
 
-        {selectedCount > 0 && (
-          <div className="flex items-center gap-2 ml-auto">
-            <span className="text-sm text-muted-foreground">
-              {selectedCount} selected
-            </span>
+        <div className="ml-auto flex items-center gap-2">
+          {selectedCount > 0 && (
+            <>
+              <span className="text-sm text-muted-foreground">
+                {selectedCount} dipilih
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" disabled={isBulkBusy}>
+                    Aksi massal
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {BULK_STATUS_ACTIONS.map((action) => (
+                    <DropdownMenuItem
+                      key={action.key}
+                      onClick={() => onBulkStatusChange(action.status)}
+                    >
+                      {action.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="destructive" disabled={isBulkBusy}>
+                    Hapus
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Hapus {selectedCount} produk?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tindakan ini tidak dapat dibatalkan.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction onClick={onBulkDelete}>Hapus</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" disabled={isBulkBusy}>
-                  Actions
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {BULK_STATUS_ACTIONS.map((action) => (
-                  <DropdownMenuItem
-                    key={action.key}
-                    onClick={() => onBulkStatusChange(action.status)}
-                  >
-                    {action.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  disabled={isBulkBusy}
-                >
-                  Delete selected
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete {selectedCount} selected products?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={onBulkDelete}>
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )}
+          <Button size="sm" onClick={onAdd}>
+            <Plus className="size-4 mr-1" />
+            Tambah Produk
+          </Button>
+        </div>
       </div>
     </>
   );
