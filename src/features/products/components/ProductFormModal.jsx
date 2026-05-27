@@ -1,6 +1,3 @@
-import { Loader2, Upload, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,15 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Upload, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toProductFormValues } from "../productMapper";
 
 const MAX_IMAGES = 5;
@@ -62,13 +55,17 @@ function PhotoDropzone({ urls, onUpload, onRemove, disabled }) {
           </div>
         ))}
         {urls.length < MAX_IMAGES && (
-          <label className={`flex flex-col items-center justify-center w-16 h-16 border-2 border-dashed rounded-md cursor-pointer hover:bg-muted/50 transition-colors ${disabled || busy ? "opacity-50 pointer-events-none" : ""}`}>
+          <label
+            className={`flex flex-col items-center justify-center w-16 h-16 border-2 border-dashed rounded-md cursor-pointer hover:bg-muted/50 transition-colors ${disabled || busy ? "opacity-50 pointer-events-none" : ""}`}
+          >
             {busy ? (
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
             ) : (
               <>
                 <Upload className="size-4 text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground mt-0.5">Upload</span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">
+                  Upload
+                </span>
               </>
             )}
             <input
@@ -81,7 +78,9 @@ function PhotoDropzone({ urls, onUpload, onRemove, disabled }) {
           </label>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">Maks {MAX_IMAGES} foto, {MAX_SIZE_MB}MB per foto</p>
+      <p className="text-xs text-muted-foreground">
+        Maks {MAX_IMAGES} foto, {MAX_SIZE_MB}MB per foto
+      </p>
     </div>
   );
 }
@@ -116,7 +115,9 @@ export default function ProductFormModal({
     if (!open) return;
     if (isEdit && product) {
       reset(toProductFormValues(product));
-      setMediaUrls(Array.isArray(product.media_urls) ? [...product.media_urls] : []);
+      setMediaUrls(
+        Array.isArray(product.media_urls) ? [...product.media_urls] : [],
+      );
     } else {
       reset({ status: "draft", stock: 0, price: "" });
       setMediaUrls([]);
@@ -147,17 +148,19 @@ export default function ProductFormModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleCancel(); }}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) handleCancel();
+      }}
+    >
+      <DialogContent className="w-[95vw] sm:w-[95vw] sm:max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Produk" : "Tambah Produk"}</DialogTitle>
         </DialogHeader>
 
-        <form
-          id="product-form"
-          onSubmit={handleSubmit(handleFinish)}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_224px] gap-4">
+        <form id="product-form" onSubmit={handleSubmit(handleFinish)}>
+          <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-6">
             {/* Left — Product Info */}
             <div className="flex flex-col gap-3">
               <Card>
@@ -174,7 +177,9 @@ export default function ProductFormModal({
                       aria-invalid={!!errors.name}
                     />
                     {errors.name && (
-                      <p className="text-xs text-destructive">{errors.name.message}</p>
+                      <p className="text-xs text-destructive">
+                        {errors.name.message}
+                      </p>
                     )}
                   </div>
 
@@ -182,7 +187,7 @@ export default function ProductFormModal({
                     <Label htmlFor="description">Deskripsi</Label>
                     <Textarea
                       id="description"
-                      rows={3}
+                      rows={6}
                       placeholder="Deskripsikan produkmu..."
                       {...register("description")}
                     />
@@ -203,7 +208,9 @@ export default function ProductFormModal({
                         aria-invalid={!!errors.price}
                       />
                       {errors.price && (
-                        <p className="text-xs text-destructive">{errors.price.message}</p>
+                        <p className="text-xs text-destructive">
+                          {errors.price.message}
+                        </p>
                       )}
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -220,7 +227,9 @@ export default function ProductFormModal({
                         aria-invalid={!!errors.stock}
                       />
                       {errors.stock && (
-                        <p className="text-xs text-destructive">{errors.stock.message}</p>
+                        <p className="text-xs text-destructive">
+                          {errors.stock.message}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -281,7 +290,9 @@ export default function ProductFormModal({
                 <CardContent>
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm text-muted-foreground">
-                      {isActive ? "Aktif — tampil di toko" : "Draft — tidak tampil"}
+                      {isActive
+                        ? "Aktif — tampil di toko"
+                        : "Draft — tidak tampil"}
                     </span>
                     <Switch
                       checked={isActive}
@@ -298,7 +309,11 @@ export default function ProductFormModal({
         </form>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isSubmitting}
+          >
             Batal
           </Button>
           <Button
