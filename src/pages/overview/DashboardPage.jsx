@@ -1,23 +1,9 @@
-import {
-  BoxPlotOutlined,
-  DollarOutlined,
-  ShoppingCartOutlined,
-  ShoppingOutlined,
-} from "@ant-design/icons";
-import {
-  Button,
-  Card,
-  Col,
-  Divider,
-  List,
-  Row,
-  Space,
-  Spin,
-  Tag,
-  Typography,
-} from "antd";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Box, DollarSign, Loader2, ShoppingBag, ShoppingCart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocalization } from "../../context/LocalizationContext";
 import { getDashboardSummary, getOrders } from "../../services/api";
 import KpiCard from "../../shared/ui/KpiCard";
@@ -33,7 +19,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     getDashboardSummary()
-      .then((data) => setState({ loading: false, data: data, error: "" }))
+      .then((data) => setState({ loading: false, data, error: "" }))
       .catch((err) =>
         setState({
           loading: false,
@@ -49,16 +35,20 @@ export default function DashboardPage() {
   if (state.loading) {
     return (
       <Card>
-        <Space>
-          <Spin />
-          <Typography.Text>Loading dashboard...</Typography.Text>
-        </Space>
+        <CardContent className="flex items-center gap-2 p-4">
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          <span className="text-sm">Loading dashboard...</span>
+        </CardContent>
       </Card>
     );
   }
 
   if (state.error || !state.data) {
-    return <Card>{state.error || "No data"}</Card>;
+    return (
+      <Card>
+        <CardContent className="p-4">{state.error || "No data"}</CardContent>
+      </Card>
+    );
   }
 
   const { data } = state;
@@ -85,48 +75,24 @@ export default function DashboardPage() {
   ];
 
   const statusSeries = [
-    {
-      name: "Not paid",
-      value: data.topStatuses?.not_paid || 0,
-      fill: "var(--amber)",
-    },
-    {
-      name: "Need ship",
-      value: data.topStatuses?.need_ship || 0,
-      fill: "var(--horizon)",
-    },
+    { name: "Not paid", value: data.topStatuses?.not_paid || 0, fill: "#d97706" },
+    { name: "Need ship", value: data.topStatuses?.need_ship || 0, fill: "#eab308" },
     {
       name: "Ongoing shipped",
       value: data.topStatuses?.ongoing_shipped || 0,
-      fill: "var(--sage)",
+      fill: "#059669",
     },
   ];
 
   const pipelineStages = [
-    {
-      label: "Awaiting payment",
-      count: data.topStatuses?.not_paid || 0,
-      color: "var(--amber)",
-    },
-    {
-      label: "Ready to ship",
-      count: data.topStatuses?.need_ship || 0,
-      color: "var(--horizon)",
-    },
-    {
-      label: "In transit",
-      count: data.topStatuses?.ongoing_shipped || 0,
-      color: "var(--sage)",
-    },
+    { label: "Awaiting payment", count: data.topStatuses?.not_paid || 0, color: "bg-amber-500" },
+    { label: "Ready to ship", count: data.topStatuses?.need_ship || 0, color: "bg-yellow-500" },
+    { label: "In transit", count: data.topStatuses?.ongoing_shipped || 0, color: "bg-emerald-500" },
   ];
 
   const quickActions = [
     { label: "Add a product", to: "/products", desc: "Expand your catalog" },
-    {
-      label: "Create a collection",
-      to: "/collections",
-      desc: "Organize products",
-    },
+    { label: "Create a collection", to: "/collections", desc: "Organize products" },
     { label: "View orders", to: "/orders", desc: "Manage order lifecycle" },
     {
       label: "Customize your store",
@@ -136,154 +102,112 @@ export default function DashboardPage() {
   ];
 
   return (
-    <section style={{ display: "grid", gap: 16 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
+    <section className="grid gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            Overview
-          </Typography.Title>
-          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            Today &mdash;{" "}
+          <h2 className="text-xl font-semibold">Overview</h2>
+          <p className="text-xs text-muted-foreground">
+            Today —{" "}
             {new Date().toLocaleDateString("en-US", {
               weekday: "long",
               month: "long",
               day: "numeric",
               year: "numeric",
             })}
-          </Typography.Text>
+          </p>
         </div>
-        <Space>
+        <div className="flex gap-2">
           <Link to="/orders">
-            <Button>View orders</Button>
+            <Button variant="outline">View orders</Button>
           </Link>
           <Link to="/products">
-            <Button type="primary">Add product</Button>
+            <Button>Add product</Button>
           </Link>
-        </Space>
+        </div>
       </div>
 
-      <Row gutter={[12, 12]}>
-        <Col xs={24} sm={12} xl={6}>
-          <KpiCard
-            title="Total sales today"
-            value={formatCurrency(data.todaysSales)}
-            delta="+12.4%"
-            icon={<DollarOutlined />}
-            color="var(--sage)"
-          />
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <KpiCard
-            title="Gross revenue"
-            value={formatCurrency(data.grossRevenue)}
-            delta="+8.1%"
-            icon={<ShoppingCartOutlined />}
-            color="var(--horizon-ink)"
-          />
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <KpiCard
-            title="Total orders"
-            value={formatNumber(data.orders || 0)}
-            delta="+5.3%"
-            icon={<ShoppingOutlined />}
-            color="var(--sunset)"
-          />
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <KpiCard
-            title="Products"
-            value={formatNumber(data.products || 0)}
-            icon={<BoxPlotOutlined />}
-            color="var(--amber)"
-          />
-        </Col>
-      </Row>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          title="Total sales today"
+          value={formatCurrency(data.todaysSales)}
+          delta="+12.4%"
+          icon={<DollarSign className="size-5" />}
+          color="#059669"
+        />
+        <KpiCard
+          title="Gross revenue"
+          value={formatCurrency(data.grossRevenue)}
+          delta="+8.1%"
+          icon={<ShoppingCart className="size-5" />}
+          color="#0f172a"
+        />
+        <KpiCard
+          title="Total orders"
+          value={formatNumber(data.orders || 0)}
+          delta="+5.3%"
+          icon={<ShoppingBag className="size-5" />}
+          color="#f59e0b"
+        />
+        <KpiCard
+          title="Products"
+          value={formatNumber(data.products || 0)}
+          icon={<Box className="size-5" />}
+          color="#d97706"
+        />
+      </div>
 
       {pendingOrders.length > 0 && (
-        <Card
-          styles={{ body: { padding: "12px 16px" } }}
-          style={{
-            border: "1px solid var(--amber)",
-            background: "var(--amber-soft)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 8,
-            }}
-          >
-            <Space>
-              <Tag color="warning" style={{ margin: 0 }}>
-                Action needed
-              </Tag>
-              <Typography.Text strong style={{ color: "var(--amber-ink)" }}>
-                {pendingOrders.length} order
-                {pendingOrders.length > 1 ? "s" : ""} waiting to ship
-              </Typography.Text>
-            </Space>
-            <Link to="/orders">
-              <Button
-                type="text"
-                size="small"
-                style={{ color: "var(--amber)" }}
-              >
-                View all →
-              </Button>
-            </Link>
-          </div>
-          <List
-            size="small"
-            dataSource={pendingOrders.slice(0, 3)}
-            renderItem={(order) => (
-              <List.Item
-                style={{ padding: "4px 0", borderBottom: "none" }}
-                extra={
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">
+                  Action needed
+                </Badge>
+                <span className="font-semibold text-amber-900">
+                  {pendingOrders.length} order
+                  {pendingOrders.length > 1 ? "s" : ""} waiting to ship
+                </span>
+              </div>
+              <Link to="/orders">
+                <Button variant="ghost" size="sm" className="text-amber-900">
+                  View all →
+                </Button>
+              </Link>
+            </div>
+            <ul className="space-y-1">
+              {pendingOrders.slice(0, 3).map((order) => (
+                <li
+                  key={order.id}
+                  className="flex items-center justify-between py-1"
+                >
+                  <span className="text-sm">
+                    #{order.orderNumber} — {order.customerName ?? "Guest"}
+                  </span>
                   <Link to={`/orders/${order.id}`}>
-                    <Button size="small" type="primary">
-                      Ship now
-                    </Button>
+                    <Button size="sm">Ship now</Button>
                   </Link>
-                }
-              >
-                <List.Item.Meta
-                  title={
-                    <Typography.Text style={{ fontSize: 13 }}>
-                      #{order.orderNumber} &mdash;{" "}
-                      {order.customerName ?? "Guest"}
-                    </Typography.Text>
-                  }
-                />
-              </List.Item>
+                </li>
+              ))}
+            </ul>
+            {pendingOrders.length > 3 && (
+              <Link to="/orders">
+                <span className="text-xs text-muted-foreground">
+                  + {pendingOrders.length - 3} more orders
+                </span>
+              </Link>
             )}
-          />
-
-          {pendingOrders.length > 3 && (
-            <Link to="/orders">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                + {pendingOrders.length - 3} more orders
-              </Typography.Text>
-            </Link>
-          )}
+          </CardContent>
         </Card>
       )}
 
       <Suspense
         fallback={
           <Card>
-            <Space>
-              <Spin />
-              <Typography.Text>Loading charts...</Typography.Text>
-            </Space>
+            <CardContent className="flex items-center gap-2 p-4">
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              <span className="text-sm">Loading charts...</span>
+            </CardContent>
           </Card>
         }
       >
@@ -295,94 +219,59 @@ export default function DashboardPage() {
         />
       </Suspense>
 
-      <Row gutter={[12, 12]}>
-        <Col xs={24} lg={12}>
-          <Card
-            title="Order pipeline"
-            styles={{ body: { padding: 0 } }}
-            extra={
-              <Link to="/orders">
-                <Button type="text" size="small">
-                  View all
-                </Button>
-              </Link>
-            }
-          >
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Order pipeline</CardTitle>
+            <Link to="/orders">
+              <Button variant="ghost" size="sm">
+                View all
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent className="p-0">
             {pipelineStages.map((item, i) => (
-              <div key={item.label}>
-                {i > 0 && <Divider style={{ margin: 0 }} />}
-                <div
-                  style={{
-                    padding: "12px 20px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Space>
-                    <div
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: item.color,
-                      }}
-                    />
-
-                    <Typography.Text style={{ fontSize: 13 }}>
-                      {item.label}
-                    </Typography.Text>
-                  </Space>
-                  <Typography.Text strong style={{ fontSize: 13 }}>
-                    {item.count}
-                  </Typography.Text>
+              <div
+                key={item.label}
+                className={`flex items-center justify-between px-5 py-3 ${
+                  i > 0 ? "border-t" : ""
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`size-2 rounded-full ${item.color}`} />
+                  <span className="text-sm">{item.label}</span>
                 </div>
+                <span className="text-sm font-semibold">{item.count}</span>
               </div>
             ))}
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Quick actions">
-            <Space direction="vertical" style={{ width: "100%" }} size={8}>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-2">
               {quickActions.map((action) => (
                 <Link to={action.to} key={action.to}>
-                  <div
-                    style={{
-                      padding: "10px 12px",
-                      border: "1px solid var(--line-strong)",
-                      borderRadius: 8,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      cursor: "pointer",
-                      transition: "border-color 0.2s",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.borderColor = "var(--sage)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.borderColor = "var(--line-strong)")
-                    }
-                  >
-                    <Space direction="vertical" size={0}>
-                      <Typography.Text strong style={{ fontSize: 13 }}>
+                  <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:border-foreground/40">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold">
                         {action.label}
-                      </Typography.Text>
-                      <Typography.Text
-                        type="secondary"
-                        style={{ fontSize: 12 }}
-                      >
+                      </span>
+                      <span className="text-xs text-muted-foreground">
                         {action.desc}
-                      </Typography.Text>
-                    </Space>
-                    <Typography.Text type="secondary">→</Typography.Text>
+                      </span>
+                    </div>
+                    <span className="text-muted-foreground">→</span>
                   </div>
                 </Link>
               ))}
-            </Space>
-          </Card>
-        </Col>
-      </Row>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </section>
   );
 }

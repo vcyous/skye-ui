@@ -87,7 +87,7 @@ const Icon = ({ name, ...props }) => {
 
 const Wordmark = () => (
   <a href="/" className="m-nav__brand">
-    <SkyeCloud width={32} color="var(--ink)" />
+    <SkyeCloud width={32} color="var(--foreground)" />
     <span className="m-nav__brand__text">skye</span>
   </a>
 );
@@ -298,7 +298,7 @@ const Pricing = () => {
       <h2>One plan. No surprises.</h2>
       <p
         style={{
-          color: "var(--ink-2)",
+          color: "var(--muted-foreground)",
           maxWidth: 520,
           margin: "16px auto 0",
           fontSize: 18,
@@ -375,7 +375,7 @@ const Footer = () => (
         <Wordmark />
         <p
           style={{
-            color: "var(--ink-3)",
+            color: "var(--muted-foreground)",
             fontSize: 13,
             marginTop: 16,
             maxWidth: 280,

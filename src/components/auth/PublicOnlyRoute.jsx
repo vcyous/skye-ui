@@ -1,4 +1,4 @@
-import { Flex, Spin, Typography } from "antd";
+import { Loader2 } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
@@ -7,16 +7,10 @@ export default function PublicOnlyRoute({ children }) {
 
   if (isLoading) {
     return (
-      <Flex
-        vertical
-        align="center"
-        justify="center"
-        style={{ minHeight: "100vh" }}
-        gap={12}
-      >
-        <Spin />
-        <Typography.Text type="secondary">Checking session...</Typography.Text>
-      </Flex>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Checking session...</p>
+      </div>
     );
   }
 

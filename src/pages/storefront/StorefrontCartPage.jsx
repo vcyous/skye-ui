@@ -1,6 +1,8 @@
-import { App, Button, InputNumber, Space, Typography } from "antd";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useCart } from "../../context/CartContext";
 
 function formatPrice(value) {
@@ -9,7 +11,6 @@ function formatPrice(value) {
 
 export default function StorefrontCartPage() {
   const navigate = useNavigate();
-  const { message } = App.useApp();
   const { cart, isLoading, refreshCart, updateItemQuantity, removeItem } =
     useCart();
 
@@ -23,50 +24,46 @@ export default function StorefrontCartPage() {
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Could not update quantity.";
-      message.error(msg);
+      toast.error(msg);
     }
   }
 
   async function handleRemove(item) {
     try {
       await removeItem(item.id);
-      message.success("Item removed.");
+      toast.success("Item removed");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Could not remove item.";
-      message.error(msg);
+      toast.error(msg);
     }
   }
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: 32 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 24,
-        }}
-      >
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          Your Cart
-        </Typography.Title>
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Your Cart</h2>
         <Button
-          type="link"
+          variant="link"
+          className="px-0"
           onClick={() => navigate("/storefront")}
-          style={{ padding: 0 }}
         >
           ← Continue Shopping
         </Button>
       </div>
 
-      {isLoading && <Typography.Text>Loading cart...</Typography.Text>}
+      {isLoading && (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          <span>Loading cart...</span>
+        </div>
+      )}
 
       {!isLoading && cart.items.length === 0 && (
-        <div style={{ textAlign: "center", padding: "48px 0" }}>
-          <Typography.Title level={4} type="secondary">
+        <div className="text-center py-12">
+          <h4 className="text-lg font-semibold text-muted-foreground mb-4">
             Your cart is empty
-          </Typography.Title>
-          <Button type="primary" onClick={() => navigate("/storefront")}>
+          </h4>
+          <Button onClick={() => navigate("/storefront")}>
             Browse Products
           </Button>
         </div>
@@ -74,70 +71,54 @@ export default function StorefrontCartPage() {
 
       {!isLoading && cart.items.length > 0 && (
         <>
-          <div style={{ display: "grid", gap: 12 }}>
+          <div className="flex flex-col gap-3">
             {cart.items.map((item) => (
               <div
                 key={item.id}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto auto auto",
-                  gap: 16,
-                  alignItems: "center",
-                  padding: "12px 0",
-                  borderBottom: "1px solid #E5E7EB",
-                }}
+                className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center py-3 border-b"
               >
                 <div>
-                  <Typography.Text strong>{item.productName}</Typography.Text>
-                  <br />
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    SKU: {item.sku}
-                  </Typography.Text>
+                  <p className="font-semibold">{item.productName}</p>
+                  <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
                 </div>
-                <Typography.Text>{formatPrice(item.unitPrice)}</Typography.Text>
-                <InputNumber
+
+                <span className="text-sm">{formatPrice(item.unitPrice)}</span>
+
+                <input
+                  type="number"
                   min={1}
                   max={item.stock}
                   value={item.quantity}
-                  onChange={(val) => handleQuantityChange(item, val)}
-                  size="small"
-                  style={{ width: 70 }}
+                  onChange={(e) =>
+                    handleQuantityChange(item, Math.max(1, Number(e.target.value)))
+                  }
+                  className="w-16 border rounded-md px-2 py-1 text-sm"
                 />
 
-                <Space direction="vertical" size={4} align="end">
-                  <Typography.Text strong>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="font-semibold text-sm">
                     {formatPrice(item.lineTotal)}
-                  </Typography.Text>
+                  </span>
                   <Button
-                    danger
-                    size="small"
-                    type="text"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive px-0 h-auto"
                     onClick={() => handleRemove(item)}
                   >
                     Remove
                   </Button>
-                </Space>
+                </div>
               </div>
             ))}
           </div>
 
-          <div
-            style={{
-              marginTop: 24,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
+          <div className="mt-6 flex justify-between items-center">
             <div>
-              <Typography.Text type="secondary">Subtotal</Typography.Text>
-              <Typography.Title level={3} style={{ margin: 0 }}>
-                {formatPrice(cart.subtotal)}
-              </Typography.Title>
+              <p className="text-sm text-muted-foreground">Subtotal</p>
+              <p className="text-2xl font-bold">{formatPrice(cart.subtotal)}</p>
             </div>
             <Button
-              type="primary"
-              size="large"
+              size="lg"
               onClick={() => navigate("/storefront/checkout")}
             >
               Proceed to Checkout →

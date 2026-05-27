@@ -1,6 +1,7 @@
-import { App, Spin, Typography } from "antd";
+import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { templateRegistry } from "../../components/website-builder/templateRegistry";
 import { addToCart, getProductsForPreview } from "../../services/api";
 import { supabase } from "../../services/supabaseClient";
@@ -8,7 +9,6 @@ import { supabase } from "../../services/supabaseClient";
 export default function StorefrontPreviewPage() {
   const [searchParams] = useSearchParams();
   const storeSlug = searchParams.get("store");
-  const { message } = App.useApp();
 
   const [config, setConfig] = useState(null);
   const [storeName, setStoreName] = useState("");
@@ -68,48 +68,30 @@ export default function StorefrontPreviewPage() {
 
   async function handleAddToCart(product) {
     if (!product.variantId) {
-      message.warning("This product has no variant to add.");
+      toast.warning("This product has no variant to add.");
       return;
     }
     try {
       await addToCart({ variantId: product.variantId, quantity: 1 });
-      message.success(`${product.name} added to cart!`);
+      toast.success(`${product.name} added to cart!`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to add to cart";
-      message.error(msg);
+      toast.error(msg);
     }
   }
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Spin size="large" tip="Loading store preview..." />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (error || !config) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexDirection: "column",
-          gap: 12,
-        }}
-      >
-        <Typography.Text type="secondary">
-          {error || "Store unavailable."}
-        </Typography.Text>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <span className="text-muted-foreground">{error || "Store unavailable."}</span>
       </div>
     );
   }
@@ -119,12 +101,12 @@ export default function StorefrontPreviewPage() {
 
   if (!TemplateComponent) {
     return (
-      <Typography.Text type="secondary">Template not found.</Typography.Text>
+      <span className="text-muted-foreground">Template not found.</span>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh" }}>
+    <div className="min-h-screen">
       <TemplateComponent
         config={config}
         storeName={storeName}

@@ -1,45 +1,14 @@
-import { Button, Card, Empty, Space, Table, Tag } from "antd";
-
-function buildColumns({ onEdit, onDelete }) {
-  return [
-    { title: "Name", dataIndex: "name", key: "name" },
-    {
-      title: "Type",
-      dataIndex: "shippingType",
-      key: "shippingType",
-      render: (value) => <Tag>{value}</Tag>,
-    },
-    { title: "Base Rate", dataIndex: "baseRate", key: "baseRate" },
-    {
-      title: "Zones",
-      key: "zones",
-      render: (_, record) =>
-        record.zones?.length
-          ? record.zones.map((zone) => zone.name).join(", ")
-          : "All zones",
-    },
-    {
-      title: "Status",
-      key: "status",
-      render: (_, record) =>
-        record.isActive ? <Tag color="green">active</Tag> : <Tag>inactive</Tag>,
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space>
-          <Button size="small" onClick={() => onEdit(record)}>
-            Edit
-          </Button>
-          <Button size="small" danger onClick={() => onDelete(record)}>
-            Delete
-          </Button>
-        </Space>
-      ),
-    },
-  ];
-}
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function MethodsSection({
   methods,
@@ -49,27 +18,77 @@ export default function MethodsSection({
   onDelete,
 }) {
   return (
-    <Card
-      title="Shipping Methods"
-      extra={
-        <Space>
-          <Button type="primary" onClick={onAdd}>
-            Add Method
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Shipping Methods</CardTitle>
+        <div className="flex items-center gap-2">
+          <Button onClick={onAdd}>Add Method</Button>
+          <Button variant="outline" onClick={onCreateShipment}>
+            Create Shipment
           </Button>
-          <Button onClick={onCreateShipment}>Create Shipment</Button>
-        </Space>
-      }
-    >
-      {methods.length ? (
-        <Table
-          rowKey="id"
-          columns={buildColumns({ onEdit, onDelete })}
-          dataSource={methods}
-          pagination={{ pageSize: 6 }}
-        />
-      ) : (
-        <Empty description="No shipping methods configured yet." />
-      )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {methods.length ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Base Rate</TableHead>
+                <TableHead>Zones</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {methods.map((method) => (
+                <TableRow key={method.id}>
+                  <TableCell>{method.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{method.shippingType}</Badge>
+                  </TableCell>
+                  <TableCell>{method.baseRate}</TableCell>
+                  <TableCell>
+                    {method.zones?.length
+                      ? method.zones.map((z) => z.name).join(", ")
+                      : "All zones"}
+                  </TableCell>
+                  <TableCell>
+                    {method.isActive ? (
+                      <Badge variant="default">active</Badge>
+                    ) : (
+                      <Badge variant="secondary">inactive</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onEdit(method)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => onDelete(method)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="grid place-items-center p-8 text-muted-foreground">
+            No shipping methods configured yet.
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
 }

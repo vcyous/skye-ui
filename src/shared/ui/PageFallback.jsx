@@ -1,5 +1,10 @@
-import { Card } from "antd";
+import { Loader2 } from "lucide-react";
 
 export default function PageFallback() {
-  return <Card className="page-fallback">Loading page...</Card>;
+  return (
+    <div className="flex min-h-[200px] items-center justify-center gap-2 text-muted-foreground">
+      <Loader2 className="size-4 animate-spin" />
+      <span className="text-sm">Loading page...</span>
+    </div>
+  );
 }

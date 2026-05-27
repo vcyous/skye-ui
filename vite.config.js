@@ -1,9 +1,10 @@
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -26,13 +27,6 @@ export default defineConfig({
               return "supabase";
             }
 
-            if (
-              id.includes("antd") ||
-              id.includes("@ant-design") ||
-              id.includes("rc-")
-            ) {
-              return "ui-kit";
-            }
           }
         },
       },

@@ -1,75 +1,76 @@
-import { UploadOutlined } from "@ant-design/icons";
-import {
-  Card,
-  Col,
-  DatePicker,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Row,
-  Select,
-  Space,
-  Typography,
-  Upload,
-} from "antd";
+import { Loader2, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { STATUS_OPTIONS } from "../constants";
 import { toProductFormValues } from "../productMapper";
 
 function ImageUploader({ onUpload, urls }) {
   const [isBusy, setIsBusy] = useState(false);
 
-  const beforeUpload = async (file) => {
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
     setIsBusy(true);
     try {
       await onUpload(file);
     } finally {
       setIsBusy(false);
+      e.target.value = "";
     }
-    return false;
-  };
+  }
 
   return (
-    <>
-      <Upload
-        beforeUpload={beforeUpload}
-        accept="image/*"
-        listType="picture-card"
-        showUploadList={false}
-        multiple
-      >
-        <div style={{ padding: "16px 0" }}>
-          <UploadOutlined style={{ fontSize: 20, color: "var(--ink-3)" }} />
-          <div style={{ marginTop: 8, fontSize: 13, color: "var(--ink-2)" }}>
-            Add image
-          </div>
-        </div>
-      </Upload>
+    <div className="flex flex-col gap-2">
+      <label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+        <Upload className="size-5 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground mt-1">Add image</span>
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </label>
       {urls.length > 0 && (
-        <Space wrap style={{ marginTop: 8 }}>
+        <div className="flex flex-wrap gap-2 mt-1">
           {urls.map((url, i) => (
             <img
               key={i}
               src={url}
               alt=""
-              style={{
-                width: 72,
-                height: 72,
-                objectFit: "cover",
-                borderRadius: 6,
-                border: "1px solid var(--line)",
-              }}
+              className="w-18 h-18 object-cover rounded-md border"
+              style={{ width: 72, height: 72 }}
             />
           ))}
-        </Space>
+        </div>
       )}
       {isBusy && (
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        <span className="text-xs text-muted-foreground flex items-center gap-1">
+          <Loader2 className="size-3 animate-spin" />
           Uploading...
-        </Typography.Text>
+        </span>
       )}
-    </>
+    </div>
   );
 }
 
@@ -82,23 +83,30 @@ export default function ProductFormModal({
   onCancel,
   onUploadImage,
 }) {
-  const [form] = Form.useForm();
-  const [mediaUrls, setMediaUrls] = useState([]);
-
   const isEdit = mode === "edit";
   const title = isEdit ? "Edit product" : "Add product";
   const okText = isEdit ? "Save changes" : "Save product";
 
+  const [mediaUrls, setMediaUrls] = useState([]);
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm({ defaultValues: {} });
+
   useEffect(() => {
     if (!open) return;
     if (isEdit && product) {
-      form.setFieldsValue(toProductFormValues(product));
+      reset(toProductFormValues(product));
       setMediaUrls([...(product.mediaUrls || [])]);
     } else {
-      form.resetFields();
+      reset({});
       setMediaUrls([]);
     }
-  }, [open, isEdit, product, form]);
+  }, [open, isEdit, product, reset]);
 
   async function handleUpload(file) {
     const url = await onUploadImage(file);
@@ -110,220 +118,310 @@ export default function ProductFormModal({
   async function handleFinish(values) {
     const ok = await onSubmit(values, mediaUrls);
     if (ok) {
-      form.resetFields();
+      reset({});
       setMediaUrls([]);
     }
   }
 
   function handleCancel() {
-    form.resetFields();
+    reset({});
     setMediaUrls([]);
     onCancel();
   }
 
   return (
-    <Modal
-      title={title}
-      open={open}
-      onOk={() => form.submit()}
-      onCancel={handleCancel}
-      confirmLoading={isSubmitting}
-      destroyOnClose
-      width={960}
-      okText={okText}
-    >
-      <Form form={form} layout="vertical" onFinish={handleFinish}>
-        <Row gutter={16}>
-          <Col xs={24} md={16}>
-            <Card size="small" style={{ marginBottom: 12 }}>
-              <Form.Item
-                name="name"
-                label="Title"
-                rules={[{ required: true }]}
-                style={{ marginBottom: 12 }}
-              >
-                <Input
-                  placeholder={isEdit ? undefined : "Short sleeve t-shirt"}
-                  size="large"
-                />
-              </Form.Item>
-              <Form.Item
-                name="description"
-                label="Description"
-                style={{ marginBottom: 0 }}
-              >
-                <Input.TextArea
-                  rows={4}
-                  placeholder={isEdit ? undefined : "Describe your product..."}
-                />
-              </Form.Item>
-            </Card>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleCancel(); }}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
 
-            <Card size="small" title="Media" style={{ marginBottom: 12 }}>
-              <ImageUploader onUpload={handleUpload} urls={mediaUrls} />
-            </Card>
-
-            <Card size="small" title="Pricing" style={{ marginBottom: 12 }}>
-              <Row gutter={12}>
-                <Col span={12}>
-                  <Form.Item
-                    name="price"
-                    label="Price"
-                    rules={[{ required: true }]}
-                  >
-                    <InputNumber
-                      min={0}
-                      step={0.01}
-                      style={{ width: "100%" }}
-                      prefix="$"
-                      placeholder={isEdit ? undefined : "0.00"}
+        <form
+          id="product-form"
+          onSubmit={handleSubmit(handleFinish)}
+          className="flex flex-col gap-3"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-3">
+            <div className="flex flex-col gap-3">
+              <Card>
+                <CardContent className="pt-4 flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="name">Title</Label>
+                    <Input
+                      id="name"
+                      placeholder={isEdit ? undefined : "Short sleeve t-shirt"}
+                      {...register("name", { required: "Title is required" })}
+                      aria-invalid={!!errors.name}
                     />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="compareAtPrice" label="Compare-at price">
-                    <InputNumber
-                      min={0}
-                      step={0.01}
-                      style={{ width: "100%" }}
-                      prefix="$"
-                      placeholder={isEdit ? undefined : "0.00"}
+                    {errors.name && (
+                      <p className="text-xs text-destructive">{errors.name.message}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      rows={4}
+                      placeholder={isEdit ? undefined : "Describe your product..."}
+                      {...register("description")}
                     />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="costPrice" label="Cost per item">
-                    <InputNumber
-                      min={0}
-                      step={0.01}
-                      style={{ width: "100%" }}
-                      prefix="$"
-                      placeholder={isEdit ? undefined : "0.00"}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-sm font-medium">Media</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ImageUploader onUpload={handleUpload} urls={mediaUrls} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-sm font-medium">Pricing</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="price">Price</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                        <Input
+                          id="price"
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          placeholder={isEdit ? undefined : "0.00"}
+                          className="pl-7"
+                          {...register("price", {
+                            required: "Price is required",
+                            valueAsNumber: true,
+                          })}
+                          aria-invalid={!!errors.price}
+                        />
+                      </div>
+                      {errors.price && (
+                        <p className="text-xs text-destructive">{errors.price.message}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="compareAtPrice">Compare-at price</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                        <Input
+                          id="compareAtPrice"
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          placeholder={isEdit ? undefined : "0.00"}
+                          className="pl-7"
+                          {...register("compareAtPrice", { valueAsNumber: true })}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="costPrice">Cost per item</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                        <Input
+                          id="costPrice"
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          placeholder={isEdit ? undefined : "0.00"}
+                          className="pl-7"
+                          {...register("costPrice", { valueAsNumber: true })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-sm font-medium">Inventory</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="sku">
+                        {isEdit ? "SKU" : "SKU (Stock Keeping Unit)"}
+                      </Label>
+                      <Input
+                        id="sku"
+                        placeholder={isEdit ? undefined : "SKU-001"}
+                        {...register("sku", { required: "SKU is required" })}
+                        aria-invalid={!!errors.sku}
+                      />
+                      {errors.sku && (
+                        <p className="text-xs text-destructive">{errors.sku.message}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="stock">Quantity</Label>
+                      <Input
+                        id="stock"
+                        type="number"
+                        min={0}
+                        {...register("stock", {
+                          required: "Quantity is required",
+                          valueAsNumber: true,
+                        })}
+                        aria-invalid={!!errors.stock}
+                      />
+                      {errors.stock && (
+                        <p className="text-xs text-destructive">{errors.stock.message}</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-sm font-medium">Search engine listing</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="urlHandle">URL handle</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">products/</span>
+                      <Input
+                        id="urlHandle"
+                        placeholder={isEdit ? undefined : "short-sleeve-t-shirt"}
+                        className="pl-[76px]"
+                        {...register("urlHandle")}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="seoTitle">Page title</Label>
+                    <Input
+                      id="seoTitle"
+                      placeholder={isEdit ? undefined : "SEO title (70 characters max)"}
+                      maxLength={70}
+                      {...register("seoTitle")}
                     />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Card>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="seoDescription">Meta description</Label>
+                    <Textarea
+                      id="seoDescription"
+                      rows={3}
+                      placeholder={isEdit ? undefined : "SEO description (160 characters max)"}
+                      maxLength={160}
+                      {...register("seoDescription")}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Card size="small" title="Inventory" style={{ marginBottom: 12 }}>
-              <Row gutter={12}>
-                <Col span={12}>
-                  <Form.Item
-                    name="sku"
-                    label={isEdit ? "SKU" : "SKU (Stock Keeping Unit)"}
-                    rules={[{ required: true }]}
-                  >
-                    <Input placeholder={isEdit ? undefined : "SKU-001"} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="stock"
-                    label="Quantity"
-                    rules={[{ required: true }]}
-                  >
-                    <InputNumber min={0} style={{ width: "100%" }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Card>
+            <div className="flex flex-col gap-3">
+              <Card>
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-sm font-medium">Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Controller
+                    control={control}
+                    name="status"
+                    defaultValue={isEdit ? undefined : "draft"}
+                    rules={{ required: "Status is required" }}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUS_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </CardContent>
+              </Card>
 
-            <Card size="small" title="Search engine listing">
-              <Form.Item name="urlHandle" label="URL handle">
-                <Input
-                  prefix="products/"
-                  placeholder={isEdit ? undefined : "short-sleeve-t-shirt"}
-                />
-              </Form.Item>
-              <Form.Item name="seoTitle" label="Page title">
-                <Input
-                  placeholder={isEdit ? undefined : "SEO title (70 characters max)"}
-                  maxLength={70}
-                  showCount
-                />
-              </Form.Item>
-              <Form.Item
-                name="seoDescription"
-                label="Meta description"
-                style={{ marginBottom: 0 }}
-              >
-                <Input.TextArea
-                  rows={3}
-                  placeholder={
-                    isEdit ? undefined : "SEO description (160 characters max)"
-                  }
-                  maxLength={160}
-                  showCount
-                />
-              </Form.Item>
-            </Card>
-          </Col>
+              <Card>
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-sm font-medium">Product organization</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="vendor">Vendor</Label>
+                    <Input
+                      id="vendor"
+                      placeholder={isEdit ? undefined : "Acme"}
+                      {...register("vendor")}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="productType">Product type</Label>
+                    <Input
+                      id="productType"
+                      placeholder={isEdit ? undefined : "Apparel"}
+                      {...register("productType")}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="tags">Tags</Label>
+                    <Input
+                      id="tags"
+                      placeholder={
+                        isEdit
+                          ? "comma separated"
+                          : "fashion, summer (comma separated)"
+                      }
+                      {...register("tags")}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Col xs={24} md={8}>
-            <Card size="small" title="Status" style={{ marginBottom: 12 }}>
-              <Form.Item
-                name="status"
-                initialValue={isEdit ? undefined : "draft"}
-                rules={[{ required: true }]}
-                style={{ marginBottom: 0 }}
-              >
-                <Select options={STATUS_OPTIONS} />
-              </Form.Item>
-            </Card>
+              <Card>
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-sm font-medium">Sale schedule</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="priceStartAt">Start date</Label>
+                    <Input
+                      id="priceStartAt"
+                      type="datetime-local"
+                      {...register("priceStartAt")}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="priceEndAt">End date</Label>
+                    <Input
+                      id="priceEndAt"
+                      type="datetime-local"
+                      {...register("priceEndAt")}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </form>
 
-            <Card
-              size="small"
-              title="Product organization"
-              style={{ marginBottom: 12 }}
-            >
-              <Form.Item
-                name="vendor"
-                label="Vendor"
-                style={{ marginBottom: 8 }}
-              >
-                <Input placeholder={isEdit ? undefined : "Acme"} />
-              </Form.Item>
-              <Form.Item
-                name="productType"
-                label="Product type"
-                style={{ marginBottom: 8 }}
-              >
-                <Input placeholder={isEdit ? undefined : "Apparel"} />
-              </Form.Item>
-              <Form.Item name="tags" label="Tags" style={{ marginBottom: 0 }}>
-                <Input
-                  placeholder={
-                    isEdit
-                      ? "comma separated"
-                      : "fashion, summer (comma separated)"
-                  }
-                />
-              </Form.Item>
-            </Card>
-
-            <Card size="small" title="Sale schedule">
-              <Form.Item name="priceStartAt" label="Start date">
-                <DatePicker
-                  showTime
-                  style={{ width: "100%" }}
-                  placeholder={isEdit ? undefined : "No start date"}
-                />
-              </Form.Item>
-              <Form.Item
-                name="priceEndAt"
-                label="End date"
-                style={{ marginBottom: 0 }}
-              >
-                <DatePicker
-                  showTime
-                  style={{ width: "100%" }}
-                  placeholder={isEdit ? undefined : "No end date"}
-                />
-              </Form.Item>
-            </Card>
-          </Col>
-        </Row>
-      </Form>
-    </Modal>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" form="product-form" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="size-4 mr-2 animate-spin" />}
+            {okText}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

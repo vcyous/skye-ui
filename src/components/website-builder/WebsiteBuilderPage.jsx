@@ -1,5 +1,6 @@
-import { App, Modal, Spin, Typography } from "antd";
+import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useAuth } from "../../context/AuthContext";
 import {
   getCatalogOptions,
@@ -16,7 +17,6 @@ import { useTemplateBuilder } from "./useTemplateBuilder";
 import "./WebsiteBuilderPage.css";
 
 export default function WebsiteBuilderPage() {
-  const { message } = App.useApp();
   const { store, refreshSession } = useAuth();
   const {
     state,
@@ -42,6 +42,9 @@ export default function WebsiteBuilderPage() {
   const [changeCount, setChangeCount] = useState(0);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [showSwitchDialog, setShowSwitchDialog] = useState(false);
+  const [pendingSwitchId, setPendingSwitchId] = useState(null);
   const hasAutoSwitched = useRef(false);
   const prevIsSaving = useRef(false);
 
@@ -125,13 +128,13 @@ export default function WebsiteBuilderPage() {
       setSubdomain(result.subdomain);
       await refreshSession();
       if (wasPublished) {
-        message.success("Store unpublished.");
+        toast.success("Store unpublished");
       } else {
         setShowPublishModal(false);
         setShowCelebration(true);
       }
     } catch (err) {
-      message.error(err.message || "Failed to update publish status.");
+      toast.error(err.message || "Failed to update publish status");
     } finally {
       setIsPublishing(false);
     }
@@ -144,17 +147,13 @@ export default function WebsiteBuilderPage() {
   }
 
   function handleReset() {
-    Modal.confirm({
-      title: "Reset customizations?",
-      content:
-        "This will restore all text, colors, and images to their template defaults.",
-      okText: "Reset",
-      okButtonProps: { danger: true },
-      onOk: () => {
-        resetConfig();
-        setChangeCount(0);
-      },
-    });
+    setShowResetDialog(true);
+  }
+
+  function confirmReset() {
+    resetConfig();
+    setChangeCount(0);
+    setShowResetDialog(false);
   }
 
   function handleUseTemplate(id) {
@@ -162,35 +161,24 @@ export default function WebsiteBuilderPage() {
       setView("editor");
       return;
     }
-    Modal.confirm({
-      title: "Switch template?",
-      content:
-        "Switching resets your text and image customisations. Catalog settings are kept.",
-      okText: "Switch template",
-      cancelText: "Keep current",
-      okButtonProps: { danger: true },
-      onOk: () => {
-        selectTemplate(id);
-        setChangeCount(0);
-        setView("editor");
-      },
-    });
+    setPendingSwitchId(id);
+    setShowSwitchDialog(true);
+  }
+
+  function confirmSwitch() {
+    if (pendingSwitchId) {
+      selectTemplate(pendingSwitchId);
+      setChangeCount(0);
+      setView("editor");
+    }
+    setShowSwitchDialog(false);
+    setPendingSwitchId(null);
   }
 
   function handleSwitchTemplateFromPanel(id) {
     if (id === state.selectedTemplateId) return;
-    Modal.confirm({
-      title: "Switch template?",
-      content:
-        "Switching resets your text and image customisations. Catalog settings are kept.",
-      okText: "Switch template",
-      cancelText: "Keep current",
-      okButtonProps: { danger: true },
-      onOk: () => {
-        selectTemplate(id);
-        setChangeCount(0);
-      },
-    });
+    setPendingSwitchId(id);
+    setShowSwitchDialog(true);
   }
 
   function handleEditSection(key) {
@@ -224,29 +212,23 @@ export default function WebsiteBuilderPage() {
 
       {isPublished && subdomain && (
         <div className="builder-live-banner">
-          <Typography.Text style={{ fontSize: 13 }}>
+          <span style={{ fontSize: 13 }}>
             Your store is live at{" "}
-            <Typography.Link
+            <a
               href={`https://${subdomain}.skye.id`}
               target="_blank"
               rel="noopener noreferrer"
+              className="font-medium underline"
             >
               {subdomain}.skye.id
-            </Typography.Link>
-          </Typography.Text>
+            </a>
+          </span>
         </div>
       )}
 
       {isLoading ? (
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Spin tip="Loading your store…" />
+        <div className="flex flex-1 items-center justify-center">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
       ) : view === "gallery" ? (
         <BuilderGallery
@@ -283,6 +265,88 @@ export default function WebsiteBuilderPage() {
             onUpdateImage={handleUpdateImage}
             onUpdateCatalog={handleUpdateCatalog}
           />
+        </div>
+      )}
+
+      {showResetDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-6"
+          onClick={() => setShowResetDialog(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold mb-2">Reset customizations?</h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              This will restore all text, colors, and images to their template
+              defaults.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                className="builder-modal-btn builder-modal-btn--secondary"
+                style={{ flex: "initial", padding: "0 16px", height: 36 }}
+                onClick={() => setShowResetDialog(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="builder-modal-btn builder-modal-btn--primary"
+                style={{
+                  flex: "initial",
+                  padding: "0 16px",
+                  height: 36,
+                  background: "#dc2626",
+                }}
+                onClick={confirmReset}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSwitchDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-6"
+          onClick={() => setShowSwitchDialog(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold mb-2">Switch template?</h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              Switching resets your text and image customisations. Catalog
+              settings are kept.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                className="builder-modal-btn builder-modal-btn--secondary"
+                style={{ flex: "initial", padding: "0 16px", height: 36 }}
+                onClick={() => setShowSwitchDialog(false)}
+              >
+                Keep current
+              </button>
+              <button
+                type="button"
+                className="builder-modal-btn builder-modal-btn--primary"
+                style={{
+                  flex: "initial",
+                  padding: "0 16px",
+                  height: 36,
+                  background: "#dc2626",
+                }}
+                onClick={confirmSwitch}
+              >
+                Switch template
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

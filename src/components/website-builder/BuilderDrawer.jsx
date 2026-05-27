@@ -1,17 +1,21 @@
-import { UploadOutlined } from "@ant-design/icons";
-import {
-  App,
-  Button,
-  ColorPicker,
-  Drawer,
-  Image,
-  Input,
-  Select,
-  Spin,
-  Typography,
-  Upload,
-} from "antd";
+import { Loader2, Upload } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { uploadStoreAsset } from "../../services/api";
 
 function camelToLabel(key) {
@@ -22,52 +26,63 @@ function camelToLabel(key) {
 }
 
 function ImageUploadField({ assetKey, label, currentUrl, onUploaded }) {
-  const { message } = App.useApp();
   const [uploading, setUploading] = useState(false);
 
-  async function handleUpload(file) {
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
     setUploading(true);
     try {
       const url = await uploadStoreAsset(file, assetKey);
       onUploaded(url);
     } catch (err) {
-      message.error(err.message || "Upload failed");
+      toast.error(err.message || "Upload failed");
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
-    return false;
   }
 
   return (
     <div className="builder-field">
       <div className="builder-field__label">{label}</div>
       {currentUrl && (
-        <Image
+        <img
           src={currentUrl}
-          height={60}
+          alt={label}
           style={{
+            height: 60,
             objectFit: "contain",
             borderRadius: 4,
             marginBottom: 8,
             display: "block",
           }}
-          preview={false}
         />
       )}
-      <Upload
-        accept="image/jpeg,image/png,image/webp,image/svg+xml"
-        showUploadList={false}
-        beforeUpload={handleUpload}
-        disabled={uploading}
-      >
-        <Button
-          icon={uploading ? <Spin size="small" /> : <UploadOutlined />}
-          size="small"
+      <label>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/svg+xml"
+          className="sr-only"
           disabled={uploading}
+          onChange={handleFileChange}
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={uploading}
+          asChild={false}
+          onClick={(e) => e.currentTarget.previousSibling?.click()}
+          type="button"
         >
+          {uploading ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Upload className="size-3.5" />
+          )}
           {uploading ? "Uploading..." : currentUrl ? "Replace" : "Upload"}
         </Button>
-      </Upload>
+      </label>
     </div>
   );
 }
@@ -117,10 +132,12 @@ export default function BuilderDrawer({
     if (sectionKey === "hero") {
       const keys = getHeroKeys(config.texts);
       return (
-        <div className="builder-drawer-fields">
+        <div className="flex flex-col gap-3 p-4">
           {keys.map((key) => (
-            <div key={key} className="builder-field">
-              <div className="builder-field__label">{camelToLabel(key)}</div>
+            <div key={key} className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
+                {camelToLabel(key)}
+              </span>
               <Input
                 value={config.texts[key]}
                 onChange={(e) => onUpdateText(key, e.target.value)}
@@ -136,16 +153,18 @@ export default function BuilderDrawer({
       const keys = getContentKeys(config.texts);
       if (keys.length === 0) {
         return (
-          <Typography.Text type="secondary">
+          <div className="p-4 text-sm text-muted-foreground">
             No content fields for this template.
-          </Typography.Text>
+          </div>
         );
       }
       return (
-        <div className="builder-drawer-fields">
+        <div className="flex flex-col gap-3 p-4">
           {keys.map((key) => (
-            <div key={key} className="builder-field">
-              <div className="builder-field__label">{camelToLabel(key)}</div>
+            <div key={key} className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
+                {camelToLabel(key)}
+              </span>
               <Input
                 value={config.texts[key]}
                 onChange={(e) => onUpdateText(key, e.target.value)}
@@ -159,52 +178,69 @@ export default function BuilderDrawer({
 
     if (sectionKey === "products") {
       return (
-        <div className="builder-drawer-fields">
-          <div className="builder-field">
-            <div className="builder-field__label">Featured Collection</div>
+        <div className="flex flex-col gap-4 p-4">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">
+              Featured Collection
+            </span>
             <Select
-              style={{ width: "100%" }}
               value={config.catalog.collectionId ?? "__all__"}
-              onChange={(val) =>
+              onValueChange={(val) =>
                 onUpdateCatalog({
                   collectionId: val === "__all__" ? null : val,
                 })
               }
-              options={[
-                { value: "__all__", label: "All products (latest)" },
-                ...catalogOptions.map((opt) => ({
-                  value: opt.value,
-                  label: opt.label,
-                })),
-              ]}
-              placeholder="Select a collection..."
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a collection..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All products (latest)</SelectItem>
+                {catalogOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="builder-field">
-            <div className="builder-field__label">Products to show</div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">
+              Products to show
+            </span>
             <Select
-              style={{ width: "100%" }}
-              value={config.catalog.displayCount}
-              onChange={(val) => onUpdateCatalog({ displayCount: val })}
-              options={[
-                { value: 3, label: "3 products" },
-                { value: 6, label: "6 products" },
-                { value: 9, label: "9 products" },
-              ]}
-            />
+              value={String(config.catalog.displayCount)}
+              onValueChange={(val) =>
+                onUpdateCatalog({ displayCount: Number(val) })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3 products</SelectItem>
+                <SelectItem value="6">6 products</SelectItem>
+                <SelectItem value="9">9 products</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="builder-field">
-            <div className="builder-field__label">Grid layout</div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">
+              Grid layout
+            </span>
             <Select
-              style={{ width: "100%" }}
               value={config.catalog.layout}
-              onChange={(val) => onUpdateCatalog({ layout: val })}
-              options={[
-                { value: "grid-2", label: "2 columns" },
-                { value: "grid-3", label: "3 columns" },
-                { value: "grid-4", label: "4 columns" },
-              ]}
-            />
+              onValueChange={(val) => onUpdateCatalog({ layout: val })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grid-2">2 columns</SelectItem>
+                <SelectItem value="grid-3">3 columns</SelectItem>
+                <SelectItem value="grid-4">4 columns</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       );
@@ -212,22 +248,24 @@ export default function BuilderDrawer({
 
     if (sectionKey === "colors") {
       return (
-        <div className="builder-drawer-fields">
+        <div className="flex flex-col gap-2 p-4">
           {Object.entries(config.colors).map(([key, value]) => (
-            <div key={key} className="builder-color-field">
-              <div className="builder-color-field__left">
-                <ColorPicker
-                  size="small"
-                  value={value}
-                  onChange={(_, hex) => onUpdateColor(key, hex)}
-                  showText={false}
-                />
-
-                <span className="builder-color-field__label">
-                  {camelToLabel(key)}
-                </span>
-              </div>
-              <code className="builder-color-field__hex">{value}</code>
+            <div
+              key={key}
+              className="flex items-center gap-2.5 rounded-md border bg-card px-2.5 py-2"
+            >
+              <input
+                type="color"
+                className="h-7 w-7 cursor-pointer rounded border-0 p-0"
+                value={value}
+                onChange={(e) => onUpdateColor(key, e.target.value)}
+              />
+              <span className="flex-1 text-xs text-foreground">
+                {camelToLabel(key)}
+              </span>
+              <code className="font-mono text-[10px] text-muted-foreground">
+                {value}
+              </code>
             </div>
           ))}
         </div>
@@ -236,14 +274,13 @@ export default function BuilderDrawer({
 
     if (sectionKey === "branding") {
       return (
-        <div className="builder-drawer-fields">
+        <div className="flex flex-col gap-4 p-4">
           <ImageUploadField
             assetKey="logo"
             label="Store Logo"
             currentUrl={config.images.logoUrl || ""}
             onUploaded={(url) => onUpdateImage("logoUrl", url)}
           />
-
           <ImageUploadField
             assetKey="hero"
             label="Hero Banner Image"
@@ -258,15 +295,13 @@ export default function BuilderDrawer({
   }
 
   return (
-    <Drawer
-      title={title}
-      placement="right"
-      width={400}
-      open={open}
-      onClose={onClose}
-      styles={{ body: { padding: 20 } }}
-    >
-      {renderContent()}
-    </Drawer>
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent side="right" className="w-[400px] p-0 overflow-y-auto">
+        <SheetHeader className="px-5 py-4 border-b">
+          <SheetTitle>{title}</SheetTitle>
+        </SheetHeader>
+        {renderContent()}
+      </SheetContent>
+    </Sheet>
   );
 }

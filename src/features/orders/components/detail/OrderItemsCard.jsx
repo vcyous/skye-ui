@@ -1,79 +1,16 @@
-import { CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
-import { Card, Divider, Space, Table, Tag, Typography } from "antd";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { CheckCircle2, Clock } from "lucide-react";
 import { formatCurrency } from "../../../../shared/format";
-
-function buildColumns({ fulfillmentItems }) {
-  return [
-    {
-      title: "Product",
-      key: "product",
-      render: (_, record) => (
-        <Space direction="vertical" size={0}>
-          <Typography.Text strong style={{ fontSize: 13 }}>
-            {record.productTitle}
-          </Typography.Text>
-          {record.variantTitle && (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {record.variantTitle}
-            </Typography.Text>
-          )}
-          {record.sku && (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              SKU: {record.sku}
-            </Typography.Text>
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: "Qty",
-      dataIndex: "quantity",
-      key: "quantity",
-      width: 60,
-      render: (value) => (
-        <Typography.Text style={{ fontSize: 13 }}>{value}</Typography.Text>
-      ),
-    },
-    {
-      title: "Price",
-      key: "price",
-      width: 100,
-      render: (_, record) => (
-        <Typography.Text style={{ fontSize: 13 }}>
-          {formatCurrency(record.unitPrice)}
-        </Typography.Text>
-      ),
-    },
-    {
-      title: "Total",
-      key: "total",
-      width: 110,
-      render: (_, record) => (
-        <Typography.Text strong style={{ fontSize: 13 }}>
-          {formatCurrency(record.lineTotal)}
-        </Typography.Text>
-      ),
-    },
-    {
-      title: "Fulfillment",
-      key: "fulfillment",
-      width: 120,
-      render: (_, record) => {
-        const fi = fulfillmentItems.find((item) => item.id === record.id);
-        if (!fi) return <Tag>—</Tag>;
-        return fi.remainingQty === 0 ? (
-          <Tag icon={<CheckCircleOutlined />} color="success">
-            Fulfilled
-          </Tag>
-        ) : (
-          <Tag icon={<ClockCircleOutlined />} color="warning">
-            {fi.allocatedQty}/{fi.orderedQty} shipped
-          </Tag>
-        );
-      },
-    },
-  ];
-}
 
 export default function OrderItemsCard({ order, fulfillmentItems, hasUnshipped }) {
   const currency = order?.displayCurrencyCode || order?.currencyCode || "USD";
@@ -97,55 +34,101 @@ export default function OrderItemsCard({ order, fulfillmentItems, hasUnshipped }
   ];
 
   return (
-    <Card
-      title="Items"
-      bodyStyle={{ padding: 0 }}
-      style={{ marginBottom: 12 }}
-      extra={
-        !hasUnshipped && (
-          <Tag color="success" icon={<CheckCircleOutlined />}>
-            Fully shipped
-          </Tag>
-        )
-      }
-    >
-      <Table
-        rowKey="id"
-        columns={buildColumns({ fulfillmentItems })}
-        dataSource={order?.items ?? []}
-        pagination={false}
-        size="middle"
-      />
-
-      <div style={{ padding: "12px 16px", borderTop: "1px solid var(--line)" }}>
-        {totalsRows.map((row) => (
-          <div
-            key={row.label}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "4px 0",
-            }}
-          >
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              {row.label}
-            </Typography.Text>
-            <Typography.Text style={{ fontSize: 13 }}>
-              {formatCurrency(Math.abs(row.value), { currency })}
-            </Typography.Text>
-          </div>
-        ))}
-        <Divider style={{ margin: "8px 0" }} />
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <Typography.Text strong>Total</Typography.Text>
-          <Typography.Text strong style={{ fontSize: 15 }}>
-            {formatCurrency(
-              order?.displayTotalAmount ?? order?.totalAmount ?? 0,
-              { currency },
-            )}
-          </Typography.Text>
+    <Card className="mb-3">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Items</CardTitle>
+          {!hasUnshipped && (
+            <Badge variant="default" className="gap-1">
+              <CheckCircle2 className="size-3" />
+              Fully shipped
+            </Badge>
+          )}
         </div>
-      </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Product</TableHead>
+              <TableHead className="w-14">Qty</TableHead>
+              <TableHead className="w-24">Price</TableHead>
+              <TableHead className="w-28">Total</TableHead>
+              <TableHead className="w-32">Fulfillment</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {(order?.items ?? []).map((record) => {
+              const fi = fulfillmentItems.find((item) => item.id === record.id);
+              return (
+                <TableRow key={record.id}>
+                  <TableCell>
+                    <div className="flex flex-col gap-0">
+                      <span className="text-sm font-medium">
+                        {record.productTitle}
+                      </span>
+                      {record.variantTitle && (
+                        <span className="text-xs text-muted-foreground">
+                          {record.variantTitle}
+                        </span>
+                      )}
+                      {record.sku && (
+                        <span className="text-xs text-muted-foreground">
+                          SKU: {record.sku}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm">{record.quantity}</TableCell>
+                  <TableCell className="text-sm">
+                    {formatCurrency(record.unitPrice)}
+                  </TableCell>
+                  <TableCell className="text-sm font-medium">
+                    {formatCurrency(record.lineTotal)}
+                  </TableCell>
+                  <TableCell>
+                    {!fi ? (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    ) : fi.remainingQty === 0 ? (
+                      <Badge variant="default" className="gap-1 text-xs">
+                        <CheckCircle2 className="size-3" />
+                        Fulfilled
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="gap-1 text-xs">
+                        <Clock className="size-3" />
+                        {fi.allocatedQty}/{fi.orderedQty} shipped
+                      </Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+
+        <div className="px-4 py-3 border-t">
+          {totalsRows.map((row) => (
+            <div
+              key={row.label}
+              className="flex justify-between py-1 text-sm"
+            >
+              <span className="text-muted-foreground">{row.label}</span>
+              <span>{formatCurrency(Math.abs(row.value), { currency })}</span>
+            </div>
+          ))}
+          <Separator className="my-2" />
+          <div className="flex justify-between text-sm font-semibold">
+            <span>Total</span>
+            <span className="text-base">
+              {formatCurrency(
+                order?.displayTotalAmount ?? order?.totalAmount ?? 0,
+                { currency },
+              )}
+            </span>
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
 }

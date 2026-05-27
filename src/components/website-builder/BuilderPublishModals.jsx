@@ -1,9 +1,4 @@
-import {
-  CheckOutlined,
-  CloseOutlined,
-  LockOutlined,
-  RocketOutlined,
-} from "@ant-design/icons";
+import { Check, Lock, Rocket, X } from "lucide-react";
 
 function previewSlug(storeName, subdomain) {
   if (subdomain) return subdomain;
@@ -38,11 +33,11 @@ export function PublishModal({
           onClick={onClose}
           disabled={isPublishing}
         >
-          <CloseOutlined />
+          <X className="size-3" />
         </button>
 
         <div className="builder-modal-chip">
-          <RocketOutlined />
+          <Rocket className="size-6" />
         </div>
 
         <h2 className="builder-modal-title">Ready to go live?</h2>
@@ -52,9 +47,8 @@ export function PublishModal({
         </p>
 
         <div className="builder-modal-url">
-          <LockOutlined style={{ fontSize: 11, color: "var(--sage)" }} />
-
-          <span style={{ color: "var(--ink-4)" }}>https://</span>
+          <Lock className="size-3 text-muted-foreground" />
+          <span className="text-muted-foreground">https://</span>
           <strong>{slug}.skye.id</strong>
         </div>
 
@@ -89,11 +83,11 @@ export function CelebrationModal({ open, storeName, subdomain, onClose }) {
     <div className="builder-modal-center" onClick={onClose}>
       <div className="builder-modal-card" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="builder-modal-close" onClick={onClose}>
-          <CloseOutlined />
+          <X className="size-3" />
         </button>
 
         <div className="builder-modal-chip builder-modal-chip--sage">
-          <CheckOutlined />
+          <Check className="size-6" />
         </div>
 
         <h2 className="builder-modal-title">
@@ -105,9 +99,8 @@ export function CelebrationModal({ open, storeName, subdomain, onClose }) {
         </p>
 
         <div className="builder-modal-url">
-          <LockOutlined style={{ fontSize: 11, color: "var(--sage)" }} />
-
-          <span style={{ color: "var(--ink-4)" }}>https://</span>
+          <Lock className="size-3 text-muted-foreground" />
+          <span className="text-muted-foreground">https://</span>
           <strong>{slug}.skye.id</strong>
         </div>
 

@@ -1,4 +1,3 @@
-import { Card, Col, Row, Typography } from "antd";
 import {
   Bar,
   BarChart,
@@ -11,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "../shared/format";
 
 export default function DashboardCharts({
@@ -20,17 +20,16 @@ export default function DashboardCharts({
   shippedShare,
 }) {
   return (
-    <Row gutter={[12, 12]}>
-      <Col xs={24} lg={16}>
-        <Card
-          title="Revenue Trend"
-          extra={
-            <Typography.Text type="secondary">
-              {formatCurrency(todaysSales)} today
-            </Typography.Text>
-          }
-        >
-          <div style={{ height: 220 }}>
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <Card className="lg:col-span-2">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Revenue Trend</CardTitle>
+          <span className="text-sm text-muted-foreground">
+            {formatCurrency(todaysSales)} today
+          </span>
+        </CardHeader>
+        <CardContent>
+          <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={trendSeries}
@@ -44,7 +43,6 @@ export default function DashboardCharts({
                   axisLine={false}
                   fontSize={12}
                 />
-
                 <YAxis
                   stroke="#637381"
                   tickLine={false}
@@ -52,7 +50,6 @@ export default function DashboardCharts({
                   fontSize={12}
                   tickFormatter={(value) => `$${Math.round(value)}`}
                 />
-
                 <Tooltip
                   formatter={(value) => formatCurrency(value)}
                   contentStyle={{
@@ -61,23 +58,26 @@ export default function DashboardCharts({
                     background: "#ffffff",
                   }}
                 />
-
                 <Line
                   type="monotone"
                   dataKey="sales"
-                  stroke="#006c9c"
+                  stroke="#0f172a"
                   strokeWidth={3}
-                  dot={{ r: 3, fill: "#006c9c" }}
+                  dot={{ r: 3, fill: "#0f172a" }}
                   activeDot={{ r: 5 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </Card>
-      </Col>
-      <Col xs={24} lg={8}>
-        <Card title="Order Pipeline">
-          <div style={{ height: 180 }}>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Order Pipeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={statusSeries}
@@ -89,7 +89,6 @@ export default function DashboardCharts({
                   strokeDasharray="3 3"
                   horizontal={false}
                 />
-
                 <XAxis
                   type="number"
                   stroke="#637381"
@@ -97,7 +96,6 @@ export default function DashboardCharts({
                   axisLine={false}
                   fontSize={12}
                 />
-
                 <YAxis
                   type="category"
                   dataKey="name"
@@ -107,7 +105,6 @@ export default function DashboardCharts({
                   fontSize={12}
                   width={100}
                 />
-
                 <Tooltip
                   formatter={(value) => [value, "Orders"]}
                   contentStyle={{
@@ -116,7 +113,6 @@ export default function DashboardCharts({
                     background: "#ffffff",
                   }}
                 />
-
                 <Bar dataKey="value" radius={[8, 8, 8, 8]}>
                   {statusSeries.map((entry) => (
                     <Cell key={entry.name} fill={entry.fill} />
@@ -125,11 +121,11 @@ export default function DashboardCharts({
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <Typography.Paragraph style={{ marginTop: 12, marginBottom: 0 }}>
+          <p className="mt-3">
             Shipped share: <strong>{shippedShare}%</strong>
-          </Typography.Paragraph>
-        </Card>
-      </Col>
-    </Row>
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -1,11 +1,11 @@
-import { App as AntApp, ConfigProvider } from "antd";
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
 import PublicOnlyRoute from "./components/auth/PublicOnlyRoute.jsx";
 import PageFallback from "./shared/ui/PageFallback";
 import AppLayout from "./layouts/admin";
-import skyeTheme from "./lib/theme";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const LoginPage = lazy(() => import("./pages/auth/LoginPage.jsx"));
 const RegisterPage = lazy(() => import("./pages/auth/RegisterPage.jsx"));
@@ -31,65 +31,60 @@ const MarketingPage = lazy(() => import("./pages/marketing/MarketingPage.jsx"));
 
 export default function App() {
   return (
-    <ConfigProvider theme={skyeTheme}>
-      <AntApp>
-        <Suspense fallback={<PageFallback />}>
-          <Routes>
-            <Route path="/" element={<MarketingPage />} />
-            <Route path="/landing" element={<Navigate to="/" replace />} />
-            <Route path="/preview" element={<StorefrontPreviewPage />} />
-            <Route
-              path="/storefront/product/:handle"
-              element={<StorefrontProductPage />}
-            />
-            <Route path="/storefront/cart" element={<StorefrontCartPage />} />
-            <Route
-              path="/storefront/checkout"
-              element={<StorefrontCheckoutPage />}
-            />
-            <Route
-              path="/storefront/order-confirmed/:orderId"
-              element={<StorefrontOrderConfirmationPage />}
-            />
-
-            <Route
-              path="/login"
-              element={
-                <PublicOnlyRoute>
-                  <LoginPage />
-                </PublicOnlyRoute>
-              }
-            />
-
-            <Route
-              path="/register"
-              element={
-                <PublicOnlyRoute>
-                  <RegisterPage />
-                </PublicOnlyRoute>
-              }
-            />
-
-            <Route
-              path="/onboarding"
-              element={
-                <ProtectedRoute>
-                  <OnboardingPage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/dashboard/*"
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </Suspense>
-      </AntApp>
-    </ConfigProvider>
+    <TooltipProvider>
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          <Route path="/" element={<MarketingPage />} />
+          <Route path="/landing" element={<Navigate to="/" replace />} />
+          <Route path="/preview" element={<StorefrontPreviewPage />} />
+          <Route
+            path="/storefront/product/:handle"
+            element={<StorefrontProductPage />}
+          />
+          <Route path="/storefront/cart" element={<StorefrontCartPage />} />
+          <Route
+            path="/storefront/checkout"
+            element={<StorefrontCheckoutPage />}
+          />
+          <Route
+            path="/storefront/order-confirmed/:orderId"
+            element={<StorefrontOrderConfirmationPage />}
+          />
+          <Route
+            path="/login"
+            element={
+              <PublicOnlyRoute>
+                <LoginPage />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicOnlyRoute>
+                <RegisterPage />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <OnboardingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/*"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Suspense>
+      <Toaster />
+    </TooltipProvider>
   );
 }

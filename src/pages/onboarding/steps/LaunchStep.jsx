@@ -1,40 +1,50 @@
-import { Button, Descriptions, Space, Typography } from "antd";
+import { Button } from "@/components/ui/button";
 
 export default function LaunchStep({ values, onLaunch, onBack, isLaunching }) {
+  const rows = [
+    { label: "Store name", value: values.storeName },
+    { label: "Template", value: values.templateSlug },
+    { label: "Currency", value: values.currency },
+    { label: "Timezone", value: values.timezone },
+  ];
+
   return (
     <>
-      <Typography.Title level={3}>You&apos;re ready to launch</Typography.Title>
-      <Typography.Paragraph type="secondary">
+      <h3 className="text-xl font-semibold">You&apos;re ready to launch</h3>
+      <p className="mt-1 text-sm text-muted-foreground">
         Review your store details and hit Launch when you&apos;re ready.
-      </Typography.Paragraph>
-      <Descriptions bordered column={1} style={{ marginBottom: 24 }}>
-        <Descriptions.Item label="Store name">
-          {values.storeName}
-        </Descriptions.Item>
-        <Descriptions.Item label="Template">
-          {values.templateSlug}
-        </Descriptions.Item>
-        <Descriptions.Item label="Currency">
-          {values.currency}
-        </Descriptions.Item>
-        <Descriptions.Item label="Timezone">
-          {values.timezone}
-        </Descriptions.Item>
-      </Descriptions>
-      <Space style={{ width: "100%", justifyContent: "space-between" }}>
-        <Button size="large" onClick={onBack} disabled={isLaunching}>
+      </p>
+      <div className="my-6 overflow-hidden rounded-lg border">
+        {rows.map((row, i) => (
+          <div
+            key={row.label}
+            className={`grid grid-cols-[140px_1fr] ${i > 0 ? "border-t" : ""}`}
+          >
+            <div className="bg-muted px-4 py-2 text-sm font-medium">
+              {row.label}
+            </div>
+            <div className="px-4 py-2 text-sm">{row.value}</div>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={onBack}
+          disabled={isLaunching}
+        >
           Back
         </Button>
         <Button
-          type="primary"
-          size="large"
-          loading={isLaunching}
+          size="lg"
+          className="flex-1"
           onClick={onLaunch}
-          block
+          disabled={isLaunching}
         >
-          Launch My Store
+          {isLaunching ? "Launching..." : "Launch My Store"}
         </Button>
-      </Space>
+      </div>
     </>
   );
 }

@@ -1,5 +1,8 @@
-import { Alert, Button, Card, Spin, Typography } from "antd";
-import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import CreateShipmentModal from "./components/CreateShipmentModal";
 import MethodFormModal from "./components/MethodFormModal";
 import MethodsSection from "./components/MethodsSection";
@@ -38,6 +41,20 @@ export default function ShippingPage() {
   const [editingZone, setEditingZone] = useState(null);
   const [isCreateShipmentOpen, setIsCreateShipmentOpen] = useState(false);
 
+  useEffect(() => {
+    if (!notice.message) return;
+    const fn = toast[notice.type] || toast.info;
+    fn(notice.message);
+  }, [notice]);
+
+  useEffect(() => {
+    if (!loadError) return;
+    toast.error("Failed to load shipping data", {
+      description: loadError,
+      action: { label: "Retry", onClick: loadData },
+    });
+  }, [loadError]);
+
   async function handleCreateMethod(values) {
     const ok = await createMethod(values);
     if (ok) setIsCreateMethodOpen(false);
@@ -73,34 +90,21 @@ export default function ShippingPage() {
   if (isLoading) {
     return (
       <Card>
-        <Spin />
+        <CardContent className="flex items-center justify-center p-8">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <section style={{ display: "grid", gap: 16 }}>
+    <section className="grid gap-4">
       <header>
-        <Typography.Title level={3} className="page-title">
-          Shipping
-        </Typography.Title>
-        <Typography.Text className="page-subtitle">
+        <h3 className="text-xl font-semibold">Shipping</h3>
+        <p className="text-muted-foreground text-sm">
           Manage shipping methods and create shipments for orders.
-        </Typography.Text>
+        </p>
       </header>
-
-      {notice.message ? (
-        <Alert type={notice.type || "info"} message={notice.message} showIcon />
-      ) : null}
-
-      {loadError ? (
-        <Alert
-          type="error"
-          showIcon
-          message={loadError}
-          action={<Button onClick={loadData}>Retry</Button>}
-        />
-      ) : null}
 
       <ShippingMetrics metrics={metrics} />
 

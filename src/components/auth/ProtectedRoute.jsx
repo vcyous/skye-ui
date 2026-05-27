@@ -1,5 +1,6 @@
-import { Button, Flex, Result, Spin, Typography } from "antd";
+import { Loader2, ShieldX } from "lucide-react";
 import { Navigate, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "../../context/AuthContext";
 
 export default function ProtectedRoute({
@@ -10,23 +11,15 @@ export default function ProtectedRoute({
   const { isAuthenticated, isLoading, hasRole, currentRole, store } = useAuth();
   const location = useLocation();
 
-  // Loading state
   if (isLoading) {
     return (
-      <Flex
-        vertical
-        align="center"
-        justify="center"
-        style={{ minHeight: "100vh" }}
-        gap={12}
-      >
-        <Spin />
-        <Typography.Text type="secondary">Checking session...</Typography.Text>
-      </Flex>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Checking session...</p>
+      </div>
     );
   }
 
-  // Not authenticated - redirect to login
   if (!isAuthenticated) {
     return (
       <Navigate
@@ -37,12 +30,10 @@ export default function ProtectedRoute({
     );
   }
 
-  // No store selected - redirect to store selector
   if (!store) {
     return <Navigate to="/select-store" replace />;
   }
 
-  // Onboarding guard — redirect to /onboarding if not yet completed
   if (
     store &&
     !store.onboardingCompletedAt &&
@@ -51,35 +42,24 @@ export default function ProtectedRoute({
     return <Navigate to="/onboarding" replace />;
   }
 
-  // Role-based access control
   if (requiredRoles && !hasRole(requiredRoles)) {
-    // Return custom fallback or default access denied screen
-    if (fallback) {
-      return fallback;
-    }
+    if (fallback) return fallback;
 
     return (
-      <Flex
-        vertical
-        align="center"
-        justify="center"
-        style={{ minHeight: "100vh" }}
-      >
-        <Result
-          status="403"
-          title="Access Denied"
-          subTitle={`This page requires ${
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="flex size-16 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+          <ShieldX className="size-8" />
+        </div>
+        <h2 className="text-xl font-semibold">Access Denied</h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          {`This page requires ${
             Array.isArray(requiredRoles)
               ? requiredRoles.join(" or ")
               : requiredRoles
           } role. You are currently: ${currentRole}`}
-          extra={
-            <Button type="primary" onClick={() => window.history.back()}>
-              Go Back
-            </Button>
-          }
-        />
-      </Flex>
+        </p>
+        <Button onClick={() => window.history.back()}>Go Back</Button>
+      </div>
     );
   }
 

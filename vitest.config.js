@@ -16,5 +16,23 @@ export default defineConfig({
     include: ["__tests__/**/*.{test,spec}.{js,jsx}"],
     exclude: ["__tests__/_archive/**", "node_modules/**"],
     css: false,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html", "lcov"],
+      reportsDirectory: "./coverage",
+      include: [
+        "src/services/**",
+        "src/shared/**",
+        "src/features/**/hooks/**",
+        "src/features/**/*Mapper.js",
+        "src/features/**/constants.js",
+      ],
+      exclude: [
+        "src/services/supabaseClient.js",
+        "src/services/orders/create.js",
+        "src/services/orders/detail.js",
+        "node_modules/**",
+      ],
+    },
   },
 });

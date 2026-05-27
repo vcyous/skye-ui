@@ -1,10 +1,5 @@
-import {
-  DesktopOutlined,
-  EyeOutlined,
-  MobileOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
-import { Button } from "antd";
+import { Eye, Monitor, Settings, Smartphone } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function BuilderTopbar({
   view,
@@ -57,14 +52,14 @@ export default function BuilderTopbar({
             className={viewMode === "desktop" ? "active" : ""}
             onClick={() => onViewModeChange("desktop")}
           >
-            <DesktopOutlined /> Desktop
+            <Monitor className="size-3.5" /> Desktop
           </button>
           <button
             type="button"
             className={viewMode === "mobile" ? "active" : ""}
             onClick={() => onViewModeChange("mobile")}
           >
-            <MobileOutlined /> Mobile
+            <Smartphone className="size-3.5" /> Mobile
           </button>
         </div>
       )}
@@ -95,12 +90,13 @@ export default function BuilderTopbar({
               onClick={onOpenTheme}
               title="Look & feel"
             >
-              <SettingOutlined />
+              <Settings className="size-3.5" />
             </button>
-            <Button size="small" icon={<EyeOutlined />} onClick={onPreview}>
+            <Button size="sm" variant="outline" onClick={onPreview}>
+              <Eye className="size-3.5" />
               Preview
             </Button>
-            <Button size="small" onClick={onReset}>
+            <Button size="sm" variant="outline" onClick={onReset}>
               Reset
             </Button>
           </>

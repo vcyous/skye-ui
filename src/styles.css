@@ -1,350 +1,84 @@
-/* ── Skye Design System tokens ──────────────────────────────────────────── */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
 :root {
-  /* Surfaces */
-  --paper:           #FBF5D6;
-  --paper-deep:      #F2E59E;
-  --white:           #FFFFFF;
-
-  /* Ink */
-  --ink:             #1A1812;
-  --ink-2:           #4A453B;
-  --ink-3:           #8A8478;
-  --ink-4:           #C5BFB1;
-
-  /* Lines */
-  --line:            rgba(26, 24, 18, 0.08);
-  --line-strong:     rgba(26, 24, 18, 0.16);
-
-  /* Brand — Horizon (yellow primary) */
-  --horizon:         #F5D24A;
-  --horizon-hover:   #E8C228;
-  --horizon-press:   #D5AE16;
-  --horizon-soft:    #FCF4C9;
-  --horizon-ink:     #5C4B0A;
-
-  /* Brand — Sunset (amber accent) */
-  --sunset:          #E8A823;
-  --sunset-soft:     #FCF0D2;
-  --sunset-ink:      #5C4108;
-
-  /* Semantic */
-  --sage:            #3F7053;
-  --sage-soft:       #DDEADF;
-  --sage-ink:        #1F3D2A;
-  --ember:           #C8442A;
-  --ember-soft:      #F8DDD3;
-  --ember-ink:       #6E1E0F;
-  --amber:           #C28E1A;
-  --amber-soft:      #F5E9C8;
-  --amber-ink:       #5C4108;
-
-  /* Radii */
-  --r-xs:   4px;
-  --r-sm:   8px;
-  --r-md:   12px;
-  --r-lg:   16px;
-  --r-xl:   20px;
-  --r-full: 999px;
-
-  /* Warm shadows */
-  --shadow-sm:
-    0 1px 0 rgba(26, 24, 18, 0.04),
-    0 1px 2px rgba(26, 24, 18, 0.06);
-  --shadow-md:
-    0 1px 0 rgba(26, 24, 18, 0.04),
-    0 4px 12px rgba(26, 24, 18, 0.06),
-    0 2px 4px rgba(26, 24, 18, 0.04);
-  --shadow-lg:
-    0 1px 0 rgba(26, 24, 18, 0.04),
-    0 16px 32px rgba(26, 24, 18, 0.08),
-    0 4px 8px rgba(26, 24, 18, 0.04);
-  --shadow-xl:
-    0 1px 0 rgba(26, 24, 18, 0.04),
-    0 28px 56px rgba(26, 24, 18, 0.10),
-    0 8px 16px rgba(26, 24, 18, 0.06);
-  --paper-deep: #F2E59E;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --radius: 0.625rem;
 }
 
-/* ── Base ────────────────────────────────────────────────────────────────── */
-* {
-  box-sizing: border-box;
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  color: var(--ink);
-  font-family: 'Sora', system-ui, sans-serif;
-  background-color: var(--paper);
-  background-image: radial-gradient(
-    circle at 0% 0%,
-    rgba(245, 210, 74, 0.08) 0,
-    rgba(251, 245, 214, 0) 32%
-  );
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-}
-
-h1,
-h2,
-h3 {
-  margin: 0;
-  font-family: 'Sora', system-ui, sans-serif;
-}
-
-@keyframes authFloat {
-  from {
-    transform: translateY(0px) scale(1);
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-  to {
-    transform: translateY(-10px) scale(1.02);
-  }
-}
-
-/* ── App shell ───────────────────────────────────────────────────────────── */
-.app-shell {
-  min-height: 100vh;
-  background: transparent;
-}
-
-.app-sider {
-  border-right: 1px solid var(--line-strong);
-  background: rgba(255, 255, 255, 0.92) !important;
-  backdrop-filter: blur(12px);
-  padding: 22px 14px;
-  position: sticky !important;
-  top: 0;
-  height: 100vh;
-  overflow: auto;
-  width: 300px !important;
-  min-width: 300px !important;
-  max-width: 300px !important;
-  flex: 0 0 300px !important;
-}
-
-.app-logo {
-  margin-bottom: 18px;
-}
-
-.app-logo-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r-sm);
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, var(--sunset), var(--amber));
-  color: var(--ink);
-  font-size: 0.82rem;
-  font-weight: 800;
-  box-shadow: 0 4px 12px rgba(232, 168, 35, 0.28);
-}
-
-.app-logo-title {
-  margin: 0 !important;
-}
-
-.app-logo-subtitle {
-  color: var(--ink-3);
-  font-size: 0.82rem;
-}
-
-/* ── Navigation ──────────────────────────────────────────────────────────── */
-.app-menu {
-  border-inline-end: 0 !important;
-  background: transparent !important;
-}
-
-.app-menu .ant-menu-item {
-  margin-inline: 4px;
-  border-radius: var(--r-sm);
-  height: 42px;
-  line-height: 42px;
-}
-
-.app-menu .ant-menu-submenu {
-  margin-inline: 4px;
-  border-radius: var(--r-sm);
-}
-
-.app-menu .ant-menu-submenu-title {
-  height: 42px !important;
-  line-height: 42px !important;
-  border-radius: var(--r-sm);
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.app-menu .ant-menu-submenu-open > .ant-menu-submenu-title {
-  background: var(--horizon-soft);
-}
-
-.app-menu .ant-menu-sub {
-  background: transparent !important;
-}
-
-.app-menu .ant-menu-sub .ant-menu-item {
-  margin-left: 8px;
-  font-size: 0.92rem;
-}
-
-.app-menu .ant-menu-item-selected {
-  background: var(--horizon-soft) !important;
-}
-
-.app-sider-footer {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-}
-
-.app-user-email {
-  display: block;
-  margin-bottom: 12px;
-  word-break: break-all;
-}
-
-/* ── Content area ────────────────────────────────────────────────────────── */
-.app-content {
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-}
-
-.app-topbar {
-  margin-bottom: 16px;
-  flex-shrink: 0;
-  border-radius: var(--r-md) !important;
-  border: 1px solid var(--line-strong);
-  background: var(--white);
-  box-shadow: var(--shadow-sm);
-}
-
-.app-topbar .ant-card-body {
-  padding: 10px 16px !important;
-}
-
-.app-kicker {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--horizon-ink);
-  font-weight: 700;
-  font-size: 0.78rem;
-}
-
-.app-topbar-title {
-  margin: 3px 0 2px !important;
-}
-
-.app-topbar-subtitle {
-  color: var(--ink-3);
-  font-size: 0.85rem;
-}
-
-.app-user-avatar {
-  background: linear-gradient(135deg, var(--ink-2), var(--ink)) !important;
-}
-
-.app-content-scroll {
-  width: 100%;
-  max-width: 1440px;
-  margin: 0 auto;
-  display: grid;
-  gap: 16px;
-  flex: 1;
-  overflow-y: auto;
-  padding-bottom: 24px;
-  scrollbar-width: none;
-}
-
-.app-content-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.app-content-scroll .ant-card {
-  border-radius: var(--r-md);
-  border: 1px solid var(--line-strong);
-}
-
-.app-content-scroll .ant-table-wrapper,
-.app-content-scroll .ant-list,
-.app-content-scroll .ant-descriptions {
-  overflow-x: auto;
-}
-
-.app-mobile-drawer .ant-drawer-body {
-  padding-top: 8px;
-}
-
-/* ── Page primitives ─────────────────────────────────────────────────────── */
-.page-fallback {
-  color: var(--ink-3);
-}
-
-.page-title {
-  margin-bottom: 4px !important;
-}
-
-.page-subtitle {
-  color: var(--ink-3);
-}
-
-/* ── Auth pages ──────────────────────────────────────────────────────────── */
-.auth-page {
-  position: relative;
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  padding: 18px;
-}
-
-.auth-ornament {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(245, 210, 74, 0.18), transparent 42%),
-    radial-gradient(circle at 80% 85%, rgba(232, 168, 35, 0.12), transparent 36%);
-  animation: authFloat 9s ease-in-out infinite alternate;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 460px;
-  position: relative;
-  z-index: 1;
-}
-
-.auth-brand {
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--horizon-ink);
-  font-weight: 800;
-  font-size: 0.84rem;
-}
-
-.auth-footer {
-  margin: 14px 0 0;
-}
-
-/* ── Responsive ──────────────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .app-sider {
-    display: none;
-  }
-
-  .app-content {
-    padding: 10px;
-    height: 100dvh;
-  }
-
-  .app-topbar {
-    margin-bottom: 12px;
-  }
-
-  .app-content-scroll {
-    gap: 12px;
+  body {
+    @apply bg-background text-foreground;
   }
 }

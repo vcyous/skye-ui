@@ -1,15 +1,16 @@
-import { CloseOutlined, LockOutlined, UploadOutlined } from "@ant-design/icons";
-import {
-  App,
-  Button,
-  ColorPicker,
-  Input,
-  Segmented,
-  Select,
-  Spin,
-  Upload,
-} from "antd";
+import { Loader2, Lock, Upload, X } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { uploadStoreAsset } from "../../services/api";
 import { templateRegistry } from "./templateRegistry";
 
@@ -63,11 +64,11 @@ function TextField({ label, value, maxLength, multiline, hint, onChange }) {
         </span>
       </div>
       {multiline ? (
-        <Input.TextArea
+        <Textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           maxLength={maxLength}
-          autoSize={{ minRows: 3, maxRows: 6 }}
+          className="min-h-[80px] resize-none"
         />
       ) : (
         <Input
@@ -82,20 +83,21 @@ function TextField({ label, value, maxLength, multiline, hint, onChange }) {
 }
 
 function ImageUploadField({ label, assetKey, currentUrl, onUploaded }) {
-  const { message } = App.useApp();
   const [uploading, setUploading] = useState(false);
 
-  async function handleUpload(file) {
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
     setUploading(true);
     try {
       const url = await uploadStoreAsset(file, assetKey);
       onUploaded(url);
     } catch (err) {
-      message.error(err.message || "Upload failed");
+      toast.error(err.message || "Upload failed");
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
-    return false;
   }
 
   return (
@@ -108,20 +110,32 @@ function ImageUploadField({ label, assetKey, currentUrl, onUploaded }) {
           className="builder-panel__img-preview"
         />
       )}
-      <Upload
-        accept="image/jpeg,image/png,image/webp,image/svg+xml"
-        showUploadList={false}
-        beforeUpload={handleUpload}
-        disabled={uploading}
-      >
-        <Button
-          size="small"
-          icon={uploading ? <Spin size="small" /> : <UploadOutlined />}
+      <label className="inline-block">
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/svg+xml"
+          className="sr-only"
           disabled={uploading}
+          onChange={handleFileChange}
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          type="button"
+          disabled={uploading}
+          onClick={(e) => {
+            e.preventDefault();
+            e.currentTarget.closest("label")?.querySelector("input")?.click();
+          }}
         >
+          {uploading ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Upload className="size-3.5" />
+          )}
           {uploading ? "Uploading…" : currentUrl ? "Replace" : "Upload"}
         </Button>
-      </Upload>
+      </label>
     </div>
   );
 }
@@ -220,13 +234,12 @@ export default function BuilderPanel({
         <PanelGroup title="COLORS">
           {Object.entries(config.colors).map(([key, value]) => (
             <div key={key} className="builder-panel__color-row">
-              <ColorPicker
-                size="small"
+              <input
+                type="color"
+                className="h-6 w-6 cursor-pointer rounded border-0 p-0 shrink-0"
                 value={value}
-                onChange={(_, hex) => onUpdateColor(key, hex)}
-                showText={false}
+                onChange={(e) => onUpdateColor(key, e.target.value)}
               />
-
               <span className="builder-panel__color-label">
                 {camelToLabel(key)}
               </span>
@@ -242,7 +255,6 @@ export default function BuilderPanel({
             currentUrl={config.images.logoUrl || ""}
             onUploaded={(url) => onUpdateImage("logoUrl", url)}
           />
-
           <ImageUploadField
             label="Hero Banner Image"
             assetKey="hero"
@@ -275,7 +287,7 @@ export default function BuilderPanel({
                 <div className="builder-panel__locked-label">{item.label}</div>
                 <div className="builder-panel__locked-hint">{item.hint}</div>
               </div>
-              <LockOutlined className="builder-panel__locked-padlock" />
+              <Lock className="builder-panel__locked-padlock size-3" />
             </div>
           ))}
         </PanelGroup>
@@ -289,15 +301,22 @@ export default function BuilderPanel({
         <PanelGroup title="LAYOUT">
           <div className="builder-panel__field">
             <div className="builder-panel__field-label">Hero layout</div>
-            <Segmented
-              block
-              options={[
-                { label: "Split", value: "split" },
-                { label: "Centered", value: "centered" },
-              ]}
-              value={config.texts.heroLayout || "split"}
-              onChange={(val) => onUpdateText("heroLayout", val)}
-            />
+            <div className="flex rounded-md border overflow-hidden">
+              {["split", "centered"].map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  className={`flex-1 py-1.5 text-xs font-medium capitalize transition-colors ${
+                    (config.texts.heroLayout || "split") === opt
+                      ? "bg-foreground text-background"
+                      : "bg-card text-muted-foreground hover:bg-muted"
+                  }`}
+                  onClick={() => onUpdateText("heroLayout", opt)}
+                >
+                  {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
         </PanelGroup>
 
@@ -308,14 +327,12 @@ export default function BuilderPanel({
             maxLength={TEXT_MAX.heroEyebrow}
             onChange={(v) => onUpdateText("heroEyebrow", v)}
           />
-
           <TextField
             label="Heading"
             value={config.texts.heroTitle || ""}
             maxLength={TEXT_MAX.heroTitle}
             onChange={(v) => onUpdateText("heroTitle", v)}
           />
-
           <TextField
             label="Body"
             value={config.texts.heroSubtitle || ""}
@@ -332,7 +349,6 @@ export default function BuilderPanel({
             maxLength={TEXT_MAX.ctaButton}
             onChange={(v) => onUpdateText("ctaButton", v)}
           />
-
           <TextField
             label="Secondary button"
             value={config.texts.heroSecondaryButton || ""}
@@ -372,57 +388,65 @@ export default function BuilderPanel({
 
   function renderProductsPanel() {
     return (
-      <>
-        <PanelGroup title="CATALOG">
-          <div className="builder-panel__field">
-            <div className="builder-panel__field-label">
-              Featured Collection
-            </div>
-            <Select
-              style={{ width: "100%" }}
-              value={config.catalog.collectionId ?? "__all__"}
-              onChange={(val) =>
-                onUpdateCatalog({
-                  collectionId: val === "__all__" ? null : val,
-                })
-              }
-              options={[
-                { value: "__all__", label: "All products (latest)" },
-                ...catalogOptions.map((opt) => ({
-                  value: opt.value,
-                  label: opt.label,
-                })),
-              ]}
-            />
-          </div>
-          <div className="builder-panel__field">
-            <div className="builder-panel__field-label">Products to show</div>
-            <Select
-              style={{ width: "100%" }}
-              value={config.catalog.displayCount}
-              onChange={(val) => onUpdateCatalog({ displayCount: val })}
-              options={[
-                { value: 3, label: "3 products" },
-                { value: 6, label: "6 products" },
-                { value: 9, label: "9 products" },
-              ]}
-            />
-          </div>
-          <div className="builder-panel__field">
-            <div className="builder-panel__field-label">Grid layout</div>
-            <Select
-              style={{ width: "100%" }}
-              value={config.catalog.layout}
-              onChange={(val) => onUpdateCatalog({ layout: val })}
-              options={[
-                { value: "grid-2", label: "2 columns" },
-                { value: "grid-3", label: "3 columns" },
-                { value: "grid-4", label: "4 columns" },
-              ]}
-            />
-          </div>
-        </PanelGroup>
-      </>
+      <PanelGroup title="CATALOG">
+        <div className="builder-panel__field">
+          <div className="builder-panel__field-label">Featured Collection</div>
+          <Select
+            value={config.catalog.collectionId ?? "__all__"}
+            onValueChange={(val) =>
+              onUpdateCatalog({
+                collectionId: val === "__all__" ? null : val,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All products (latest)</SelectItem>
+              {catalogOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="builder-panel__field">
+          <div className="builder-panel__field-label">Products to show</div>
+          <Select
+            value={String(config.catalog.displayCount)}
+            onValueChange={(val) =>
+              onUpdateCatalog({ displayCount: Number(val) })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3">3 products</SelectItem>
+              <SelectItem value="6">6 products</SelectItem>
+              <SelectItem value="9">9 products</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="builder-panel__field">
+          <div className="builder-panel__field-label">Grid layout</div>
+          <Select
+            value={config.catalog.layout}
+            onValueChange={(val) => onUpdateCatalog({ layout: val })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="grid-2">2 columns</SelectItem>
+              <SelectItem value="grid-3">3 columns</SelectItem>
+              <SelectItem value="grid-4">4 columns</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </PanelGroup>
     );
   }
 
@@ -456,9 +480,7 @@ export default function BuilderPanel({
   function renderFooterPanel() {
     return (
       <div className="builder-panel__empty">
-        <LockOutlined
-          style={{ fontSize: 20, marginBottom: 8, color: "var(--ink-4)" }}
-        />
+        <Lock className="size-5 mb-2 text-muted-foreground" />
         <p>The footer layout is managed by Skye to ensure consistency.</p>
       </div>
     );
@@ -478,7 +500,7 @@ export default function BuilderPanel({
             className="builder-panel__close"
             onClick={onClose}
           >
-            <CloseOutlined />
+            <X className="size-3.5" />
           </button>
         </div>
 

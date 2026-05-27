@@ -1,27 +1,23 @@
-import {
-  GlobalOutlined,
-  LayoutOutlined,
-  SaveOutlined,
-  ShopOutlined,
-} from "@ant-design/icons";
-import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Divider,
-  Form,
-  Input,
-  List,
-  Row,
-  Select,
-  Space,
-  Spin,
-  Tag,
-  Typography,
-} from "antd";
+import { Globe, Layout, Save, Store } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   getStoreProfile,
   getTemplates,
@@ -58,20 +54,67 @@ const statusOptions = ["draft", "active", "inactive", "archived"].map(
   (value) => ({ value, label: value }),
 );
 
+function SectionLabel({ children }) {
+  return (
+    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+      {children}
+    </p>
+  );
+}
+
+function FieldRow({ children }) {
+  return <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{children}</div>;
+}
+
+function FormField({ label, children }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function ControlledSelect({ control, name, options, rules }) {
+  return (
+    <Controller
+      control={control}
+      name={name}
+      rules={rules}
+      render={({ field }) => (
+        <Select value={field.value} onValueChange={field.onChange}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    />
+  );
+}
+
 export default function StorePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [templates, setTemplates] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [settingsNotice, setSettingsNotice] = useState(null);
-  const [brandingNotice, setBrandingNotice] = useState(null);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSavingBranding, setIsSavingBranding] = useState(false);
-  const [isSettingsDirty, setIsSettingsDirty] = useState(false);
-  const [isBrandingDirty, setIsBrandingDirty] = useState(false);
-  const [settingsForm] = Form.useForm();
-  const [brandingForm] = Form.useForm();
+
+  const settingsForm = useForm({ defaultValues: {} });
+  const brandingForm = useForm({ defaultValues: {} });
+
+  const isSettingsDirty = settingsForm.formState.isDirty;
+  const isBrandingDirty = brandingForm.formState.isDirty;
+
+  const brandingWatch = brandingForm.watch();
 
   const activeTemplateName = useMemo(
     () => templates.find((item) => item.active)?.name || "Default branding",
@@ -86,41 +129,37 @@ export default function StorePage() {
         getStoreProfile(),
         getTemplates(),
       ]);
-      const s = store;
-      const t = list;
-      setProfile(s);
-      setTemplates(t);
+      setProfile(store);
+      setTemplates(list);
 
-      settingsForm.setFieldsValue({
-        storeName: s.storeName,
-        description: s.description || "",
-        status: s.status || "active",
-        currencyCode: s.currencyCode || "IDR",
-        timezone: s.timezone || "Asia/Jakarta",
-        locale: s.locale || "id",
-        country: s.country || "ID",
-        contactEmail: s.contactEmail || s.email || "",
-        contactPhone: s.contactPhone || "",
-        address: s.address || "",
-        city: s.city || "",
-        province: s.province || "",
-        postalCode: s.postalCode || "",
+      settingsForm.reset({
+        storeName: store.storeName,
+        description: store.description || "",
+        status: store.status || "active",
+        currencyCode: store.currencyCode || "IDR",
+        timezone: store.timezone || "Asia/Jakarta",
+        locale: store.locale || "id",
+        country: store.country || "ID",
+        contactEmail: store.contactEmail || store.email || "",
+        contactPhone: store.contactPhone || "",
+        address: store.address || "",
+        city: store.city || "",
+        province: store.province || "",
+        postalCode: store.postalCode || "",
       });
 
-      brandingForm.setFieldsValue({
-        logoUrl: s.branding?.logoUrl || "",
-        primaryColor: s.branding?.primaryColor || "#006c9c",
-        accentColor: s.branding?.accentColor || "#ffd566",
-        headingFont: s.branding?.headingFont || "Space Grotesk",
-        bodyFont: s.branding?.bodyFont || "Manrope",
+      brandingForm.reset({
+        logoUrl: store.branding?.logoUrl || "",
+        primaryColor: store.branding?.primaryColor || "#006c9c",
+        accentColor: store.branding?.accentColor || "#ffd566",
+        headingFont: store.branding?.headingFont || "Space Grotesk",
+        bodyFont: store.branding?.bodyFont || "Manrope",
       });
-
-      setIsSettingsDirty(false);
-      setIsBrandingDirty(false);
     } catch (err) {
-      setLoadError(
-        err instanceof Error ? err.message : "Failed to load store settings.",
-      );
+      const msg =
+        err instanceof Error ? err.message : "Failed to load store settings.";
+      setLoadError(msg);
+      toast.error("Failed to load store settings", { description: msg });
     } finally {
       setIsLoading(false);
     }
@@ -131,26 +170,22 @@ export default function StorePage() {
   }, []);
 
   async function onSaveSettings(values) {
-    setSettingsNotice(null);
     setIsSavingSettings(true);
     try {
       const updated = await updateStoreProfile(values);
       setProfile(updated);
-      setSettingsNotice({ type: "success", message: "Store settings saved." });
-      setIsSettingsDirty(false);
+      toast.success("Store settings saved.");
+      settingsForm.reset(values);
     } catch (err) {
-      setSettingsNotice({
-        type: "error",
-        message:
-          err instanceof Error ? err.message : "Failed to save store settings.",
-      });
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save store settings.",
+      );
     } finally {
       setIsSavingSettings(false);
     }
   }
 
   async function onSaveBranding(values) {
-    setBrandingNotice(null);
     setIsSavingBranding(true);
     try {
       const result = await updateStoreBranding(values);
@@ -159,20 +194,16 @@ export default function StorePage() {
           ? { ...prev, branding: { ...prev.branding, ...result.branding } }
           : prev,
       );
-      setBrandingNotice({
-        type: "success",
-        message:
-          result.persistedIn === "stores.settings"
-            ? "Branding saved (fallback storage)."
-            : "Branding saved to active theme.",
-      });
-      setIsBrandingDirty(false);
+      toast.success(
+        result.persistedIn === "stores.settings"
+          ? "Branding saved (fallback storage)."
+          : "Branding saved to active theme.",
+      );
+      brandingForm.reset(values);
     } catch (err) {
-      setBrandingNotice({
-        type: "error",
-        message:
-          err instanceof Error ? err.message : "Failed to save branding.",
-      });
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save branding.",
+      );
     } finally {
       setIsSavingBranding(false);
     }
@@ -181,10 +212,12 @@ export default function StorePage() {
   if (isLoading) {
     return (
       <Card>
-        <Space>
-          <Spin />
-          <Typography.Text>Loading store settings...</Typography.Text>
-        </Space>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-4 w-4 rounded-full" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+        </CardContent>
       </Card>
     );
   }
@@ -192,17 +225,15 @@ export default function StorePage() {
   if (loadError) {
     return (
       <Card>
-        <Alert
-          type="error"
-          showIcon
-          message="Unable to load store settings"
-          description={loadError}
-          action={
-            <Button size="small" onClick={loadStoreData}>
-              Retry
-            </Button>
-          }
-        />
+        <CardContent className="pt-6 flex flex-col gap-3">
+          <p className="text-destructive font-medium">
+            Unable to load store settings
+          </p>
+          <p className="text-sm text-muted-foreground">{loadError}</p>
+          <Button size="sm" variant="outline" onClick={loadStoreData}>
+            Retry
+          </Button>
+        </CardContent>
       </Card>
     );
   }
@@ -210,522 +241,397 @@ export default function StorePage() {
   if (!profile) {
     return (
       <Card>
-        <Alert
-          type="warning"
-          showIcon
-          message="Store profile not found"
-          description="Please retry. If this persists, re-login to regenerate your store context."
-        />
+        <CardContent className="pt-6">
+          <p className="text-sm text-muted-foreground">
+            Store profile not found. Please retry or re-login to regenerate your
+            store context.
+          </p>
+        </CardContent>
       </Card>
     );
   }
 
   const brandingPreview = {
-    logoUrl:
-      brandingForm.getFieldValue("logoUrl") || profile.branding?.logoUrl || "",
+    logoUrl: brandingWatch.logoUrl || profile.branding?.logoUrl || "",
     primaryColor:
-      brandingForm.getFieldValue("primaryColor") ||
-      profile.branding?.primaryColor ||
-      "#006c9c",
+      brandingWatch.primaryColor || profile.branding?.primaryColor || "#006c9c",
     accentColor:
-      brandingForm.getFieldValue("accentColor") ||
-      profile.branding?.accentColor ||
-      "#ffd566",
+      brandingWatch.accentColor || profile.branding?.accentColor || "#ffd566",
     headingFont:
-      brandingForm.getFieldValue("headingFont") ||
+      brandingWatch.headingFont ||
       profile.branding?.headingFont ||
       "Space Grotesk",
     bodyFont:
-      brandingForm.getFieldValue("bodyFont") ||
-      profile.branding?.bodyFont ||
-      "Manrope",
+      brandingWatch.bodyFont || profile.branding?.bodyFont || "Manrope",
   };
 
   return (
-    <section style={{ display: "grid", gap: 16 }}>
-      {/* Page header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Typography.Title level={4} style={{ margin: 0 }}>
-          Settings
-        </Typography.Title>
-        <Button
-          type="primary"
-          icon={<LayoutOutlined />}
-          onClick={() => navigate("/dashboard/store/website-builder")}
-        >
+    <section className="grid gap-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-lg font-semibold">Settings</h4>
+        <Button onClick={() => navigate("/dashboard/store/website-builder")}>
+          <Layout className="size-4" />
           Open website builder
         </Button>
       </div>
 
-      <Row gutter={[16, 16]}>
-        {/* Store details */}
-        <Col xs={24} lg={16}>
-          <Card
-            title={
-              <Space>
-                <ShopOutlined />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        <div className="flex flex-col gap-4">
+          {/* Store details */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Store className="size-4" />
                 Store details
-              </Space>
-            }
-            style={{ marginBottom: 16 }}
-            extra={
-              isSettingsDirty && (
+              </CardTitle>
+              {isSettingsDirty && (
                 <Button
-                  type="primary"
-                  icon={<SaveOutlined />}
-                  size="small"
-                  loading={isSavingSettings}
-                  onClick={() => settingsForm.submit()}
+                  size="sm"
+                  disabled={isSavingSettings}
+                  onClick={settingsForm.handleSubmit(onSaveSettings)}
                 >
+                  <Save className="size-3.5" />
                   Save
                 </Button>
-              )
-            }
-          >
-            {settingsNotice?.message && (
-              <Alert
-                type={settingsNotice.type}
-                message={settingsNotice.message}
-                showIcon
-                style={{ marginBottom: 16 }}
-                closable
-                onClose={() => setSettingsNotice(null)}
-              />
-            )}
-
-            <Form
-              form={settingsForm}
-              layout="vertical"
-              onFinish={onSaveSettings}
-              onValuesChange={() => setIsSettingsDirty(true)}
-              requiredMark={false}
-            >
-              {/* Business name + description */}
-              <Typography.Text
-                type="secondary"
-                style={{
-                  fontSize: 12,
-                  textTransform: "uppercase",
-                  fontWeight: 600,
-                  display: "block",
-                  marginBottom: 12,
-                }}
-              >
-                Business information
-              </Typography.Text>
-              <Row gutter={12}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="storeName"
-                    label="Store name"
-                    rules={[{ required: true }]}
-                  >
-                    <Input placeholder="My Awesome Store" />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="status"
-                    label="Status"
-                    rules={[{ required: true }]}
-                  >
-                    <Select options={statusOptions} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24}>
-                  <Form.Item name="description" label="Store description">
-                    <Input.TextArea
-                      rows={2}
-                      placeholder="Brief description of your store"
+              )}
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={settingsForm.handleSubmit(onSaveSettings)}>
+                <SectionLabel>Business information</SectionLabel>
+                <FieldRow>
+                  <FormField label="Store name">
+                    <Input
+                      placeholder="My Awesome Store"
+                      {...settingsForm.register("storeName", {
+                        required: true,
+                      })}
                     />
-                  </Form.Item>
-                </Col>
-              </Row>
+                  </FormField>
+                  <FormField label="Status">
+                    <ControlledSelect
+                      control={settingsForm.control}
+                      name="status"
+                      options={statusOptions}
+                      rules={{ required: true }}
+                    />
+                  </FormField>
+                  <div className="md:col-span-2">
+                    <FormField label="Store description">
+                      <Textarea
+                        rows={2}
+                        placeholder="Brief description of your store"
+                        {...settingsForm.register("description")}
+                      />
+                    </FormField>
+                  </div>
+                </FieldRow>
 
-              <Divider style={{ margin: "8px 0 16px" }} />
+                <Separator className="my-4" />
 
-              {/* Contact */}
-              <Typography.Text
-                type="secondary"
-                style={{
-                  fontSize: 12,
-                  textTransform: "uppercase",
-                  fontWeight: 600,
-                  display: "block",
-                  marginBottom: 12,
-                }}
-              >
-                Contact information
-              </Typography.Text>
-              <Row gutter={12}>
-                <Col xs={24} md={12}>
-                  <Form.Item name="contactEmail" label="Contact email">
-                    <Input type="email" placeholder="store@example.com" />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item name="contactPhone" label="Contact phone">
-                    <Input placeholder="+62..." />
-                  </Form.Item>
-                </Col>
-              </Row>
+                <SectionLabel>Contact information</SectionLabel>
+                <FieldRow>
+                  <FormField label="Contact email">
+                    <Input
+                      type="email"
+                      placeholder="store@example.com"
+                      {...settingsForm.register("contactEmail")}
+                    />
+                  </FormField>
+                  <FormField label="Contact phone">
+                    <Input
+                      placeholder="+62..."
+                      {...settingsForm.register("contactPhone")}
+                    />
+                  </FormField>
+                </FieldRow>
 
-              <Divider style={{ margin: "8px 0 16px" }} />
+                <Separator className="my-4" />
 
-              {/* Address */}
-              <Typography.Text
-                type="secondary"
-                style={{
-                  fontSize: 12,
-                  textTransform: "uppercase",
-                  fontWeight: 600,
-                  display: "block",
-                  marginBottom: 12,
-                }}
-              >
-                Store address
-              </Typography.Text>
-              <Form.Item name="address" label="Address">
-                <Input placeholder="Street address" />
-              </Form.Item>
-              <Row gutter={12}>
-                <Col xs={24} md={8}>
-                  <Form.Item name="city" label="City">
-                    <Input />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={8}>
-                  <Form.Item name="province" label="Province / State">
-                    <Input />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={8}>
-                  <Form.Item name="postalCode" label="Postal code">
-                    <Input />
-                  </Form.Item>
-                </Col>
-              </Row>
+                <SectionLabel>Store address</SectionLabel>
+                <div className="flex flex-col gap-3">
+                  <FormField label="Address">
+                    <Input
+                      placeholder="Street address"
+                      {...settingsForm.register("address")}
+                    />
+                  </FormField>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <FormField label="City">
+                      <Input {...settingsForm.register("city")} />
+                    </FormField>
+                    <FormField label="Province / State">
+                      <Input {...settingsForm.register("province")} />
+                    </FormField>
+                    <FormField label="Postal code">
+                      <Input {...settingsForm.register("postalCode")} />
+                    </FormField>
+                  </div>
+                </div>
 
-              <Divider style={{ margin: "8px 0 16px" }} />
+                <Separator className="my-4" />
 
-              {/* Locale & preferences */}
-              <Typography.Text
-                type="secondary"
-                style={{
-                  fontSize: 12,
-                  textTransform: "uppercase",
-                  fontWeight: 600,
-                  display: "block",
-                  marginBottom: 12,
-                }}
-              >
-                Store defaults
-              </Typography.Text>
-              <Row gutter={12}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="currencyCode"
-                    label="Currency"
-                    rules={[{ required: true }]}
+                <SectionLabel>Store defaults</SectionLabel>
+                <FieldRow>
+                  <FormField label="Currency">
+                    <ControlledSelect
+                      control={settingsForm.control}
+                      name="currencyCode"
+                      options={currencyOptions}
+                      rules={{ required: true }}
+                    />
+                  </FormField>
+                  <FormField label="Country">
+                    <ControlledSelect
+                      control={settingsForm.control}
+                      name="country"
+                      options={countryOptions}
+                      rules={{ required: true }}
+                    />
+                  </FormField>
+                  <FormField label="Timezone">
+                    <ControlledSelect
+                      control={settingsForm.control}
+                      name="timezone"
+                      options={timezoneOptions}
+                      rules={{ required: true }}
+                    />
+                  </FormField>
+                  <FormField label="Language">
+                    <ControlledSelect
+                      control={settingsForm.control}
+                      name="locale"
+                      options={localeOptions}
+                      rules={{ required: true }}
+                    />
+                  </FormField>
+                </FieldRow>
+
+                <div className="mt-4">
+                  <Button
+                    type="submit"
+                    disabled={!isSettingsDirty || isSavingSettings}
                   >
-                    <Select options={currencyOptions} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="country"
-                    label="Country"
-                    rules={[{ required: true }]}
-                  >
-                    <Select options={countryOptions} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="timezone"
-                    label="Timezone"
-                    rules={[{ required: true }]}
-                  >
-                    <Select options={timezoneOptions} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="locale"
-                    label="Language"
-                    rules={[{ required: true }]}
-                  >
-                    <Select options={localeOptions} />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={isSavingSettings}
-                disabled={!isSettingsDirty}
-                icon={<SaveOutlined />}
-              >
-                Save settings
-              </Button>
-            </Form>
+                    <Save className="size-4" />
+                    Save settings
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
           </Card>
 
           {/* Branding card */}
-          <Card
-            title={
-              <Space>
-                <GlobalOutlined />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Globe className="size-4" />
                 Brand & appearance
-              </Space>
-            }
-            extra={
-              isBrandingDirty && (
+              </CardTitle>
+              {isBrandingDirty && (
                 <Button
-                  type="primary"
-                  icon={<SaveOutlined />}
-                  size="small"
-                  loading={isSavingBranding}
-                  onClick={() => brandingForm.submit()}
+                  size="sm"
+                  disabled={isSavingBranding}
+                  onClick={brandingForm.handleSubmit(onSaveBranding)}
                 >
+                  <Save className="size-3.5" />
                   Save
                 </Button>
-              )
-            }
-          >
-            {brandingNotice?.message && (
-              <Alert
-                type={brandingNotice.type}
-                message={brandingNotice.message}
-                showIcon
-                style={{ marginBottom: 16 }}
-                closable
-                onClose={() => setBrandingNotice(null)}
-              />
-            )}
+              )}
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={brandingForm.handleSubmit(onSaveBranding)}>
+                <div className="flex flex-col gap-3">
+                  <FormField label="Logo URL">
+                    <Input
+                      placeholder="https://..."
+                      {...brandingForm.register("logoUrl")}
+                    />
+                  </FormField>
+                  <FieldRow>
+                    <FormField label="Primary color">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="#006c9c"
+                          {...brandingForm.register("primaryColor")}
+                        />
+                        <input
+                          type="color"
+                          className="h-9 w-10 cursor-pointer rounded border border-input p-0.5"
+                          value={brandingWatch.primaryColor || "#006c9c"}
+                          onChange={(e) =>
+                            brandingForm.setValue(
+                              "primaryColor",
+                              e.target.value,
+                              { shouldDirty: true },
+                            )
+                          }
+                        />
+                      </div>
+                    </FormField>
+                    <FormField label="Accent color">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="#ffd566"
+                          {...brandingForm.register("accentColor")}
+                        />
+                        <input
+                          type="color"
+                          className="h-9 w-10 cursor-pointer rounded border border-input p-0.5"
+                          value={brandingWatch.accentColor || "#ffd566"}
+                          onChange={(e) =>
+                            brandingForm.setValue(
+                              "accentColor",
+                              e.target.value,
+                              { shouldDirty: true },
+                            )
+                          }
+                        />
+                      </div>
+                    </FormField>
+                    <FormField label="Heading font">
+                      <Input {...brandingForm.register("headingFont")} />
+                    </FormField>
+                    <FormField label="Body font">
+                      <Input {...brandingForm.register("bodyFont")} />
+                    </FormField>
+                  </FieldRow>
+                </div>
 
-            <Form
-              form={brandingForm}
-              layout="vertical"
-              onFinish={onSaveBranding}
-              onValuesChange={() => setIsBrandingDirty(true)}
-              requiredMark={false}
-            >
-              <Form.Item name="logoUrl" label="Logo URL">
-                <Input placeholder="https://..." />
-              </Form.Item>
-              <Row gutter={12}>
-                <Col xs={24} md={12}>
-                  <Form.Item name="primaryColor" label="Primary color">
-                    <Space.Compact style={{ width: "100%" }}>
-                      <Form.Item name="primaryColor" noStyle>
-                        <Input placeholder="#006c9c" />
-                      </Form.Item>
-                      <Form.Item shouldUpdate noStyle>
-                        {() => (
-                          <div
-                            style={{
-                              width: 36,
-                              background:
-                                brandingForm.getFieldValue("primaryColor") ||
-                                "#006c9c",
-                              border: "1px solid #d9d9d9",
-                              borderLeft: "none",
-                              borderRadius: "0 6px 6px 0",
-                            }}
-                          />
-                        )}
-                      </Form.Item>
-                    </Space.Compact>
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item name="accentColor" label="Accent color">
-                    <Input placeholder="#ffd566" />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item name="headingFont" label="Heading font">
-                    <Input />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item name="bodyFont" label="Body font">
-                    <Input />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={isSavingBranding}
-                disabled={!isBrandingDirty}
-                icon={<SaveOutlined />}
-              >
-                Save branding
-              </Button>
-            </Form>
+                <div className="mt-4">
+                  <Button
+                    type="submit"
+                    disabled={!isBrandingDirty || isSavingBranding}
+                  >
+                    <Save className="size-4" />
+                    Save branding
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
           </Card>
-        </Col>
+        </div>
 
         {/* Right sidebar */}
-        <Col xs={24} lg={8}>
+        <div className="flex flex-col gap-3">
           {/* Store overview */}
-          <Card style={{ marginBottom: 12 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                marginBottom: 12,
-              }}
-            >
-              <div
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 10,
-                  background: brandingPreview.primaryColor,
-                  color: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 20,
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
-              >
-                {profile.storeName?.[0]?.toUpperCase()}
-              </div>
-              <div>
-                <Typography.Text strong style={{ display: "block" }}>
-                  {profile.storeName}
-                </Typography.Text>
-                <Tag
-                  color={profile.status === "active" ? "success" : "default"}
-                  style={{ fontSize: 12 }}
-                >
-                  {profile.status || "draft"}
-                </Tag>
-              </div>
-            </div>
-            {profile.description && (
-              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                {profile.description}
-              </Typography.Text>
-            )}
-          </Card>
-
-          {/* Brand preview */}
-          <Card title="Branding preview" style={{ marginBottom: 12 }}>
-            <div
-              style={{
-                border: `2px solid ${brandingPreview.accentColor}`,
-                borderRadius: 10,
-                padding: 16,
-              }}
-            >
-              {brandingPreview.logoUrl ? (
-                <img
-                  src={brandingPreview.logoUrl}
-                  alt="Store logo"
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 8,
-                    objectFit: "cover",
-                  }}
-                />
-              ) : (
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3 mb-3">
                 <div
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 8,
-                    background: brandingPreview.primaryColor,
-                    color: "#fff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 700,
-                    fontSize: 18,
-                  }}
+                  className="size-12 rounded-xl flex items-center justify-center text-white text-xl font-bold shrink-0"
+                  style={{ background: brandingPreview.primaryColor }}
                 >
                   {profile.storeName?.[0]?.toUpperCase()}
                 </div>
+                <div>
+                  <p className="font-semibold text-sm">{profile.storeName}</p>
+                  <Badge
+                    variant={
+                      profile.status === "active" ? "default" : "secondary"
+                    }
+                    className="text-xs mt-0.5"
+                  >
+                    {profile.status || "draft"}
+                  </Badge>
+                </div>
+              </div>
+              {profile.description && (
+                <p className="text-sm text-muted-foreground">
+                  {profile.description}
+                </p>
               )}
-              <Typography.Title
-                level={5}
+            </CardContent>
+          </Card>
+
+          {/* Brand preview */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">
+                Branding preview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div
+                className="rounded-xl p-4"
                 style={{
-                  margin: "10px 0 4px",
-                  color: brandingPreview.primaryColor,
-                  fontFamily: brandingPreview.headingFont,
+                  border: `2px solid ${brandingPreview.accentColor}`,
                 }}
               >
-                {profile.storeName}
-              </Typography.Title>
-              <Typography.Text
-                style={{
-                  fontSize: 13,
-                  fontFamily: brandingPreview.bodyFont,
-                  color: "#666",
-                }}
-              >
-                {profile.description || "Your store description"}
-              </Typography.Text>
-            </div>
+                {brandingPreview.logoUrl ? (
+                  <img
+                    src={brandingPreview.logoUrl}
+                    alt="Store logo"
+                    className="size-11 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div
+                    className="size-11 rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                    style={{ background: brandingPreview.primaryColor }}
+                  >
+                    {profile.storeName?.[0]?.toUpperCase()}
+                  </div>
+                )}
+                <h5
+                  className="mt-2.5 mb-1 font-semibold text-base"
+                  style={{
+                    color: brandingPreview.primaryColor,
+                    fontFamily: brandingPreview.headingFont,
+                  }}
+                >
+                  {profile.storeName}
+                </h5>
+                <p
+                  className="text-sm text-[#666]"
+                  style={{ fontFamily: brandingPreview.bodyFont }}
+                >
+                  {profile.description || "Your store description"}
+                </p>
+              </div>
+            </CardContent>
           </Card>
 
           {/* Templates list */}
-          <Card
-            title="Themes"
-            extra={
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-sm font-medium">Themes</CardTitle>
               <Button
-                size="small"
-                onClick={() => navigate("/dashboard/store/website-builder")}
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  navigate("/dashboard/store/website-builder")
+                }
               >
                 Manage
               </Button>
-            }
-          >
-            {templates.length === 0 ? (
-              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                No themes yet. Default branding is active.
-              </Typography.Text>
-            ) : (
-              <List
-                size="small"
-                dataSource={templates}
-                renderItem={(item) => (
-                  <List.Item
-                    key={item.id}
-                    extra={
-                      item.active ? <Tag color="success">Active</Tag> : null
-                    }
-                  >
-                    <Typography.Text style={{ fontSize: 13 }}>
-                      {item.name}
-                    </Typography.Text>
-                  </List.Item>
-                )}
-              />
-            )}
-            <div style={{ marginTop: 12 }}>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            </CardHeader>
+            <CardContent>
+              {templates.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No themes yet. Default branding is active.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-1">
+                  {templates.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex items-center justify-between py-1.5 border-b last:border-0"
+                    >
+                      <span className="text-sm">{item.name}</span>
+                      {item.active && (
+                        <Badge variant="default" className="text-xs">
+                          Active
+                        </Badge>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-xs text-muted-foreground mt-3">
                 Active theme: {activeTemplateName}
-              </Typography.Text>
-            </div>
+              </p>
+            </CardContent>
           </Card>
-        </Col>
-      </Row>
+        </div>
+      </div>
     </section>
   );
 }

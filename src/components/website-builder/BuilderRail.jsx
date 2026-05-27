@@ -1,45 +1,45 @@
 import {
-  AppstoreOutlined,
-  EditOutlined,
-  EyeInvisibleOutlined,
-  EyeOutlined,
-  FileTextOutlined,
-  HolderOutlined,
-  LockOutlined,
-  MailOutlined,
-  ShopOutlined,
-} from "@ant-design/icons";
+  Eye,
+  EyeOff,
+  FileText,
+  GripVertical,
+  LayoutGrid,
+  Lock,
+  Mail,
+  Pencil,
+  Store,
+} from "lucide-react";
 import { useState } from "react";
 
 const SECTIONS = [
   {
     key: "hero",
     label: "Hero",
-    icon: <FileTextOutlined />,
+    icon: <FileText className="size-3.5" />,
     defaultStatus: "visible",
   },
   {
     key: "content",
     label: "Featured Section",
-    icon: <AppstoreOutlined />,
+    icon: <LayoutGrid className="size-3.5" />,
     defaultStatus: "visible",
   },
   {
     key: "products",
     label: "Products",
-    icon: <ShopOutlined />,
+    icon: <Store className="size-3.5" />,
     defaultStatus: "visible",
   },
   {
     key: "newsletter",
     label: "Newsletter",
-    icon: <MailOutlined />,
+    icon: <Mail className="size-3.5" />,
     defaultStatus: "visible",
   },
   {
     key: "footer",
     label: "Footer",
-    icon: <LockOutlined />,
+    icon: <Lock className="size-3.5" />,
     defaultStatus: "locked",
   },
 ];
@@ -91,7 +91,7 @@ export default function BuilderRail({ activePanel, onEditSection }) {
               onClick={isLocked ? undefined : () => onEditSection(section.key)}
             >
               <span className="builder-rail__drag">
-                <HolderOutlined />
+                <GripVertical className="size-3.5" />
               </span>
               <span className="builder-rail__icon">{section.icon}</span>
               <div className="builder-rail__label-wrap">
@@ -105,7 +105,7 @@ export default function BuilderRail({ activePanel, onEditSection }) {
 
               {isLocked ? (
                 <span className="builder-rail__lock">
-                  <LockOutlined />
+                  <Lock className="size-3" />
                 </span>
               ) : (
                 <div className="builder-rail__actions">
@@ -115,7 +115,11 @@ export default function BuilderRail({ activePanel, onEditSection }) {
                     onClick={(e) => toggleVisibility(section.key, e)}
                     title={isHidden ? "Show section" : "Hide section"}
                   >
-                    {isHidden ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                    {isHidden ? (
+                      <EyeOff className="size-3.5" />
+                    ) : (
+                      <Eye className="size-3.5" />
+                    )}
                   </button>
                   <button
                     type="button"
@@ -126,7 +130,7 @@ export default function BuilderRail({ activePanel, onEditSection }) {
                     }}
                     title="Edit section"
                   >
-                    <EditOutlined />
+                    <Pencil className="size-3.5" />
                   </button>
                 </div>
               )}

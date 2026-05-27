@@ -1,6 +1,7 @@
-import { Drawer, Grid, Layout } from "antd";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useMediaQuery } from "@/lib/use-media-query";
 import PageFallback from "../../shared/ui/PageFallback";
 import { useAuth } from "../../context/AuthContext.jsx";
 import ComingSoonPage from "../../pages/ComingSoonPage";
@@ -11,7 +12,9 @@ import Topbar from "./Topbar";
 const DashboardPage = lazy(
   () => import("../../pages/overview/DashboardPage.jsx"),
 );
-const ProductsPage = lazy(() => import("../../features/products/ProductsPage.jsx"));
+const ProductsPage = lazy(
+  () => import("../../features/products/ProductsPage.jsx"),
+);
 const CollectionsPage = lazy(
   () => import("../../features/collections/CollectionsPage.jsx"),
 );
@@ -34,8 +37,8 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
-  const screens = Grid.useBreakpoint();
-  const isMobile = !screens.lg;
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isMobile = !isDesktop;
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -99,35 +102,32 @@ export default function AppLayout() {
   );
 
   return (
-    <Layout className="app-shell">
+    <div className="flex min-h-screen">
       {!isMobile ? (
-        <Layout.Sider width="fit-content" className="app-sider">
+        <aside className="sticky top-0 h-screen w-[280px] shrink-0 overflow-auto border-r bg-card/60 p-4 backdrop-blur">
           {sidebar}
-        </Layout.Sider>
+        </aside>
       ) : null}
 
-      <Drawer
-        placement="left"
-        width={320}
-        title="Navigation"
-        open={mobileNavOpen}
-        onClose={() => setMobileNavOpen(false)}
-        className="app-mobile-drawer"
-      >
-        {sidebar}
-      </Drawer>
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <SheetContent side="left" className="w-[320px] p-4">
+          <SheetHeader className="p-0">
+            <SheetTitle className="sr-only">Navigation</SheetTitle>
+          </SheetHeader>
+          {sidebar}
+        </SheetContent>
+      </Sheet>
 
-      <Layout.Content className="app-content">
+      <main className="flex h-screen flex-1 flex-col overflow-hidden p-4 md:p-5">
         <Topbar
           isMobile={isMobile}
           currentRouteLabel={currentRouteLabel}
           onOpenMobileNav={() => setMobileNavOpen(true)}
         />
 
-        <div className="app-content-scroll">
+        <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 overflow-y-auto pb-6">
           <Suspense fallback={<PageFallback />}>
             <Routes>
-              {/* MVP 1 — active routes */}
               <Route index element={<DashboardPage />} />
               <Route path="products" element={<ProductsPage />} />
               <Route path="collections" element={<CollectionsPage />} />
@@ -143,7 +143,6 @@ export default function AppLayout() {
               <Route path="store" element={<StorePage />} />
               <Route path="profile" element={<ProfilePage />} />
 
-              {/* Coming soon — not yet in MVP 1 */}
               <Route path="analytics" element={<ComingSoonPage />} />
               <Route path="inventory" element={<ComingSoonPage />} />
               <Route path="discounts" element={<ComingSoonPage />} />
@@ -170,7 +169,7 @@ export default function AppLayout() {
             </Routes>
           </Suspense>
         </div>
-      </Layout.Content>
-    </Layout>
+      </main>
+    </div>
   );
 }

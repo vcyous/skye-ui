@@ -1,14 +1,8 @@
-import { PlusOutlined } from "@ant-design/icons";
-import {
-  Alert,
-  Button,
-  Card,
-  Empty,
-  Space,
-  Spin,
-  Typography,
-} from "antd";
-import { useState } from "react";
+import { Loader2, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import AssignProductsModal from "./components/AssignProductsModal";
 import CollectionFormModal from "./components/CollectionFormModal";
 import CollectionPreviewModal from "./components/CollectionPreviewModal";
@@ -44,6 +38,18 @@ export default function CollectionsPage() {
   const [assigningCollection, setAssigningCollection] = useState(null);
   const [previewCollection, setPreviewCollection] = useState(null);
 
+  useEffect(() => {
+    if (!loadError) return;
+    toast.error("Unable to load collections", { description: loadError });
+  }, [loadError]);
+
+  useEffect(() => {
+    if (!notice.message) return;
+    const fn = notice.type === "error" ? toast.error : toast.success;
+    fn(notice.message);
+    setNotice({});
+  }, [notice.message, notice.type]);
+
   async function handleCreate(values) {
     const ok = await createNew(values);
     if (ok) setIsCreateOpen(false);
@@ -66,10 +72,10 @@ export default function CollectionsPage() {
   if (isLoading) {
     return (
       <Card>
-        <Space align="center" size={12}>
-          <Spin />
-          <Typography.Text>Loading collections...</Typography.Text>
-        </Space>
+        <CardContent className="flex items-center gap-3 pt-6">
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Loading collections...</span>
+        </CardContent>
       </Card>
     );
   }
@@ -77,55 +83,27 @@ export default function CollectionsPage() {
   if (loadError) {
     return (
       <Card>
-        <Alert
-          type="error"
-          showIcon
-          message="Unable to load collections"
-          description={loadError}
-          action={
-            <Button size="small" onClick={loadData}>
-              Retry
-            </Button>
-          }
-        />
+        <CardContent className="flex flex-col gap-3 pt-6">
+          <p className="text-sm text-destructive">Unable to load collections</p>
+          <Button size="sm" variant="outline" onClick={loadData}>
+            Retry
+          </Button>
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <section style={{ display: "grid", gap: 0 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 16,
-        }}
-      >
-        <Typography.Title level={4} style={{ margin: 0 }}>
-          Collections
-        </Typography.Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setIsCreateOpen(true)}
-        >
+    <section className="grid gap-0">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-xl font-semibold">Collections</h4>
+        <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+          <Plus className="size-4 mr-2" />
           Create collection
         </Button>
       </div>
 
-      {notice.message && (
-        <Alert
-          type={notice.type}
-          message={notice.message}
-          showIcon
-          style={{ marginBottom: 12 }}
-          closable
-          onClose={() => setNotice({ type: "", message: "" })}
-        />
-      )}
-
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card className="p-0 overflow-hidden">
         <CollectionsFilterBar
           statusTab={statusTab}
           onStatusTabChange={setStatusTab}
@@ -135,26 +113,21 @@ export default function CollectionsPage() {
         />
 
         {visibleCollections.length === 0 ? (
-          <div style={{ padding: 48 }}>
-            <Empty
-              description={
-                <Space direction="vertical" size={4}>
-                  <Typography.Text strong>No collections yet</Typography.Text>
-                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                    Create collections to group products for your storefront.
-                  </Typography.Text>
-                </Space>
-              }
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            >
+          <div className="grid place-items-center p-12 text-muted-foreground">
+            <div className="flex flex-col items-center gap-2">
+              <p className="font-medium text-foreground">No collections yet</p>
+              <p className="text-sm">
+                Create collections to group products for your storefront.
+              </p>
               <Button
-                type="primary"
-                icon={<PlusOutlined />}
+                size="sm"
+                className="mt-2"
                 onClick={() => setIsCreateOpen(true)}
               >
+                <Plus className="size-4 mr-2" />
                 Create collection
               </Button>
-            </Empty>
+            </div>
           </div>
         ) : (
           <CollectionsTable

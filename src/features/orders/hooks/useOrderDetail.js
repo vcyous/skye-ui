@@ -1,5 +1,5 @@
-import { App } from "antd";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   addOrderInternalNote,
   createShipment,
@@ -13,7 +13,6 @@ function readErrorMessage(err, fallback) {
 }
 
 export function useOrderDetail(orderId) {
-  const { message } = App.useApp();
   const [state, setState] = useState({ loading: true, data: null, error: "" });
   const [fulfillmentItems, setFulfillmentItems] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -48,14 +47,14 @@ export function useOrderDetail(orderId) {
       try {
         await updateOrderLifecycleState(orderId, patch);
         await loadOrder();
-        message.success("Order updated.");
+        toast.success("Order updated.");
       } catch (err) {
-        message.error(readErrorMessage(err, "Failed to update order."));
+        toast.error(readErrorMessage(err, "Failed to update order."));
       } finally {
         setIsSaving(false);
       }
     },
-    [orderId, loadOrder, message],
+    [orderId, loadOrder],
   );
 
   const submitInternalNote = useCallback(
@@ -66,16 +65,16 @@ export function useOrderDetail(orderId) {
       try {
         await addOrderInternalNote(orderId, trimmed);
         await loadOrder();
-        message.success("Note added.");
+        toast.success("Note added.");
         return true;
       } catch (err) {
-        message.error(readErrorMessage(err, "Failed to add note."));
+        toast.error(readErrorMessage(err, "Failed to add note."));
         return false;
       } finally {
         setIsSaving(false);
       }
     },
-    [orderId, loadOrder, message],
+    [orderId, loadOrder],
   );
 
   const createShipmentForRemaining = useCallback(
@@ -95,16 +94,16 @@ export function useOrderDetail(orderId) {
           })),
         });
         await loadOrder();
-        message.success("Shipment created.");
+        toast.success("Shipment created.");
         return true;
       } catch (err) {
-        message.error(readErrorMessage(err, "Failed to create shipment."));
+        toast.error(readErrorMessage(err, "Failed to create shipment."));
         return false;
       } finally {
         setIsShipping(false);
       }
     },
-    [orderId, fulfillmentItems, loadOrder, message],
+    [orderId, fulfillmentItems, loadOrder],
   );
 
   return {

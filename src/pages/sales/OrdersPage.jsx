@@ -1,20 +1,28 @@
-import { ExportOutlined, SearchOutlined } from "@ant-design/icons";
-import {
-  Alert,
-  App,
-  Badge,
-  Button,
-  Card,
-  Input,
-  Select,
-  Space,
-  Table,
-  Tabs,
-  Tag,
-  Typography,
-} from "antd";
+import { Download, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocalization } from "../../context/LocalizationContext";
 import {
   getOrderLifecycleOptions,
@@ -31,38 +39,38 @@ const STATUS_TABS = [
   { key: "cancelled", label: "Cancelled" },
 ];
 
-const PAYMENT_TAG = {
-  paid: { color: "success", label: "Paid" },
-  pending: { color: "warning", label: "Pending" },
-  refunded: { color: "default", label: "Refunded" },
-  failed: { color: "error", label: "Failed" },
+const PAYMENT_BADGE = {
+  paid: { variant: "default", label: "Paid" },
+  pending: { variant: "secondary", label: "Pending" },
+  refunded: { variant: "outline", label: "Refunded" },
+  failed: { variant: "destructive", label: "Failed" },
 };
 
-const FULFILLMENT_TAG = {
-  fulfilled: { color: "success", label: "Fulfilled" },
-  unfulfilled: { color: "warning", label: "Unfulfilled" },
-  partial: { color: "processing", label: "Partial" },
-  shipped: { color: "processing", label: "Shipped" },
+const FULFILLMENT_BADGE = {
+  fulfilled: { variant: "default", label: "Fulfilled" },
+  unfulfilled: { variant: "secondary", label: "Unfulfilled" },
+  partial: { variant: "outline", label: "Partial" },
+  shipped: { variant: "outline", label: "Shipped" },
 };
 
 export default function OrdersPage() {
   const { formatCurrency } = useLocalization();
-  const { message } = App.useApp();
   const [selected, setSelected] = useState("semua_orders");
   const [search, setSearch] = useState("");
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState("");
 
   const loadOrders = async () => {
     setLoading(true);
-    setError("");
     try {
       const data = await getOrders(selected);
       setOrders(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load orders.");
+      toast.error("Failed to load orders", {
+        description: err instanceof Error ? err.message : "An unexpected error occurred.",
+        action: { label: "Retry", onClick: loadOrders },
+      });
     } finally {
       setLoading(false);
     }
@@ -95,134 +103,15 @@ export default function OrdersPage() {
     try {
       await updateOrderLifecycleState(order.id, patch);
       await loadOrders();
-      message.success("Order updated.");
+      toast.success("Order updated");
     } catch (err) {
-      message.error(
-        err instanceof Error ? err.message : "Failed to update order.",
-      );
+      toast.error("Failed to update order", {
+        description: err instanceof Error ? err.message : "An unexpected error occurred.",
+      });
     } finally {
       setUpdatingId("");
     }
   }
-
-  const columns = [
-    {
-      title: "Order",
-      key: "order",
-      render: (_, record) => (
-        <Link
-          to={`/orders/${record.id}`}
-          style={{ fontWeight: 500, color: "#0D5C53" }}
-        >
-          #{record.orderNumber ?? record.order_number}
-        </Link>
-      ),
-    },
-    {
-      title: "Date",
-      key: "date",
-      render: (_, record) => {
-        const raw = record.created_at ?? record.createdAt;
-        if (!raw) return "—";
-        return (
-          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            {new Date(raw).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </Typography.Text>
-        );
-      },
-    },
-    {
-      title: "Customer",
-      key: "customer",
-      render: (_, record) => (
-        <Typography.Text style={{ fontSize: 13 }}>
-          {record.customerName ?? record.customer_name ?? "Guest"}
-        </Typography.Text>
-      ),
-    },
-    {
-      title: "Total",
-      key: "total",
-      render: (_, record) => (
-        <Typography.Text strong style={{ fontSize: 13 }}>
-          {formatCurrency(
-            record.displayTotal ?? record.total ?? record.total_price,
-            record.displayCurrencyCode || record.currencyCode || "USD",
-          )}
-        </Typography.Text>
-      ),
-    },
-    {
-      title: "Payment",
-      key: "payment",
-      render: (_, record) => {
-        const info = PAYMENT_TAG[record.paymentStatus || "pending"] ?? {
-          color: "default",
-          label: record.paymentStatus || "Pending",
-        };
-        return <Tag color={info.color}>{info.label}</Tag>;
-      },
-    },
-    {
-      title: "Fulfillment",
-      key: "fulfillment",
-      render: (_, record) => {
-        const info = FULFILLMENT_TAG[
-          record.fulfillmentStatus || "unfulfilled"
-        ] ?? {
-          color: "default",
-          label: record.fulfillmentStatus || "Unfulfilled",
-        };
-        return <Tag color={info.color}>{info.label}</Tag>;
-      },
-    },
-    {
-      title: "Status",
-      key: "status",
-      render: (_, record) => {
-        const options = getOrderLifecycleOptions({
-          status: record.status,
-          paymentStatus: record.paymentStatus,
-          fulfillmentStatus: record.fulfillmentStatus,
-        });
-        return (
-          <Select
-            size="small"
-            value={record.status}
-            disabled={updatingId === record.id}
-            loading={updatingId === record.id}
-            onChange={(value) =>
-              updateLifecycle(record, {
-                status: value,
-                note: `Status changed from ${record.status} to ${value}`,
-              })
-            }
-            options={options.status.map((item) => ({
-              value: item,
-              label: item,
-            }))}
-            style={{ width: 150 }}
-          />
-        );
-      },
-    },
-    {
-      title: "",
-      key: "actions",
-      width: 80,
-      render: (_, record) => (
-        <Link to={`/orders/${record.id}`}>
-          <Button type="link" size="small" style={{ padding: 0, fontSize: 13 }}>
-            View
-          </Button>
-        </Link>
-      ),
-    },
-  ];
 
   const tabCounts = useMemo(() => {
     const counts = { semua_orders: orders.length };
@@ -238,120 +127,165 @@ export default function OrdersPage() {
   }, [orders]);
 
   return (
-    <section style={{ display: "grid", gap: 0 }}>
-      {/* Page header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 16,
-        }}
-      >
-        <Typography.Title level={4} style={{ margin: 0 }}>
-          Orders
-        </Typography.Title>
-        <Space>
-          <Button icon={<ExportOutlined />}>Export</Button>
-        </Space>
+    <section className="grid gap-0">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-lg font-semibold">Orders</h4>
+        <Button variant="outline" size="sm">
+          <Download className="size-4 mr-2" />
+          Export
+        </Button>
       </div>
 
-      {error && (
-        <Alert
-          type="error"
-          message={error}
-          showIcon
-          style={{ marginBottom: 12 }}
-          action={
-            <Button size="small" onClick={loadOrders}>
-              Retry
-            </Button>
-          }
-        />
-      )}
-
-      <Card bodyStyle={{ padding: 0 }}>
-        {/* Status tabs */}
-        <div style={{ borderBottom: "1px solid #f0f0f0", paddingLeft: 16 }}>
-          <Tabs
-            activeKey={selected}
-            onChange={setSelected}
-            size="small"
-            items={STATUS_TABS.map((tab) => ({
-              key: tab.key,
-              label: (
-                <span>
+      <Card className="overflow-hidden">
+        <div className="border-b px-4">
+          <Tabs value={selected} onValueChange={setSelected}>
+            <TabsList className="h-auto bg-transparent gap-0 p-0 rounded-none">
+              {STATUS_TABS.map((tab) => (
+                <TabsTrigger
+                  key={tab.key}
+                  value={tab.key}
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2 text-sm"
+                >
                   {tab.label}
                   {tabCounts[tab.key] != null && (
-                    <span
-                      style={{ marginLeft: 6, color: "#999", fontSize: 12 }}
-                    >
+                    <span className="ml-1.5 text-xs text-muted-foreground">
                       {tabCounts[tab.key]}
                     </span>
                   )}
-                </span>
-              ),
-            }))}
-          />
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
 
-        {/* Filter bar */}
-        <div
-          style={{
-            padding: "12px 16px",
-            borderBottom: "1px solid #f0f0f0",
-            display: "flex",
-            gap: 8,
-            alignItems: "center",
-          }}
-        >
-          <Input
-            prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-            placeholder="Search orders"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            allowClear
-            style={{ width: 280 }}
-          />
-
-          <div style={{ marginLeft: "auto" }}>
-            <Badge
-              count={visibleOrders.length}
-              showZero
-              color="#8c8c8c"
-              overflowCount={9999}
-            >
-              <Typography.Text
-                type="secondary"
-                style={{ fontSize: 13, paddingRight: 8 }}
-              >
-                orders
-              </Typography.Text>
-            </Badge>
+        <div className="flex items-center gap-2 px-4 py-3 border-b">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search orders"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 w-64"
+            />
+          </div>
+          <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{visibleOrders.length} orders</span>
           </div>
         </div>
 
-        <Table
-          rowKey="id"
-          loading={loading}
-          columns={columns}
-          dataSource={visibleOrders}
-          pagination={{
-            pageSize: 20,
-            showSizeChanger: false,
-            showTotal: (total) => `${total} orders`,
-          }}
-          size="middle"
-          locale={{
-            emptyText: (
-              <div style={{ padding: "32px 0" }}>
-                <Typography.Text type="secondary">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Order</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Total</TableHead>
+              <TableHead>Payment</TableHead>
+              <TableHead>Fulfillment</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-16"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : visibleOrders.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   No orders found
-                </Typography.Text>
-              </div>
-            ),
-          }}
-        />
+                </TableCell>
+              </TableRow>
+            ) : (
+              visibleOrders.map((record) => {
+                const paymentInfo = PAYMENT_BADGE[record.paymentStatus || "pending"] ?? {
+                  variant: "outline",
+                  label: record.paymentStatus || "Pending",
+                };
+                const fulfillInfo = FULFILLMENT_BADGE[record.fulfillmentStatus || "unfulfilled"] ?? {
+                  variant: "outline",
+                  label: record.fulfillmentStatus || "Unfulfilled",
+                };
+                const options = getOrderLifecycleOptions({
+                  status: record.status,
+                  paymentStatus: record.paymentStatus,
+                  fulfillmentStatus: record.fulfillmentStatus,
+                });
+
+                const raw = record.created_at ?? record.createdAt;
+                const dateStr = raw
+                  ? new Date(raw).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "—";
+
+                return (
+                  <TableRow key={record.id}>
+                    <TableCell>
+                      <Link
+                        to={`/orders/${record.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        #{record.orderNumber ?? record.order_number}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{dateStr}</TableCell>
+                    <TableCell className="text-sm">
+                      {record.customerName ?? record.customer_name ?? "Guest"}
+                    </TableCell>
+                    <TableCell className="font-medium text-sm">
+                      {formatCurrency(
+                        record.displayTotal ?? record.total ?? record.total_price,
+                        record.displayCurrencyCode || record.currencyCode || "USD",
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={paymentInfo.variant}>{paymentInfo.label}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={fulfillInfo.variant}>{fulfillInfo.label}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={record.status}
+                        disabled={updatingId === record.id}
+                        onValueChange={(value) =>
+                          updateLifecycle(record, {
+                            status: value,
+                            note: `Status changed from ${record.status} to ${value}`,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-7 text-xs w-36">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {options.status.map((item) => (
+                            <SelectItem key={item} value={item}>
+                              {item}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Link to={`/orders/${record.id}`}>
+                        <Button variant="link" size="sm" className="p-0 text-xs h-auto">
+                          View
+                        </Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
       </Card>
     </section>
   );

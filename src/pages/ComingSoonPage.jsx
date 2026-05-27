@@ -1,45 +1,36 @@
-import { RocketOutlined } from "@ant-design/icons";
-import { Button, Card, Result, Space, Tag, Typography } from "antd";
+import { Rocket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function ComingSoonPage() {
   const navigate = useNavigate();
 
   return (
     <Card>
-      <Result
-        icon={<RocketOutlined style={{ color: "#0D5C53", fontSize: 64 }} />}
-        title="Feature Under Development"
-        subTitle={
-          <Space direction="vertical" size={4}>
-            <Typography.Text type="secondary">
-              This feature is part of our upcoming roadmap and will be available
-              in a future release.
-            </Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              We're focusing on the core commerce experience for now — store
-              setup, products, and orders.
-            </Typography.Text>
-          </Space>
-        }
-        extra={
-          <Space direction="vertical" align="center" size={12}>
-            <Tag
-              color="processing"
-              style={{ fontSize: 13, padding: "4px 12px" }}
-            >
-              Coming Soon
-            </Tag>
-            <Button
-              type="primary"
-              size="large"
-              onClick={() => navigate("/dashboard")}
-            >
-              Back to Dashboard
-            </Button>
-          </Space>
-        }
-      />
+      <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
+        <div className="flex size-20 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Rocket className="size-10" />
+        </div>
+        <h2 className="text-2xl font-semibold">Feature Under Development</h2>
+        <div className="max-w-md space-y-1">
+          <p className="text-sm text-muted-foreground">
+            This feature is part of our upcoming roadmap and will be available
+            in a future release.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            We're focusing on the core commerce experience for now — store
+            setup, products, and orders.
+          </p>
+        </div>
+        <div className="flex flex-col items-center gap-3 pt-2">
+          <Badge variant="secondary">Coming Soon</Badge>
+          <Button size="lg" onClick={() => navigate("/dashboard")}>
+            Back to Dashboard
+          </Button>
+        </div>
+      </CardContent>
     </Card>
   );
 }

@@ -1,111 +1,30 @@
-import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
+import { Pencil, Trash2 } from "lucide-react";
 import {
-  Badge,
-  Button,
-  Popconfirm,
-  Space,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
   Table,
-  Tag,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Tooltip,
-  Typography,
-} from "antd";
-
-function buildColumns({ onEdit, onAssign, onPreview, onDelete }) {
-  return [
-    {
-      title: "Title",
-      key: "name",
-      render: (_, record) => (
-        <Space direction="vertical" size={0}>
-          <Typography.Text strong style={{ fontSize: 13 }}>
-            {record.name}
-          </Typography.Text>
-          {record.urlHandle && (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              /{record.urlHandle}
-            </Typography.Text>
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: "Products",
-      key: "productCount",
-      render: (_, record) => (
-        <Typography.Text style={{ fontSize: 13 }}>
-          {record.productCount ?? 0}
-        </Typography.Text>
-      ),
-    },
-    {
-      title: "Type",
-      key: "collectionType",
-      render: (_, record) =>
-        record.collectionType === "smart" ? (
-          <Tag color="purple" style={{ fontSize: 12 }}>
-            Smart
-          </Tag>
-        ) : (
-          <Tag style={{ fontSize: 12 }}>Manual</Tag>
-        ),
-    },
-    {
-      title: "Status",
-      key: "status",
-      render: (_, record) => (
-        <Badge
-          status={record.status === "active" ? "success" : "default"}
-          text={
-            <span style={{ textTransform: "capitalize", fontSize: 13 }}>
-              {record.status}
-            </span>
-          }
-        />
-      ),
-    },
-    {
-      title: "",
-      key: "actions",
-      width: 180,
-      render: (_, record) => (
-        <Space>
-          {record.collectionType === "manual" ? (
-            <Button size="small" onClick={() => onAssign(record)}>
-              Assign products
-            </Button>
-          ) : (
-            <Button size="small" onClick={() => onPreview(record)}>
-              Preview
-            </Button>
-          )}
-          <Tooltip title="Edit">
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => onEdit(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Delete this collection?"
-            okText="Delete"
-            cancelText="Cancel"
-            onConfirm={() => onDelete(record)}
-          >
-            <Tooltip title="Delete">
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-}
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function CollectionsTable({
   collections,
@@ -115,16 +34,117 @@ export default function CollectionsTable({
   onDelete,
 }) {
   return (
-    <Table
-      rowKey="id"
-      columns={buildColumns({ onEdit, onAssign, onPreview, onDelete })}
-      dataSource={collections}
-      pagination={{
-        pageSize: 20,
-        showSizeChanger: false,
-        showTotal: (total) => `${total} collections`,
-      }}
-      size="middle"
-    />
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Title</TableHead>
+          <TableHead>Products</TableHead>
+          <TableHead>Type</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="w-44" />
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {collections.map((record) => (
+          <TableRow key={record.id}>
+            <TableCell>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium">{record.name}</span>
+                {record.urlHandle && (
+                  <span className="text-xs text-muted-foreground">
+                    /{record.urlHandle}
+                  </span>
+                )}
+              </div>
+            </TableCell>
+            <TableCell>
+              <span className="text-sm">{record.productCount ?? 0}</span>
+            </TableCell>
+            <TableCell>
+              {record.collectionType === "smart" ? (
+                <Badge variant="secondary" className="text-purple-700 bg-purple-100">
+                  Smart
+                </Badge>
+              ) : (
+                <Badge variant="outline">Manual</Badge>
+              )}
+            </TableCell>
+            <TableCell>
+              <Badge
+                variant={record.status === "active" ? "default" : "secondary"}
+              >
+                <span className="capitalize">{record.status}</span>
+              </Badge>
+            </TableCell>
+            <TableCell>
+              <div className="flex items-center gap-1">
+                {record.collectionType === "manual" ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onAssign(record)}
+                  >
+                    Assign products
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onPreview(record)}
+                  >
+                    Preview
+                  </Button>
+                )}
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8"
+                      onClick={() => onEdit(record)}
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Edit</TooltipContent>
+                </Tooltip>
+
+                <AlertDialog>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>Delete</TooltipContent>
+                  </Tooltip>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete this collection?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => onDelete(record)}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

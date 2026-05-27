@@ -1,18 +1,8 @@
-import {
-  ExportOutlined,
-  ImportOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
-import {
-  Alert,
-  Button,
-  Card,
-  Empty,
-  Space,
-  Typography,
-} from "antd";
+import { Download, Plus, Upload } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "../../context/CartContext";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import ProductFormModal from "./components/ProductFormModal";
 import ProductsFilterBar from "./components/ProductsFilterBar";
 import ProductsTable from "./components/ProductsTable";
@@ -81,67 +71,26 @@ export default function ProductsPage() {
   const isEmpty = visibleProducts.length === 0 && !isLoading;
 
   return (
-    <section style={{ display: "grid", gap: 0 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 16,
-        }}
-      >
-        <Typography.Title level={4} style={{ margin: 0 }}>
-          Products
-        </Typography.Title>
-        <Space>
-          <Button icon={<ImportOutlined />}>Import</Button>
-          <Button icon={<ExportOutlined />}>Export</Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setIsCreateOpen(true)}
-          >
+    <section className="grid gap-0">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-xl font-semibold">Products</h4>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm">
+            <Upload className="size-4 mr-2" />
+            Import
+          </Button>
+          <Button variant="outline" size="sm">
+            <Download className="size-4 mr-2" />
+            Export
+          </Button>
+          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+            <Plus className="size-4 mr-2" />
             Add product
           </Button>
-        </Space>
+        </div>
       </div>
 
-      {submitError && (
-        <Alert
-          type="error"
-          message={submitError}
-          showIcon
-          style={{ marginBottom: 12 }}
-          closable
-          onClose={() => setSubmitError("")}
-        />
-      )}
-      {notice && (
-        <Alert
-          type="success"
-          message={notice}
-          showIcon
-          style={{ marginBottom: 12 }}
-          closable
-          onClose={() => setNotice("")}
-        />
-      )}
-      {loadError && (
-        <Alert
-          type="error"
-          message="Failed to load products"
-          description={loadError}
-          showIcon
-          style={{ marginBottom: 12 }}
-          action={
-            <Button size="small" onClick={loadProducts}>
-              Retry
-            </Button>
-          }
-        />
-      )}
-
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card className="p-0 overflow-hidden">
         <ProductsFilterBar
           status={status}
           onStatusChange={setStatus}
@@ -157,26 +106,21 @@ export default function ProductsPage() {
         />
 
         {isEmpty ? (
-          <div style={{ padding: 48 }}>
-            <Empty
-              description={
-                <Space direction="vertical" size={4}>
-                  <Typography.Text strong>No products found</Typography.Text>
-                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                    Add your first product to start building your catalog.
-                  </Typography.Text>
-                </Space>
-              }
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            >
+          <div className="grid place-items-center p-12 text-muted-foreground">
+            <div className="flex flex-col items-center gap-2">
+              <p className="font-medium text-foreground">No products found</p>
+              <p className="text-sm">
+                Add your first product to start building your catalog.
+              </p>
               <Button
-                type="primary"
-                icon={<PlusOutlined />}
+                size="sm"
+                className="mt-2"
                 onClick={() => setIsCreateOpen(true)}
               >
+                <Plus className="size-4 mr-2" />
                 Add product
               </Button>
-            </Empty>
+            </div>
           </div>
         ) : (
           <ProductsTable

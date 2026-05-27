@@ -1,25 +1,20 @@
-import { Card, Typography } from "antd";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function OrderCustomerCard({ order }) {
   return (
-    <Card title="Customer" style={{ marginBottom: 12 }}>
-      <Typography.Text strong style={{ fontSize: 13 }}>
-        {order?.customerName || "Guest"}
-      </Typography.Text>
-      <br />
-      {order?.customerEmail && (
-        <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-          {order.customerEmail}
-        </Typography.Text>
-      )}
-      {order?.customerPhone && (
-        <>
-          <br />
-          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            {order.customerPhone}
-          </Typography.Text>
-        </>
-      )}
+    <Card className="mb-3">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Customer</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-0.5 text-sm">
+        <span className="font-medium">{order?.customerName || "Guest"}</span>
+        {order?.customerEmail && (
+          <span className="text-muted-foreground">{order.customerEmail}</span>
+        )}
+        {order?.customerPhone && (
+          <span className="text-muted-foreground">{order.customerPhone}</span>
+        )}
+      </CardContent>
     </Card>
   );
 }

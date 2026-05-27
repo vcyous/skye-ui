@@ -1,4 +1,11 @@
-import { Card, Select, Space, Typography } from "antd";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ROWS = [
   {
@@ -32,37 +39,41 @@ export default function OrderPaymentCard({
   onPatch,
 }) {
   return (
-    <Card title="Payment" style={{ marginBottom: 12 }}>
-      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+    <Card className="mb-3">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Payment</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
         {ROWS.map((row) => (
           <div
             key={row.valueKey}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
+            className="flex items-center justify-between gap-2"
           >
-            <Typography.Text style={{ fontSize: 13 }}>{row.label}</Typography.Text>
+            <span className="text-sm">{row.label}</span>
             <Select
-              size="small"
               value={order?.[row.valueKey] || row.fallback}
               disabled={isSaving}
-              onChange={(value) =>
+              onValueChange={(value) =>
                 onPatch({
                   [row.patchKey]: value,
                   note: `${row.noteLabel} → ${value}`,
                 })
               }
-              options={lifecycleOptions[row.optionsKey].map((item) => ({
-                value: item,
-                label: item,
-              }))}
-              style={{ width: 180 }}
-            />
+            >
+              <SelectTrigger className="h-7 w-44 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {lifecycleOptions[row.optionsKey].map((item) => (
+                  <SelectItem key={item} value={item} className="text-xs">
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ))}
-      </Space>
+      </CardContent>
     </Card>
   );
 }

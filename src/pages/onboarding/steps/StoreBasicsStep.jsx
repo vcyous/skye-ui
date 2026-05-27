@@ -1,4 +1,14 @@
-import { Button, Form, Input, Select, Typography } from "antd";
+import { Controller, useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const CURRENCY_OPTIONS = [
   { value: "IDR", label: "IDR — Indonesian Rupiah" },
@@ -16,44 +26,92 @@ const TIMEZONE_OPTIONS = [
 ];
 
 export default function StoreBasicsStep({ onNext }) {
-  const [form] = Form.useForm();
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    defaultValues: { storeName: "", currency: "IDR", timezone: "Asia/Jakarta" },
+  });
 
   return (
     <>
-      <Typography.Title level={3}>Tell us about your store</Typography.Title>
-      <Typography.Paragraph type="secondary">
+      <h3 className="text-xl font-semibold">Tell us about your store</h3>
+      <p className="mt-1 text-sm text-muted-foreground">
         You can change these settings later from your dashboard.
-      </Typography.Paragraph>
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{ currency: "IDR", timezone: "Asia/Jakarta" }}
-        onFinish={onNext}
-        requiredMark={false}
+      </p>
+      <form
+        onSubmit={handleSubmit(onNext)}
+        className="mt-6 flex flex-col gap-4"
       >
-        <Form.Item
-          label="Store name"
-          name="storeName"
-          rules={[
-            { required: true, message: "Store name is required" },
-            { min: 3, message: "Minimum 3 characters" },
-            { max: 100, message: "Maximum 100 characters" },
-          ]}
-        >
-          <Input placeholder="e.g. Batik Nusantara" size="large" />
-        </Form.Item>
-        <Form.Item label="Currency" name="currency">
-          <Select options={CURRENCY_OPTIONS} size="large" />
-        </Form.Item>
-        <Form.Item label="Timezone" name="timezone">
-          <Select options={TIMEZONE_OPTIONS} size="large" />
-        </Form.Item>
-        <Form.Item>
-          <Button type="primary" htmlType="submit" size="large" block>
-            Continue
-          </Button>
-        </Form.Item>
-      </Form>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="storeName">Store name</Label>
+          <Input
+            id="storeName"
+            placeholder="e.g. Batik Nusantara"
+            aria-invalid={!!errors.storeName}
+            {...register("storeName", {
+              required: "Store name is required",
+              minLength: { value: 3, message: "Minimum 3 characters" },
+              maxLength: { value: 100, message: "Maximum 100 characters" },
+            })}
+          />
+          {errors.storeName && (
+            <p className="text-xs text-destructive">
+              {errors.storeName.message}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="currency">Currency</Label>
+          <Controller
+            control={control}
+            name="currency"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="currency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCY_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="timezone">Timezone</Label>
+          <Controller
+            control={control}
+            name="timezone"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="timezone">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIMEZONE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+
+        <Button type="submit" size="lg" className="w-full">
+          Continue
+        </Button>
+      </form>
     </>
   );
 }

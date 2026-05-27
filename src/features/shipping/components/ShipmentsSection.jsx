@@ -1,56 +1,67 @@
-import { Card, Empty, Select, Space, Table, Tag } from "antd";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { SHIPMENT_STATUS_OPTIONS } from "../constants";
-
-function buildColumns({ onStatusChange }) {
-  return [
-    { title: "Order", dataIndex: "orderNumber", key: "orderNumber" },
-    {
-      title: "Method",
-      dataIndex: "shippingMethodName",
-      key: "shippingMethodName",
-    },
-    { title: "Tracking", dataIndex: "trackingNumber", key: "trackingNumber" },
-    { title: "Carrier", dataIndex: "carrier", key: "carrier" },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (value) => <Tag color="blue">{value}</Tag>,
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space>
-          <Select
-            size="small"
-            value={record.status}
-            style={{ width: 130 }}
-            onChange={(value) => onStatusChange(record, value)}
-            options={SHIPMENT_STATUS_OPTIONS.map((opt) => ({
-              value: opt.value,
-              label: opt.value,
-            }))}
-          />
-        </Space>
-      ),
-    },
-  ];
-}
 
 export default function ShipmentsSection({ shipments, onStatusChange }) {
   return (
-    <Card title="Shipments">
-      {shipments.length ? (
-        <Table
-          rowKey="id"
-          columns={buildColumns({ onStatusChange })}
-          dataSource={shipments}
-          pagination={{ pageSize: 6 }}
-        />
-      ) : (
-        <Empty description="No shipments yet. Create first fulfillment batch." />
-      )}
+    <Card>
+      <CardHeader>
+        <CardTitle>Shipments</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {shipments.length ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Order</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Tracking</TableHead>
+                <TableHead>Carrier</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {shipments.map((shipment) => (
+                <TableRow key={shipment.id}>
+                  <TableCell>{shipment.orderNumber}</TableCell>
+                  <TableCell>{shipment.shippingMethodName}</TableCell>
+                  <TableCell>{shipment.trackingNumber}</TableCell>
+                  <TableCell>{shipment.carrier}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{shipment.status}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <select
+                      className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      value={shipment.status}
+                      onChange={(e) => onStatusChange(shipment, e.target.value)}
+                    >
+                      {SHIPMENT_STATUS_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.value}
+                        </option>
+                      ))}
+                    </select>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="grid place-items-center p-8 text-muted-foreground">
+            No shipments yet. Create first fulfillment batch.
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
 }

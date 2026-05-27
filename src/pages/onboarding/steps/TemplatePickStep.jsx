@@ -1,5 +1,6 @@
-import { Button, Card, Col, Row, Space, Typography } from "antd";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { templateRegistry } from "../../../components/website-builder/templateRegistry";
 
 export default function TemplatePickStep({ onNext, onBack }) {
@@ -9,53 +10,45 @@ export default function TemplatePickStep({ onNext, onBack }) {
 
   return (
     <>
-      <Typography.Title level={3}>Choose a template</Typography.Title>
-      <Typography.Paragraph type="secondary">
+      <h3 className="text-xl font-semibold">Choose a template</h3>
+      <p className="mt-1 text-sm text-muted-foreground">
         Pick a starting point for your storefront. You can customise everything
         after launch.
-      </Typography.Paragraph>
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      </p>
+      <div className="my-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {templateRegistry.map((tmpl) => (
-          <Col xs={24} sm={8} key={tmpl.id}>
-            <Card
-              hoverable
-              onClick={() => setSelected(tmpl.id)}
+          <Card
+            key={tmpl.id}
+            onClick={() => setSelected(tmpl.id)}
+            className={`cursor-pointer overflow-hidden p-0 transition-all ${
+              selected === tmpl.id
+                ? "border-2 border-primary"
+                : "border-2 border-transparent hover:border-border"
+            }`}
+          >
+            <div
+              className="h-32"
               style={{
-                border:
-                  selected === tmpl.id
-                    ? "2px solid #0D5C53"
-                    : "2px solid transparent",
-                cursor: "pointer",
+                background: `linear-gradient(135deg, ${tmpl.gradientFrom}, ${tmpl.gradientTo})`,
               }}
-              styles={{ body: { padding: 0 } }}
-            >
-              <div
-                style={{
-                  height: 120,
-                  background: `linear-gradient(135deg, ${tmpl.gradientFrom}, ${tmpl.gradientTo})`,
-                  borderRadius: "8px 8px 0 0",
-                }}
-              />
-
-              <div style={{ padding: "12px 16px" }}>
-                <Typography.Text strong>{tmpl.name}</Typography.Text>
-                <br />
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {tmpl.description}
-                </Typography.Text>
-              </div>
-            </Card>
-          </Col>
+            />
+            <div className="p-3">
+              <p className="font-semibold">{tmpl.name}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {tmpl.description}
+              </p>
+            </div>
+          </Card>
         ))}
-      </Row>
-      <Space style={{ width: "100%", justifyContent: "space-between" }}>
-        <Button size="large" onClick={onBack}>
+      </div>
+      <div className="flex items-center justify-between">
+        <Button size="lg" variant="outline" onClick={onBack}>
           Back
         </Button>
-        <Button type="primary" size="large" onClick={() => onNext(selected)}>
+        <Button size="lg" onClick={() => onNext(selected)}>
           Use this template
         </Button>
-      </Space>
+      </div>
     </>
   );
 }

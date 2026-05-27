@@ -1,5 +1,6 @@
-import { Button, Result } from "antd";
 import { Component } from "react";
+import { AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { reportError } from "../../lib/errorReporter";
 
 export default class ErrorBoundary extends Component {
@@ -40,37 +41,26 @@ export default class ErrorBoundary extends Component {
     const isDev = import.meta.env.DEV;
 
     return (
-      <div style={{ padding: 24 }}>
-        <Result
-          status="500"
-          title="Something went wrong"
-          subTitle={
-            isDev && this.state.error?.message
+      <div className="p-6">
+        <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-12 text-center">
+          <div className="flex size-16 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <AlertTriangle className="size-8" />
+          </div>
+          <h2 className="text-xl font-semibold">Something went wrong</h2>
+          <p className="text-sm text-muted-foreground">
+            {isDev && this.state.error?.message
               ? this.state.error.message
-              : "An unexpected error occurred. Try reloading the page."
-          }
-          extra={[
-            <Button key="reload" type="primary" onClick={this.handleReload}>
-              Reload
-            </Button>,
-            <Button key="retry" onClick={this.handleReset}>
+              : "An unexpected error occurred. Try reloading the page."}
+          </p>
+          <div className="flex gap-2">
+            <Button onClick={this.handleReload}>Reload</Button>
+            <Button variant="outline" onClick={this.handleReset}>
               Try again
-            </Button>,
-          ]}
-        />
+            </Button>
+          </div>
+        </div>
         {isDev && this.state.error?.stack ? (
-          <pre
-            style={{
-              marginTop: 16,
-              padding: 16,
-              background: "var(--paper, #fafafa)",
-              border: "1px solid var(--line, #eee)",
-              borderRadius: 8,
-              fontSize: 12,
-              overflow: "auto",
-              maxHeight: 320,
-            }}
-          >
+          <pre className="mt-4 max-h-80 overflow-auto rounded-lg border bg-muted p-4 text-xs">
             {this.state.error.stack}
           </pre>
         ) : null}

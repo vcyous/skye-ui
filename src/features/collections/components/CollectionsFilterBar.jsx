@@ -1,5 +1,6 @@
-import { SearchOutlined } from "@ant-design/icons";
-import { Input, Tabs } from "antd";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STATUS_TABS } from "../constants";
 
 export default function CollectionsFilterBar({
@@ -11,42 +12,37 @@ export default function CollectionsFilterBar({
 }) {
   return (
     <>
-      <div style={{ borderBottom: "1px solid var(--line)", paddingLeft: 16 }}>
-        <Tabs
-          activeKey={statusTab}
-          onChange={onStatusTabChange}
-          size="small"
-          items={STATUS_TABS.map((tab) => ({
-            key: tab.key,
-            label: (
-              <span>
+      <div className="border-b px-4">
+        <Tabs value={statusTab} onValueChange={onStatusTabChange}>
+          <TabsList className="h-auto bg-transparent p-0 gap-0 rounded-none">
+            {STATUS_TABS.map((tab) => (
+              <TabsTrigger
+                key={tab.key}
+                value={tab.key}
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2 text-sm"
+              >
                 {tab.label}
                 {tabCounts[tab.key] != null && (
-                  <span
-                    style={{
-                      marginLeft: 6,
-                      color: "var(--ink-3)",
-                      fontSize: 12,
-                    }}
-                  >
+                  <span className="ml-1.5 text-xs text-muted-foreground">
                     {tabCounts[tab.key]}
                   </span>
                 )}
-              </span>
-            ),
-          }))}
-        />
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
-      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--line)" }}>
-        <Input
-          prefix={<SearchOutlined style={{ color: "var(--ink-3)" }} />}
-          placeholder="Search collections"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          allowClear
-          style={{ width: 280 }}
-        />
+      <div className="px-4 py-3 border-b">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="Search collections"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-9 w-72"
+          />
+        </div>
       </div>
     </>
   );

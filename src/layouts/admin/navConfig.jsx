@@ -1,83 +1,105 @@
 import {
-  AppstoreOutlined,
-  DashboardOutlined,
-  DropboxOutlined,
-  ProfileOutlined,
-  SettingOutlined,
-  ShopOutlined,
-  ShoppingCartOutlined,
-  ShoppingOutlined,
-  TagsOutlined,
-  TruckOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
+  ClipboardList,
+  LayoutDashboard,
+  LayoutGrid,
+  Package,
+  Settings,
+  ShoppingBag,
+  ShoppingCart,
+  Store,
+  Tags,
+  Truck,
+  User,
+} from "lucide-react";
+
+const iconClass = "size-4";
 
 export const navSections = [
   {
     key: "overview",
     label: "Overview",
-    icon: <DashboardOutlined />,
+    icon: <LayoutDashboard className={iconClass} />,
     children: [
-      { to: "/dashboard", label: "Dashboard", icon: <DashboardOutlined /> },
+      {
+        to: "/dashboard",
+        label: "Dashboard",
+        icon: <LayoutDashboard className={iconClass} />,
+      },
     ],
   },
   {
     key: "website",
     label: "Website",
-    icon: <AppstoreOutlined />,
+    icon: <LayoutGrid className={iconClass} />,
     children: [
       {
         to: "/dashboard/store/website-builder",
         label: "Website Builder",
-        icon: <AppstoreOutlined />,
+        icon: <LayoutGrid className={iconClass} />,
       },
       {
         to: "/dashboard/store",
         label: "Store Settings",
-        icon: <ShopOutlined />,
+        icon: <Store className={iconClass} />,
       },
     ],
   },
   {
     key: "catalog",
     label: "Catalog",
-    icon: <AppstoreOutlined />,
+    icon: <LayoutGrid className={iconClass} />,
     children: [
       {
         to: "/dashboard/products",
         label: "Products",
-        icon: <DropboxOutlined />,
+        icon: <Package className={iconClass} />,
       },
       {
         to: "/dashboard/collections",
         label: "Collections",
-        icon: <TagsOutlined />,
+        icon: <Tags className={iconClass} />,
       },
     ],
   },
   {
     key: "sales",
     label: "Sales & Orders",
-    icon: <ShoppingCartOutlined />,
+    icon: <ShoppingCart className={iconClass} />,
     children: [
-      { to: "/dashboard/cart", label: "Cart", icon: <ShoppingOutlined /> },
-      { to: "/dashboard/orders", label: "Orders", icon: <ProfileOutlined /> },
+      {
+        to: "/dashboard/cart",
+        label: "Cart",
+        icon: <ShoppingBag className={iconClass} />,
+      },
+      {
+        to: "/dashboard/orders",
+        label: "Orders",
+        icon: <ClipboardList className={iconClass} />,
+      },
     ],
   },
   {
     key: "operations",
     label: "Operations",
-    icon: <TruckOutlined />,
+    icon: <Truck className={iconClass} />,
     children: [
-      { to: "/dashboard/shipping", label: "Shipping", icon: <TruckOutlined /> },
+      {
+        to: "/dashboard/shipping",
+        label: "Shipping",
+        icon: <Truck className={iconClass} />,
+      },
     ],
   },
   {
     key: "settings",
     label: "Settings",
-    icon: <SettingOutlined />,
+    icon: <Settings className={iconClass} />,
     children: [
-      { to: "/dashboard/profile", label: "Profile", icon: <UserOutlined /> },
+      {
+        to: "/dashboard/profile",
+        label: "Profile",
+        icon: <User className={iconClass} />,
+      },
     ],
   },
 ];

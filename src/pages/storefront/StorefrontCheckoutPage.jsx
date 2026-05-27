@@ -1,17 +1,20 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  App,
-  Button,
-  Col,
-  Form,
-  Input,
-  Row,
   Select,
-  Space,
-  Spin,
-  Typography,
-} from "antd";
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useCart } from "../../context/CartContext";
 import { createOrderFromCart, getCheckoutSnapshot } from "../../services/api";
 
@@ -21,12 +24,17 @@ function formatPrice(value) {
 
 export default function StorefrontCheckoutPage() {
   const navigate = useNavigate();
-  const { message } = App.useApp();
   const { cart, refreshCart } = useCart();
-  const [form] = Form.useForm();
   const [snapshot, setSnapshot] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm({ defaultValues: { country: "Indonesia" } });
 
   useEffect(() => {
     if (!cart.items.length) {
@@ -54,7 +62,7 @@ export default function StorefrontCheckoutPage() {
         err instanceof Error
           ? err.message
           : "Checkout failed. Please try again.";
-      message.error(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -62,15 +70,8 @@ export default function StorefrontCheckoutPage() {
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Spin size="large" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -79,196 +80,188 @@ export default function StorefrontCheckoutPage() {
   const shippingMethods = snapshot.shippingMethods ?? [];
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: 32 }}>
+    <div className="max-w-5xl mx-auto px-4 py-8">
       <Button
-        type="link"
+        variant="link"
+        className="px-0 mb-5"
         onClick={() => navigate("/storefront/cart")}
-        style={{ padding: 0, marginBottom: 20 }}
       >
         ← Back to Cart
       </Button>
-      <Typography.Title level={2}>Checkout</Typography.Title>
+      <h2 className="text-2xl font-bold mb-6">Checkout</h2>
 
-      <Row gutter={[32, 32]}>
-        <Col xs={24} lg={14}>
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={onSubmit}
-            requiredMark={false}
-          >
-            <Typography.Title level={4}>Customer Information</Typography.Title>
-            <Row gutter={16}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="customerName"
-                  label="Full Name"
-                  rules={[{ required: true, message: "Name is required." }]}
-                >
-                  <Input placeholder="John Doe" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="customerEmail"
-                  label="Email Address"
-                  rules={[
-                    {
-                      required: true,
-                      type: "email",
-                      message: "Enter a valid email.",
-                    },
-                  ]}
-                >
-                  <Input placeholder="john@example.com" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item name="customerPhone" label="Phone Number">
-                  <Input placeholder="+62 812 3456 7890" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Typography.Title level={4} style={{ marginTop: 16 }}>
-              Shipping Address
-            </Typography.Title>
-            <Row gutter={16}>
-              <Col xs={24}>
-                <Form.Item
-                  name="addressLine1"
-                  label="Street Address"
-                  rules={[{ required: true, message: "Address is required." }]}
-                >
-                  <Input placeholder="Jl. Sudirman No. 1" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={8}>
-                <Form.Item
-                  name="city"
-                  label="City"
-                  rules={[{ required: true, message: "City is required." }]}
-                >
-                  <Input placeholder="Jakarta" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={8}>
-                <Form.Item
-                  name="postalCode"
-                  label="Postal Code"
-                  rules={[
-                    { required: true, message: "Postal code is required." },
-                  ]}
-                >
-                  <Input placeholder="12190" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={8}>
-                <Form.Item
-                  name="country"
-                  label="Country"
-                  initialValue="Indonesia"
-                  rules={[{ required: true }]}
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Typography.Title level={4} style={{ marginTop: 16 }}>
-              Delivery & Payment
-            </Typography.Title>
-            <Row gutter={16}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="shippingMethodId"
-                  label="Shipping Method"
-                  rules={[
-                    { required: true, message: "Select a shipping method." },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select shipping"
-                    options={shippingMethods.map((m) => ({
-                      value: m.id,
-                      label: `${m.name} — ${formatPrice(m.baseRate)}`,
-                    }))}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="paymentMethodId"
-                  label="Payment Method"
-                  rules={[
-                    { required: true, message: "Select a payment method." },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select payment"
-                    options={paymentMethods.map((m) => ({
-                      value: m.id,
-                      label: m.displayName,
-                    }))}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24}>
-                <Form.Item name="note" label="Order Note (optional)">
-                  <Input.TextArea
-                    rows={2}
-                    placeholder="Special instructions..."
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              block
-              loading={isSubmitting}
-            >
-              Place Order
-            </Button>
-          </Form>
-        </Col>
-
-        <Col xs={24} lg={10}>
-          <div style={{ background: "#F9FAFB", borderRadius: 12, padding: 24 }}>
-            <Typography.Title level={4}>Order Summary</Typography.Title>
-            <Space direction="vertical" style={{ width: "100%" }} size={8}>
-              {cart.items.map((item) => (
-                <div
-                  key={item.id}
-                  style={{ display: "flex", justifyContent: "space-between" }}
-                >
-                  <Typography.Text>
-                    {item.productName} × {item.quantity}
-                  </Typography.Text>
-                  <Typography.Text strong>
-                    {formatPrice(item.lineTotal)}
-                  </Typography.Text>
-                </div>
-              ))}
-              <div
-                style={{
-                  borderTop: "1px solid #E5E7EB",
-                  paddingTop: 8,
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Typography.Text>Subtotal</Typography.Text>
-                <Typography.Text strong>
-                  {formatPrice(cart.subtotal)}
-                </Typography.Text>
-              </div>
-            </Space>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+          <h4 className="text-base font-semibold">Customer Information</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="customerName">Full Name</Label>
+              <Input
+                id="customerName"
+                placeholder="John Doe"
+                {...register("customerName", { required: "Name is required." })}
+              />
+              {errors.customerName && (
+                <span className="text-destructive text-xs">{errors.customerName.message}</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="customerEmail">Email Address</Label>
+              <Input
+                id="customerEmail"
+                type="email"
+                placeholder="john@example.com"
+                {...register("customerEmail", {
+                  required: "Enter a valid email.",
+                  pattern: { value: /\S+@\S+\.\S+/, message: "Enter a valid email." },
+                })}
+              />
+              {errors.customerEmail && (
+                <span className="text-destructive text-xs">{errors.customerEmail.message}</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="customerPhone">Phone Number</Label>
+              <Input
+                id="customerPhone"
+                placeholder="+62 812 3456 7890"
+                {...register("customerPhone")}
+              />
+            </div>
           </div>
-        </Col>
-      </Row>
+
+          <h4 className="text-base font-semibold">Shipping Address</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-3 flex flex-col gap-1">
+              <Label htmlFor="addressLine1">Street Address</Label>
+              <Input
+                id="addressLine1"
+                placeholder="Jl. Sudirman No. 1"
+                {...register("addressLine1", { required: "Address is required." })}
+              />
+              {errors.addressLine1 && (
+                <span className="text-destructive text-xs">{errors.addressLine1.message}</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                placeholder="Jakarta"
+                {...register("city", { required: "City is required." })}
+              />
+              {errors.city && (
+                <span className="text-destructive text-xs">{errors.city.message}</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="postalCode">Postal Code</Label>
+              <Input
+                id="postalCode"
+                placeholder="12190"
+                {...register("postalCode", { required: "Postal code is required." })}
+              />
+              {errors.postalCode && (
+                <span className="text-destructive text-xs">{errors.postalCode.message}</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                {...register("country", { required: true })}
+              />
+            </div>
+          </div>
+
+          <h4 className="text-base font-semibold">Delivery & Payment</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <Label>Shipping Method</Label>
+              <Controller
+                name="shippingMethodId"
+                control={control}
+                rules={{ required: "Select a shipping method." }}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select shipping" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {shippingMethods.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name} — {formatPrice(m.baseRate)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.shippingMethodId && (
+                <span className="text-destructive text-xs">{errors.shippingMethodId.message}</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label>Payment Method</Label>
+              <Controller
+                name="paymentMethodId"
+                control={control}
+                rules={{ required: "Select a payment method." }}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {paymentMethods.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.paymentMethodId && (
+                <span className="text-destructive text-xs">{errors.paymentMethodId.message}</span>
+              )}
+            </div>
+            <div className="md:col-span-2 flex flex-col gap-1">
+              <Label htmlFor="note">Order Note (optional)</Label>
+              <Textarea
+                id="note"
+                rows={2}
+                placeholder="Special instructions..."
+                {...register("note")}
+              />
+            </div>
+          </div>
+
+          <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+            {isSubmitting && <Loader2 className="size-4 animate-spin mr-2" />}
+            Place Order
+          </Button>
+        </form>
+
+        <div className="lg:w-80 bg-muted/40 rounded-xl p-6 h-fit">
+          <h4 className="text-base font-semibold mb-4">Order Summary</h4>
+          <div className="flex flex-col gap-2">
+            {cart.items.map((item) => (
+              <div key={item.id} className="flex justify-between text-sm">
+                <span>
+                  {item.productName} × {item.quantity}
+                </span>
+                <span className="font-semibold">{formatPrice(item.lineTotal)}</span>
+              </div>
+            ))}
+            <Separator className="my-2" />
+            <div className="flex justify-between text-sm">
+              <span>Subtotal</span>
+              <span className="font-semibold">{formatPrice(cart.subtotal)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

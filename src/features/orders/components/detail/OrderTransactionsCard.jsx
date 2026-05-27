@@ -1,35 +1,33 @@
-import { Card, List, Tag, Typography } from "antd";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "../../../../shared/format";
-
-const EMPTY_TEXT = (
-  <div style={{ padding: "16px", textAlign: "center" }}>
-    <Typography.Text type="secondary">No transactions yet</Typography.Text>
-  </div>
-);
 
 export default function OrderTransactionsCard({ transactions }) {
   return (
-    <Card title="Transactions" bodyStyle={{ padding: 0 }}>
-      <List
-        dataSource={transactions}
-        locale={{ emptyText: EMPTY_TEXT }}
-        renderItem={(item) => (
-          <List.Item key={item.id} style={{ padding: "10px 16px" }}>
-            <List.Item.Meta
-              title={
-                <Typography.Text strong style={{ fontSize: 13 }}>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Transactions</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {transactions.length === 0 ? (
+          <div className="grid place-items-center p-8 text-muted-foreground text-sm">
+            No transactions yet
+          </div>
+        ) : (
+          <ul className="divide-y">
+            {transactions.map((item) => (
+              <li key={item.id} className="px-4 py-2.5">
+                <p className="text-sm font-medium">
                   {item.paymentMethodName} · {formatCurrency(item.amount)}
-                </Typography.Text>
-              }
-              description={
-                <Tag color={item.status === "success" ? "success" : "default"}>
+                </p>
+                <Badge variant={item.status === "success" ? "default" : "outline"}>
                   {item.status}
-                </Tag>
-              }
-            />
-          </List.Item>
+                </Badge>
+              </li>
+            ))}
+          </ul>
         )}
-      />
+      </CardContent>
     </Card>
   );
 }

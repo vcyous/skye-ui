@@ -1,5 +1,4 @@
-import { LockOutlined } from "@ant-design/icons";
-import { Spin } from "antd";
+import { Loader2, Lock } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const DEVICE_WIDTHS = { desktop: 1280, mobile: 375 };
@@ -37,7 +36,7 @@ export default function BuilderStage({
   return (
     <div className="builder-stage">
       <div className="builder-url-bar">
-        <LockOutlined style={{ fontSize: 11, opacity: 0.5 }} />
+        <Lock style={{ fontSize: 11, opacity: 0.5 }} className="size-3" />
         <span className="builder-url-bar__text">{displayUrl}</span>
         <span className="builder-url-bar__dim">
           &middot; {deviceWidth}px &middot; {Math.round(scale * 100)}%
@@ -54,8 +53,8 @@ export default function BuilderStage({
           }}
         >
           {isLoading ? (
-            <div style={{ padding: 64, textAlign: "center" }}>
-              <Spin tip="Loading preview..." />
+            <div className="flex items-center justify-center p-16">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
           ) : TemplateComponent ? (
             <TemplateComponent

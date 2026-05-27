@@ -1,14 +1,38 @@
-import {
-  App,
-  Card,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Table,
-} from "antd";
 import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Loader2 } from "lucide-react";
 import { SHIPMENT_STATUS_OPTIONS } from "../constants";
 
 export default function CreateShipmentModal({
@@ -20,24 +44,31 @@ export default function CreateShipmentModal({
   onSubmit,
   onCancel,
 }) {
-  const { message } = App.useApp();
-  const [form] = Form.useForm();
+  const { register, handleSubmit, control, reset, setValue } = useForm({
+    defaultValues: {
+      orderId: "",
+      shippingMethodId: "",
+      carrier: "",
+      trackingNumber: "",
+      status: "pending",
+    },
+  });
   const [selectedOrderId, setSelectedOrderId] = useState("");
   const [fulfillmentItems, setFulfillmentItems] = useState([]);
   const [shipmentItemQty, setShipmentItemQty] = useState({});
 
   useEffect(() => {
     if (!open) {
-      form.resetFields();
+      reset();
       setSelectedOrderId("");
       setFulfillmentItems([]);
       setShipmentItemQty({});
     }
-  }, [open, form]);
+  }, [open, reset]);
 
   async function handleSelectOrder(orderId) {
     setSelectedOrderId(orderId);
-    form.setFieldValue("orderId", orderId);
+    setValue("orderId", orderId);
     if (!orderId) {
       setFulfillmentItems([]);
       setShipmentItemQty({});
@@ -62,98 +93,195 @@ export default function CreateShipmentModal({
       .filter((item) => item.quantity > 0);
 
     if (!selectedItems.length) {
-      message.warning("Select at least one item quantity for shipment.");
+      toast.warning("Select at least one item quantity for shipment");
       return;
     }
 
     const ok = await onSubmit({ ...values, items: selectedItems });
     if (ok) {
-      form.resetFields();
+      reset();
       setSelectedOrderId("");
       setFulfillmentItems([]);
       setShipmentItemQty({});
     }
   }
 
-  const activeMethodOptions = methods
-    .filter((item) => item.isActive)
-    .map((item) => ({ value: item.id, label: item.name }));
-
-  const orderOptions = orders.map((item) => ({
-    value: item.id,
-    label: item.orderNumber,
-  }));
+  const activeMethodOptions = methods.filter((item) => item.isActive);
+  const orderOptions = orders;
 
   return (
-    <Modal
-      title="Create Shipment"
-      open={open}
-      onCancel={onCancel}
-      onOk={() => form.submit()}
-      confirmLoading={isSaving}
-      destroyOnClose
-      width={900}
-    >
-      <Form form={form} layout="vertical" onFinish={handleFinish}>
-        <Form.Item name="orderId" label="Order" rules={[{ required: true }]}>
-          <Select onChange={handleSelectOrder} options={orderOptions} />
-        </Form.Item>
-        <Form.Item
-          name="shippingMethodId"
-          label="Shipping Method"
-          rules={[{ required: true }]}
-        >
-          <Select options={activeMethodOptions} />
-        </Form.Item>
-        <Form.Item name="carrier" label="Carrier">
-          <Input />
-        </Form.Item>
-        <Form.Item name="trackingNumber" label="Tracking Number">
-          <Input />
-        </Form.Item>
-        <Form.Item name="status" label="Status" initialValue="pending">
-          <Select options={SHIPMENT_STATUS_OPTIONS} />
-        </Form.Item>
+    <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Create Shipment</DialogTitle>
+        </DialogHeader>
 
-        {selectedOrderId ? (
-          <Card size="small" title="Split Shipment Items">
-            <Table
-              rowKey="id"
-              pagination={false}
-              dataSource={fulfillmentItems}
-              locale={{ emptyText: "No fulfillable items for this order." }}
-              columns={[
-                {
-                  title: "Item",
-                  key: "item",
-                  render: (_, record) =>
-                    `${record.productTitle}${record.variantTitle ? ` - ${record.variantTitle}` : ""}`,
-                },
-                { title: "SKU", dataIndex: "sku", key: "sku" },
-                { title: "Ordered", dataIndex: "orderedQty", key: "orderedQty" },
-                { title: "Remaining", dataIndex: "remainingQty", key: "remainingQty" },
-                {
-                  title: "Ship Qty",
-                  key: "shipQty",
-                  render: (_, record) => (
-                    <InputNumber
-                      min={0}
-                      max={record.remainingQty}
-                      value={shipmentItemQty[record.id] || 0}
-                      onChange={(value) =>
-                        setShipmentItemQty((prev) => ({
-                          ...prev,
-                          [record.id]: Number(value || 0),
-                        }))
-                      }
-                    />
-                  ),
-                },
-              ]}
+        <form
+          id="create-shipment-form"
+          onSubmit={handleSubmit(handleFinish)}
+          className="flex flex-col gap-4"
+        >
+          <div className="flex flex-col gap-1.5">
+            <Label>Order</Label>
+            <Controller
+              name="orderId"
+              control={control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={(v) => {
+                    field.onChange(v);
+                    handleSelectOrder(v);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {orderOptions.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.orderNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             />
-          </Card>
-        ) : null}
-      </Form>
-    </Modal>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Shipping Method</Label>
+            <Controller
+              name="shippingMethodId"
+              control={control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeMethodOptions.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Carrier</Label>
+            <Input {...register("carrier")} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Tracking Number</Label>
+            <Input {...register("trackingNumber")} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Status</Label>
+            <Controller
+              name="status"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SHIPMENT_STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+
+          {selectedOrderId && (
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm">Split Shipment Items</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead>Ordered</TableHead>
+                      <TableHead>Remaining</TableHead>
+                      <TableHead>Ship Qty</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fulfillmentItems.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="text-center text-muted-foreground"
+                        >
+                          No fulfillable items for this order.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      fulfillmentItems.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>
+                            {record.productTitle}
+                            {record.variantTitle
+                              ? ` - ${record.variantTitle}`
+                              : ""}
+                          </TableCell>
+                          <TableCell>{record.sku}</TableCell>
+                          <TableCell>{record.orderedQty}</TableCell>
+                          <TableCell>{record.remainingQty}</TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={record.remainingQty}
+                              value={shipmentItemQty[record.id] ?? 0}
+                              onChange={(e) =>
+                                setShipmentItemQty((prev) => ({
+                                  ...prev,
+                                  [record.id]: Number(e.target.value || 0),
+                                }))
+                              }
+                              className="w-20"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </form>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="create-shipment-form"
+            disabled={isSaving}
+          >
+            {isSaving && <Loader2 className="size-4 animate-spin" />}
+            OK
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

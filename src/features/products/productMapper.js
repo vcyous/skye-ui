@@ -1,5 +1,3 @@
-import dayjs from "dayjs";
-
 function parseListString(value) {
   return String(value || "")
     .split(",")
@@ -11,14 +9,28 @@ function toNullableNumber(value) {
   return value == null || value === "" ? null : Number(value);
 }
 
+function datetimeLocalToIso(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function isoToDatetimeLocal(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function toProductPayload(values, mediaUrls) {
   return {
     ...values,
     price: Number(values.price),
     compareAtPrice: toNullableNumber(values.compareAtPrice),
     costPrice: toNullableNumber(values.costPrice),
-    priceStartAt: values.priceStartAt ? values.priceStartAt.toISOString() : null,
-    priceEndAt: values.priceEndAt ? values.priceEndAt.toISOString() : null,
+    priceStartAt: datetimeLocalToIso(values.priceStartAt),
+    priceEndAt: datetimeLocalToIso(values.priceEndAt),
     stock: Number(values.stock),
     tags: parseListString(values.tags),
     mediaUrls,
@@ -41,8 +53,8 @@ export function toProductFormValues(product) {
     price: Number(product.price || 0),
     compareAtPrice: toNullableNumber(product.compareAtPrice),
     costPrice: toNullableNumber(product.costPrice),
-    priceStartAt: product.priceStartAt ? dayjs(product.priceStartAt) : null,
-    priceEndAt: product.priceEndAt ? dayjs(product.priceEndAt) : null,
+    priceStartAt: isoToDatetimeLocal(product.priceStartAt),
+    priceEndAt: isoToDatetimeLocal(product.priceEndAt),
     stock: Number(product.stock || 0),
   };
 }

@@ -1,45 +1,40 @@
-import { Card, Space, Tag, Typography } from "antd";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function OrderMetaCard({ order }) {
   const currency = order?.displayCurrencyCode || order?.currencyCode || "USD";
 
   return (
-    <Card title="Order details" bodyStyle={{ padding: "12px 16px" }}>
-      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Order details</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
         {order?.subscriptionContext && (
-          <div>
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 12, display: "block", marginBottom: 2 }}
-            >
-              Subscription
-            </Typography.Text>
-            <Space>
-              <Tag color="purple">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Subscription</span>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
                 {order.subscriptionContext.planName || "Subscription"}
-              </Tag>
-              <Tag>
+              </Badge>
+              <Badge variant="outline">
                 {order.subscriptionContext.isRenewal ? "Renewal" : "First charge"}
-              </Tag>
-            </Space>
+              </Badge>
+            </div>
           </div>
         )}
-        <div>
-          <Typography.Text
-            type="secondary"
-            style={{ fontSize: 12, display: "block", marginBottom: 2 }}
-          >
-            Currency
-          </Typography.Text>
-          <Tag>{currency}</Tag>
-          {order?.currencySnapshot && (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {" "}
-              FX: {order.currencySnapshot.fxRate}
-            </Typography.Text>
-          )}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Currency</span>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">{currency}</Badge>
+            {order?.currencySnapshot && (
+              <span className="text-xs text-muted-foreground">
+                FX: {order.currencySnapshot.fxRate}
+              </span>
+            )}
+          </div>
         </div>
-      </Space>
+      </CardContent>
     </Card>
   );
 }

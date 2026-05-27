@@ -1,12 +1,24 @@
-import {
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Switch,
-} from "antd";
 import { useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Loader2 } from "lucide-react";
 import { SHIPPING_TYPE_OPTIONS } from "../constants";
 
 function toFormValues(method) {
@@ -27,82 +39,165 @@ export default function MethodFormModal({
   zones,
   onSubmit,
   onCancel,
+  isSaving,
 }) {
-  const [form] = Form.useForm();
   const isEdit = mode === "edit";
+
+  const { register, handleSubmit, control, reset, setValue } = useForm({
+    defaultValues: {
+      name: "",
+      shippingType: "flat_rate",
+      baseRate: 0,
+      isActive: true,
+      zoneIds: [],
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
     if (isEdit && method) {
-      form.setFieldsValue(toFormValues(method));
+      const vals = toFormValues(method);
+      Object.entries(vals).forEach(([k, v]) => setValue(k, v));
     } else {
-      form.resetFields();
+      reset({
+        name: "",
+        shippingType: "flat_rate",
+        baseRate: 0,
+        isActive: true,
+        zoneIds: [],
+      });
     }
-  }, [open, isEdit, method, form]);
+  }, [open, isEdit, method, reset, setValue]);
 
   async function handleFinish(values) {
     const ok = await onSubmit(values);
-    if (ok) form.resetFields();
+    if (ok) reset();
   }
 
   function handleCancel() {
-    form.resetFields();
+    reset();
     onCancel();
   }
 
-  const zoneOptions = zones
-    .filter((item) => item.isActive)
-    .map((item) => ({ value: item.id, label: item.name }));
+  const activeZones = zones.filter((item) => item.isActive);
 
   return (
-    <Modal
-      title={isEdit ? "Edit Shipping Method" : "Add Shipping Method"}
-      open={open}
-      onOk={() => form.submit()}
-      onCancel={handleCancel}
-      destroyOnClose
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleFinish}
-        requiredMark={!isEdit ? false : undefined}
-      >
-        <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-          <Input />
-        </Form.Item>
-        <Form.Item
-          name="shippingType"
-          label="Type"
-          initialValue={isEdit ? undefined : "flat_rate"}
-          rules={[{ required: true }]}
+    <Dialog open={open} onOpenChange={(v) => !v && handleCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {isEdit ? "Edit Shipping Method" : "Add Shipping Method"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <form
+          id="method-form"
+          onSubmit={handleSubmit(handleFinish)}
+          className="flex flex-col gap-4"
         >
-          <Select options={SHIPPING_TYPE_OPTIONS} />
-        </Form.Item>
-        <Form.Item
-          name="baseRate"
-          label="Base Rate"
-          initialValue={isEdit ? undefined : 0}
-        >
-          <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
-        </Form.Item>
-        <Form.Item
-          name="isActive"
-          label="Active"
-          valuePropName="checked"
-          initialValue={isEdit ? undefined : true}
-        >
-          <Switch />
-        </Form.Item>
-        <Form.Item name="zoneIds" label="Zones">
-          <Select
-            mode="multiple"
-            allowClear
-            placeholder={isEdit ? undefined : "All zones when empty"}
-            options={zoneOptions}
-          />
-        </Form.Item>
-      </Form>
-    </Modal>
+          <div className="flex flex-col gap-1.5">
+            <Label>Name</Label>
+            <Input {...register("name", { required: true })} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Type</Label>
+            <Controller
+              name="shippingType"
+              control={control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SHIPPING_TYPE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Base Rate</Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              {...register("baseRate", { valueAsNumber: true })}
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Controller
+              name="isActive"
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              )}
+            />
+            <Label>Active</Label>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Zones</Label>
+            <Controller
+              name="zoneIds"
+              control={control}
+              render={({ field }) => (
+                <div className="flex flex-col gap-1">
+                  {activeZones.map((zone) => (
+                    <label
+                      key={zone.id}
+                      className="flex items-center gap-2 cursor-pointer text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(field.value || []).includes(zone.id)}
+                        onChange={(e) => {
+                          const current = field.value || [];
+                          if (e.target.checked) {
+                            field.onChange([...current, zone.id]);
+                          } else {
+                            field.onChange(
+                              current.filter((id) => id !== zone.id),
+                            );
+                          }
+                        }}
+                        className="accent-primary"
+                      />
+                      {zone.name}
+                    </label>
+                  ))}
+                  {activeZones.length === 0 && (
+                    <span className="text-sm text-muted-foreground">
+                      {isEdit ? "No active zones" : "All zones when empty"}
+                    </span>
+                  )}
+                </div>
+              )}
+            />
+          </div>
+        </form>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button type="submit" form="method-form" disabled={isSaving}>
+            {isSaving && <Loader2 className="size-4 animate-spin" />}
+            {isEdit ? "Save" : "Add"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
