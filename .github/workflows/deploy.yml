@@ -83,6 +83,7 @@ jobs:
             cd /opt/skye
             docker compose pull
             docker compose up -d
+            docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile || docker compose restart caddy
             docker image prune -f
         env:
           GHCR_USER: ${{ github.actor }}

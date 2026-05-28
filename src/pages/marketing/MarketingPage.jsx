@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { goToLogin, goToRegister } from "@/lib/site";
 import "./marketing.css";
 
 /* ── Tiny inline SVG components ─────────────────────────────────────────── */
@@ -95,7 +95,6 @@ const Wordmark = () => (
 /* ── Sections ───────────────────────────────────────────────────────────── */
 
 const Nav = () => {
-  const navigate = useNavigate();
   return (
     <nav className="m-nav">
       <div className="m-nav__inner">
@@ -110,13 +109,13 @@ const Nav = () => {
         <div className="m-nav__actions">
           <button
             className="skye-btn skye-btn-ghost"
-            onClick={() => navigate("/login")}
+            onClick={() => goToLogin()}
           >
             Sign in
           </button>
           <button
             className="skye-btn skye-btn-primary"
-            onClick={() => navigate("/register")}
+            onClick={() => goToRegister()}
           >
             Start your store
           </button>
@@ -168,7 +167,6 @@ const HeroPreview = () => {
 };
 
 const Hero = () => {
-  const navigate = useNavigate();
   return (
     <section className="m-hero">
       <div className="m-hero__eyebrow">
@@ -188,7 +186,7 @@ const Hero = () => {
         <button
           className="skye-btn skye-btn-primary"
           style={{ height: 52, padding: "0 24px", fontSize: 16 }}
-          onClick={() => navigate("/register")}
+          onClick={() => goToRegister()}
         >
           Start your store · free
           <Icon name="arrow" style={{ width: 16, height: 16 }} />
@@ -292,7 +290,6 @@ const Stats = () => (
 );
 
 const Pricing = () => {
-  const navigate = useNavigate();
   return (
     <section className="m-pricing" id="pricing">
       <h2>One plan. No surprises.</h2>
@@ -341,7 +338,7 @@ const Pricing = () => {
         <button
           className="skye-btn skye-btn-primary"
           style={{ width: "100%", height: 52, fontSize: 16 }}
-          onClick={() => navigate("/register")}
+          onClick={() => goToRegister()}
         >
           Start your store
         </button>
@@ -351,7 +348,6 @@ const Pricing = () => {
 };
 
 const Closing = () => {
-  const navigate = useNavigate();
   return (
     <section className="m-closing">
       <h2>Three minutes is all it takes.</h2>
@@ -359,7 +355,7 @@ const Closing = () => {
       <button
         className="skye-btn skye-btn-accent"
         style={{ height: 52, padding: "0 28px", fontSize: 16 }}
-        onClick={() => navigate("/register")}
+        onClick={() => goToRegister()}
       >
         <Icon name="sparkles" style={{ width: 16, height: 16 }} />
         Start your store · free
