@@ -1,21 +1,31 @@
-# Deploy — Skye Dashboard
+# Deploy — Skye Platform
 
-Auto-deploy via GitHub Actions: push ke `main` → build image → push ke GHCR → SSH ke VPS → `docker compose pull && up`.
+Auto-deploy via GitHub Actions: push ke `main` → build 3 images parallel → push ke GHCR → SSH ke VPS → `docker compose pull && up`.
 
 ## Arsitektur
 
 ```
 GitHub push (main)
-  → Actions: build Vite + nginx image
-  → push ke ghcr.io/vcyous/skye-dashboard:latest
-  → SSH ke VPS (168.231.118.160)
-  → /opt/skye: docker compose pull && up -d
+  ├─ Actions build: skye-dashboard  (Vite + nginx)
+  ├─ Actions build: skye-storefront (Next.js standalone)
+  └─ Actions build: skye-caddy      (Caddy + cloudflare DNS plugin)
+                       │
+                       ▼
+                  GHCR registry
+                       │
+                       ▼
+                  SSH ke VPS → /opt/skye → docker compose pull + up
 
-VPS containers:
+VPS containers (network: skye_web):
   caddy (TLS + reverse proxy, ports 80/443)
-    └─→ dashboard (nginx serving Vite SPA)
+    ├─→ dashboard (apex, www, dashboard.* → nginx serving Vite SPA)
+    └─→ storefront (*.skyeseller.online → Next.js Node server on :3000)
 
-URL: https://dashboard.skyeseller.online
+URLs:
+  https://skyeseller.online            → landing (dashboard container, hostname-aware routing)
+  https://www.skyeseller.online        → 301 redirect to apex
+  https://dashboard.skyeseller.online  → merchant dashboard (auth + /dashboard/*)
+  https://{slug}.skyeseller.online     → merchant storefront (Next.js, from Supabase)
 ```
 
 ## Setup One-Time
@@ -29,52 +39,63 @@ Repo Settings → Secrets and variables → Actions → New repository secret:
 | `VPS_HOST` | `168.231.118.160` |
 | `VPS_USER` | `root` |
 | `VPS_SSH_KEY` | Isi file `C:\Users\rizki\.ssh\skye_deploy` (private key, **seluruh isi** termasuk header `-----BEGIN OPENSSH PRIVATE KEY-----`) |
-| `VITE_SUPABASE_URL` | URL Supabase production |
+| `VITE_SUPABASE_URL` | URL Supabase production (di-reuse oleh storefront sebagai `NEXT_PUBLIC_SUPABASE_URL` di workflow) |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Anon/publishable key Supabase |
+| `CLOUDFLARE_API_TOKEN` | (catatan: token ini tidak dipakai workflow — disimpan untuk reference; runtime pakai `/opt/skye/.env` di VPS) |
 
 `GITHUB_TOKEN` otomatis tersedia — tidak perlu di-set manual.
 
-### 2. VPS: Authorize SSH key
+### 2. VPS: Authorize SSH key + folder
 
-SSH ke VPS dengan key existing:
 ```bash
 ssh root@168.231.118.160
-```
-
-Tambahkan public key deploy ke authorized_keys:
-```bash
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
 echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINKy20NfrVEsUxGrio3rQg5seUHHZaY15kryYxEmreZn github-actions-skye-deploy" >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
-```
-
-### 3. VPS: Buat folder deploy
-
-```bash
 mkdir -p /opt/skye
 ```
 
-Workflow akan SCP `docker-compose.yml` + `Caddyfile` ke sini saat deploy pertama.
+### 3. VPS: Buat `/opt/skye/.env` dengan Cloudflare API token
+
+⚠️ **Wajib** sebelum deploy pertama dengan storefront. Caddy butuh token ini untuk issue wildcard cert via DNS-01.
+
+```bash
+ssh root@168.231.118.160
+cat > /opt/skye/.env <<'EOF'
+CLOUDFLARE_API_TOKEN=ganti_dengan_token_dari_cloudflare
+EOF
+chmod 600 /opt/skye/.env
+```
+
+⚠️ Pastikan token punya permission `Zone:DNS:Edit` + `Zone:Zone:Read` di zone `skyeseller.online`. Lihat playbook migrasi Cloudflare untuk detail generate.
 
 ### 4. Pastikan port 80/443 terbuka
 
 ```bash
-# Cek kalau ada service lain pakai port 80/443:
 ss -tlnp | grep -E ':80|:443'
-# Kalau ada apache/nginx system, stop dulu:
+# Stop sistem nginx/apache kalau ada:
 systemctl stop nginx apache2 2>/dev/null || true
 systemctl disable nginx apache2 2>/dev/null || true
 ```
 
-### 5. Trigger deploy pertama
+### 5. Trigger deploy
 
 ```bash
-git add .github deploy
-git commit -m "ci: add VPS auto-deploy via GHCR"
 git push origin main
 ```
 
-Lalu di GitHub: Actions tab → lihat workflow "Deploy Dashboard" jalan. Setelah sukses, akses `https://dashboard.skyeseller.online` — Caddy akan auto-issue SSL via Let's Encrypt (butuh ~30 detik pertama kali).
+Lalu monitor di GitHub Actions tab → workflow "Deploy". Tunggu sampai semua 4 job hijau (build-dashboard, build-storefront, build-caddy, deploy). Total ~3-5 menit.
+
+## Test setelah deploy
+
+Asumsi ada minimal 1 merchant published di DB dengan slug `demo`:
+
+```powershell
+curl -I https://dashboard.skyeseller.online
+curl -I https://demo.skyeseller.online
+```
+
+Keduanya harus return `HTTP/2 200`. Wildcard cert issued sekali, cover semua `*.skyeseller.online` subdomain — first hit ke subdomain baru langsung instant (no cold start).
 
 ## Operasi Sehari-hari
 
@@ -82,6 +103,7 @@ Lalu di GitHub: Actions tab → lihat workflow "Deploy Dashboard" jalan. Setelah
 ```bash
 ssh root@168.231.118.160
 cd /opt/skye
+docker compose logs -f storefront
 docker compose logs -f dashboard
 docker compose logs -f caddy
 ```
@@ -91,16 +113,24 @@ docker compose logs -f caddy
 cd /opt/skye && docker compose restart
 ```
 
-### Rollback ke commit sebelumnya
-Tag image di-set dengan SHA commit, jadi bisa pin manual di `docker-compose.yml`:
+### Rollback satu service ke commit sebelumnya
+Tag image di-set dengan SHA commit. Pin di compose:
 ```yaml
-image: ghcr.io/vcyous/skye-dashboard:<sha-pendek>
+storefront:
+  image: ghcr.io/vcyous/skye-storefront:<sha-pendek>
 ```
-Lalu `docker compose up -d`.
+Lalu `docker compose up -d storefront`.
 
-## Catatan
+### Rotate Cloudflare API Token
+1. Generate token baru di Cloudflare
+2. Update `/opt/skye/.env` di VPS
+3. `docker compose restart caddy`
+4. Hapus token lama di Cloudflare
 
-- Image GHCR private secara default. VPS login pakai `GITHUB_TOKEN` ephemeral yang di-pass dari workflow tiap deploy — token cuma valid selama job berjalan, jadi aman.
-- Vite env vars (`VITE_*`) di-bake saat build di Actions, bukan runtime. Ganti nilai = perlu rebuild = push baru.
-- Caddy auto-issue & auto-renew SSL cert via Let's Encrypt. Data cert disimpan di volume `caddy_data` — jangan hapus.
-- Storefront Next.js nanti tinggal: tambah service `storefront` di compose, uncomment block `*.skyeseller.online` di Caddyfile.
+## Catatan teknis
+
+- **Wildcard cert**: 1 cert untuk `*.skyeseller.online`, di-issue via Cloudflare DNS-01 challenge. Caddy auto-renew tiap ~60 hari. Cert disimpan di volume `caddy_data` — jangan hapus.
+- **Env vars Next.js**: `NEXT_PUBLIC_*` di-bake saat build (sama seperti Vite). Ganti nilai = rebuild storefront image.
+- **GHCR auth**: VPS login pakai `GITHUB_TOKEN` ephemeral per deploy. Token cuma valid selama job, tidak persisted.
+- **Cloudflare API token**: disimpan persistent di `/opt/skye/.env`. Caddy baca via `{env.CLOUDFLARE_API_TOKEN}` di Caddyfile.
+- **Cache cleanup**: workflow include `docker image prune -f` setiap deploy biar disk VPS tidak penuh.

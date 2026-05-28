@@ -1,11 +1,14 @@
 services:
   caddy:
-    image: caddy:2-alpine
+    image: ghcr.io/vcyous/skye-caddy:latest
     container_name: skye-caddy
     restart: unless-stopped
+    pull_policy: always
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -20,6 +23,16 @@ services:
     pull_policy: always
     expose:
       - "80"
+    networks:
+      - web
+
+  storefront:
+    image: ghcr.io/vcyous/skye-storefront:latest
+    container_name: skye-storefront
+    restart: unless-stopped
+    pull_policy: always
+    expose:
+      - "3000"
     networks:
       - web
 
