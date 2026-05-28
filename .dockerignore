@@ -1,8 +1,17 @@
-node_modules
-dist
-.env
-.env.*
-*.local
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+**/*.local
+
 .git
-.gitignore
-README.md
+.github
+.serena
+docs
+deploy
+
+# Ignore other apps when building dashboard (uncomment per-app build later)
+# apps/storefront
