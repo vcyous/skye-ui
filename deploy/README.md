@@ -113,6 +113,23 @@ docker compose logs -f caddy
 cd /opt/skye && docker compose restart
 ```
 
+### Bust storefront cache (untuk DB changes tanpa redeploy)
+
+`docker compose restart` **tidak** clear Next.js `unstable_cache` disk cache
+karena file di filesystem container persist across restart. Saat merchant
+publish/unpublish atau ubah data tanpa redeploy code, cache lama (~10 min
+TTL) bisa tampil stale. Force-recreate untuk clear instant:
+
+```bash
+cd /opt/skye && docker compose up -d --force-recreate storefront
+```
+
+Normal deploy via workflow tidak perlu — `docker compose pull` + new image
+sudah otomatis recreate container.
+
+Long-term solution (Phase 3): on-demand revalidation webhook dari dashboard
+ke storefront `/api/revalidate?slug=X` saat publish, instant cache bust.
+
 ### Rollback satu service ke commit sebelumnya
 Tag image di-set dengan SHA commit. Pin di compose:
 ```yaml
