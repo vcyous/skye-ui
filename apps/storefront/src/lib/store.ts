@@ -11,7 +11,9 @@ export type Store = {
   settings: Record<string, unknown> | null;
 };
 
-const STORE_TTL_SECONDS = 600;
+// 60s = stale data tolerable for MVP merchant low-traffic. On-demand
+// revalidation via /api/revalidate (tag `store:<slug>`) busts immediately.
+const STORE_TTL_SECONDS = 60;
 
 export async function getStoreBySlug(slug: string): Promise<Store | null> {
   const fetcher = unstable_cache(

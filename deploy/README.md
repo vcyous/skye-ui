@@ -63,9 +63,14 @@ mkdir -p /opt/skye
 ssh root@168.231.118.160
 cat > /opt/skye/.env <<'EOF'
 CLOUDFLARE_API_TOKEN=ganti_dengan_token_dari_cloudflare
+REVALIDATE_SECRET=ganti_dengan_string_random_panjang
 EOF
 chmod 600 /opt/skye/.env
 ```
+
+Generate `REVALIDATE_SECRET` value via `openssl rand -hex 32` atau alat password
+random lain. Token ini dipakai oleh storefront `/api/revalidate` untuk
+menerima bust-cache request dari dashboard/Supabase trigger nanti.
 
 ⚠️ Pastikan token punya permission `Zone:DNS:Edit` + `Zone:Zone:Read` di zone `skyeseller.online`. Lihat playbook migrasi Cloudflare untuk detail generate.
 

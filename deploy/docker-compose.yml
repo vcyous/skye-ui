@@ -31,6 +31,8 @@ services:
     container_name: skye-storefront
     restart: unless-stopped
     pull_policy: always
+    environment:
+      - REVALIDATE_SECRET=${REVALIDATE_SECRET}
     expose:
       - "3000"
     networks:

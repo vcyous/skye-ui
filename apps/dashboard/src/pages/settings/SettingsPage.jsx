@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, Copy, ExternalLink, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../services/api";
@@ -15,11 +16,14 @@ import { supabase } from "../../services/api";
 const TABS = [
   { id: "profil", label: "Profil Toko" },
   { id: "subdomain", label: "Subdomain" },
+  { id: "publikasi", label: "Publikasi" },
   { id: "pembayaran", label: "Pembayaran" },
   { id: "notifikasi", label: "Notifikasi" },
 ];
 
 const COMING_SOON_TABS = ["pembayaran", "notifikasi"];
+
+const STOREFRONT_BASE = "skyeseller.online";
 
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -386,6 +390,128 @@ function SubdomainTab({ store, onStoreUpdated }) {
   );
 }
 
+function PublikasiTab({ store, onStoreUpdated }) {
+  const isPublished = Boolean(store?.is_published);
+  const slug = store?.slug ?? "";
+  const [isSaving, setIsSaving] = useState(false);
+  const storefrontUrl = slug ? `https://${slug}.${STOREFRONT_BASE}` : "";
+
+  async function togglePublish(nextValue) {
+    if (!store?.id) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from("stores")
+        .update({ is_published: nextValue })
+        .eq("id", store.id);
+
+      if (error) throw error;
+
+      toast.success(
+        nextValue
+          ? "Toko dipublikasikan. Perubahan tampil di publik dalam ~60 detik."
+          : "Toko di-unpublish. Pengunjung baru akan melihat halaman 404.",
+      );
+      if (onStoreUpdated) onStoreUpdated();
+    } catch (err) {
+      toast.error(err.message || "Gagal mengubah status publikasi.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function copyUrl() {
+    if (!storefrontUrl) return;
+    try {
+      await navigator.clipboard.writeText(storefrontUrl);
+      toast.success("URL tersalin");
+    } catch {
+      toast.error("Tidak bisa menyalin URL");
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Status Publikasi</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <Label htmlFor="publish-switch" className="text-sm font-medium">
+                Publikasikan toko ke publik
+              </Label>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Saat aktif, siapa pun dapat mengakses toko di subdomain di
+                bawah. Saat nonaktif, pengunjung akan melihat halaman 404.
+              </p>
+            </div>
+            <Switch
+              id="publish-switch"
+              checked={isPublished}
+              onCheckedChange={togglePublish}
+              disabled={isSaving || !store?.id}
+            />
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-sm">URL Toko</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                value={storefrontUrl}
+                readOnly
+                className="font-mono text-sm"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={copyUrl}
+                disabled={!storefrontUrl}
+                aria-label="Salin URL"
+              >
+                <Copy className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                asChild
+                disabled={!storefrontUrl}
+                aria-label="Buka toko di tab baru"
+              >
+                <a
+                  href={storefrontUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="size-4" />
+                </a>
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isPublished ? (
+                <span className="inline-flex items-center gap-1">
+                  <CheckCircle2 className="size-3.5 text-green-600" />
+                  Toko aktif. Perubahan data di-cache ~60 detik.
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  <XCircle className="size-3.5 text-muted-foreground" />
+                  Toko belum dipublikasikan. URL ini akan menampilkan 404.
+                </span>
+              )}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { store, refreshSession } = useAuth();
   const [activeTab, setActiveTab] = useState("profil");
@@ -436,6 +562,8 @@ export default function SettingsPage() {
             <ProfilTokoTab store={store} onStoreUpdated={handleStoreUpdated} />
           ) : activeTab === "subdomain" ? (
             <SubdomainTab store={store} onStoreUpdated={handleStoreUpdated} />
+          ) : activeTab === "publikasi" ? (
+            <PublikasiTab store={store} onStoreUpdated={handleStoreUpdated} />
           ) : null}
         </div>
       </div>
