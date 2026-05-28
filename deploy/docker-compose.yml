@@ -1,0 +1,32 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: skye-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - web
+
+  dashboard:
+    image: ghcr.io/vcyous/skye-dashboard:latest
+    container_name: skye-dashboard
+    restart: unless-stopped
+    pull_policy: always
+    expose:
+      - "80"
+    networks:
+      - web
+
+networks:
+  web:
+    name: skye_web
+
+volumes:
+  caddy_data:
+  caddy_config:

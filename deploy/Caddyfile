@@ -1,0 +1,9 @@
+dashboard.skyeseller.online {
+	encode gzip zstd
+	reverse_proxy dashboard:80
+}
+
+# Slot untuk merchant storefront (Next.js) di-uncomment nanti
+# *.skyeseller.online {
+# 	reverse_proxy storefront:3000
+# }
