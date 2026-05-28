@@ -28,3 +28,6 @@ Thumbs.db
 
 # Local-only docs (planning, roadmap, scratch)
 /docs/
+
+# Local-only one-off SQL (apply directly to live DB; not source of truth)
+/infra/sql/
