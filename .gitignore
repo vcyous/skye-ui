@@ -25,3 +25,6 @@ pnpm-debug.log*
 Thumbs.db
 
 .serena
+
+# Local-only docs (planning, roadmap, scratch)
+/docs/
