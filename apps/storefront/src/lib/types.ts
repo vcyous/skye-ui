@@ -70,7 +70,7 @@ export type ThemeConfig = {
   fontBody?: string;
   borderRadius?: number;
   cardStyle?: "flat" | "shadow" | "outlined";
-  heroLayout?: "split" | "full-bleed" | "centered";
+  heroLayout?: "split" | "full-bleed" | "centered" | "full-bleed-centered";
 };
 
 export type Theme = {
@@ -78,4 +78,27 @@ export type Theme = {
   store_id: string;
   template_slug: string;
   config_json: ThemeConfig;
+};
+
+export type ProductVariant = {
+  id: string;
+  product_id: string;
+  name: string;
+  sku: string | null;
+  size: string | null;
+  color: string | null;
+  price: number | null;
+  stock: number;
+  display_order: number;
+};
+
+export type Collection = {
+  id: string;
+  store_id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  hero_image_url: string | null;
+  is_active: boolean;
+  display_order: number;
 };

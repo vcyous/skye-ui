@@ -1,5 +1,7 @@
+import { ChicoraHome } from "@/components/chicora/chicora-home";
 import { formatPrice } from "@/lib/format";
 import {
+  getCollectionsByStore,
   getProductsByStore,
   getStoreBySlug,
   getThemeByStore,
@@ -24,6 +26,20 @@ export default async function StoreHomePage() {
     getThemeByStore(store.id, store.slug),
   ]);
 
+  // ── Chicora layout ──────────────────────────────────────
+  if (theme?.template_slug === "chicora") {
+    const collections = await getCollectionsByStore(store.id, store.slug);
+    return (
+      <ChicoraHome
+        store={store}
+        theme={theme}
+        products={products}
+        collections={collections}
+      />
+    );
+  }
+
+  // ── Default layout ──────────────────────────────────────
   const heroLayout = getHeroLayout(theme?.config_json);
   const heroImage = (store.settings as Record<string, unknown> | null)
     ?.heroImageUrl as string | undefined;
@@ -78,7 +94,7 @@ function HeroSection({
 }: {
   name: string;
   description: string | null;
-  heroLayout: "split" | "full-bleed" | "centered";
+  heroLayout: "split" | "full-bleed" | "centered" | "full-bleed-centered";
   heroImage: string | null;
 }) {
   if (heroLayout === "split") {

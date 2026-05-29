@@ -36,7 +36,7 @@ export function buildThemeVars(
  */
 export function getHeroLayout(
   config: ThemeConfig | null | undefined,
-): "split" | "full-bleed" | "centered" {
+): "split" | "full-bleed" | "centered" | "full-bleed-centered" {
   return config?.heroLayout ?? "split";
 }
 
