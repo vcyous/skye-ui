@@ -1,6 +1,11 @@
+import { ChicoraShell } from "@/components/chicora/chicora-shell";
 import { StorefrontShell } from "@/components/storefront-shell";
 import { CartProvider } from "@/lib/cart";
-import { getStoreBySlug, getThemeByStore } from "@/lib/store";
+import {
+  getCollectionsByStore,
+  getStoreBySlug,
+  getThemeByStore,
+} from "@/lib/store";
 import { buildThemeVars } from "@/lib/theme";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -31,20 +36,35 @@ export default async function RootLayout({
   const theme = store ? await getThemeByStore(store.id, store.slug) : null;
   const themeVars = buildThemeVars(theme?.config_json);
 
+  const isChicora = theme?.template_slug === "chicora";
+  const collections =
+    store && isChicora ? await getCollectionsByStore(store.id, store.slug) : [];
+
   return (
     <html
       lang="id"
+      {...(isChicora ? { "data-template": "chicora" } : {})}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body
         style={themeVars}
-        className="min-h-full bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
+        className={`min-h-full bg-white text-zinc-900${isChicora ? "" : " dark:bg-zinc-950 dark:text-zinc-100"}`}
       >
         {store ? (
           <CartProvider storeSlug={store.slug}>
-            <StorefrontShell store={store} theme={theme}>
-              {children}
-            </StorefrontShell>
+            {isChicora ? (
+              <ChicoraShell
+                store={store}
+                theme={theme}
+                collections={collections}
+              >
+                {children}
+              </ChicoraShell>
+            ) : (
+              <StorefrontShell store={store} theme={theme}>
+                {children}
+              </StorefrontShell>
+            )}
           </CartProvider>
         ) : (
           <div className="flex min-h-screen flex-col">{children}</div>

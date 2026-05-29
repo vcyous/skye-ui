@@ -17,6 +17,17 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+
+  /* Chicora template always stays light-mode */
+  [data-template="chicora"] {
+    --background: #ffffff;
+    --foreground: #171717;
+  }
+}
+
+/* Force light color-scheme for Chicora so browser chrome (scrollbars, inputs) stays light */
+[data-template="chicora"] {
+  color-scheme: light;
 }
 
 body {

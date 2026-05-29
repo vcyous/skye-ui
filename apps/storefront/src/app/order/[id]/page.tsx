@@ -1,7 +1,9 @@
+import { ChicoraConfirmation } from "@/components/chicora/chicora-confirmation";
+import { formatPrice } from "@/lib/format";
+import { getOrderById, getStoreBySlug, getThemeByStore } from "@/lib/store";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOrderById } from "@/lib/store";
-import { formatPrice } from "@/lib/format";
 
 const BANK_PREFIXES = [
   "BCA",
@@ -23,14 +25,41 @@ function isBankPayment(method: string | null): boolean {
 
 export default async function OrderConfirmationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ payment?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, sp, h] = await Promise.all([params, searchParams, headers()]);
+  const slug = h.get("x-store-slug");
+
   const result = await getOrderById(id);
   if (!result) notFound();
 
   const { order, items } = result;
+
+  // ── Chicora layout ───────────────────────────────────────
+  if (slug) {
+    const store = await getStoreBySlug(slug);
+    if (store) {
+      const theme = await getThemeByStore(store.id, store.slug);
+      if (theme?.template_slug === "chicora") {
+        const primary = theme.config_json?.primaryColor ?? "#991b1b";
+        const accent = theme.config_json?.accent ?? "#f97316";
+        return (
+          <ChicoraConfirmation
+            order={order}
+            items={items}
+            primary={primary}
+            accent={accent}
+            searchParams={sp}
+          />
+        );
+      }
+    }
+  }
+
+  // ── Default layout ───────────────────────────────────────
   const addr = (order.shipping_address ?? {}) as {
     address?: string;
     city?: string;
@@ -55,7 +84,9 @@ export default async function OrderConfirmationPage({
             <path d="M20 6 9 17l-5-5" />
           </svg>
         </div>
-        <h1 className="text-2xl font-semibold sm:text-3xl">Pesanan Berhasil!</h1>
+        <h1 className="text-2xl font-semibold sm:text-3xl">
+          Pesanan Berhasil!
+        </h1>
         <p className="mt-2 text-sm text-zinc-500">
           Nomor pesanan:{" "}
           <span className="font-medium text-zinc-900 dark:text-zinc-100">
