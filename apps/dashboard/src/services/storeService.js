@@ -30,6 +30,8 @@ export function mapStoreSummary(store) {
     name: store.name,
     slug: store.slug,
     description: store.description,
+    contact_email: store.contact_email ?? null,
+    contact_phone: store.contact_phone ?? null,
     currency: store.currency || "IDR",
     timezone: store.timezone || "Asia/Jakarta",
     isPublished: store.is_published ?? false,
