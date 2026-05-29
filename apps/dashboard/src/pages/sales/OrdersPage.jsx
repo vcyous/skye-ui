@@ -1,12 +1,7 @@
-import { Download, Search } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { useAuth } from "../../context/AuthContext";
-import { supabase } from "../../services/api";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -24,6 +19,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Download, Loader2, Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { useAuth } from "../../context/AuthContext";
+import { supabase } from "../../services/api";
 
 const TABS = [
   { key: "semua", label: "Semua", status: null },
@@ -56,7 +56,9 @@ function StatusBadge({ status }) {
   };
   const cls = map[status] ?? "bg-gray-100 text-gray-800";
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
+    >
       {status}
     </span>
   );
@@ -72,13 +74,18 @@ function NewCountDot({ count }) {
   );
 }
 
-function OrderDetailSheet({ order, open, onOpenChange }) {
+function OrderDetailSheet({ order, open, onOpenChange, onShipped }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [carrier, setCarrier] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [isShipping, setIsShipping] = useState(false);
 
   useEffect(() => {
     if (!open || !order) return;
     setItems([]);
+    setCarrier("");
+    setTrackingNumber("");
     setLoading(true);
     supabase
       .from("order_items")
@@ -96,6 +103,35 @@ function OrderDetailSheet({ order, open, onOpenChange }) {
 
   if (!order) return null;
 
+  async function handleMarkShipped() {
+    if (!order) return;
+    if (!carrier.trim() || !trackingNumber.trim()) {
+      toast.error("Kurir dan nomor resi wajib diisi");
+      return;
+    }
+    setIsShipping(true);
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          status: "selesai",
+          tracking_carrier: carrier.trim(),
+          tracking_number: trackingNumber.trim(),
+          shipped_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", order.id);
+      if (error) throw error;
+      toast.success(`Order #${order.order_number} ditandai sebagai dikirim`);
+      onShipped?.(order.id);
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err?.message || "Gagal memperbarui status");
+    } finally {
+      setIsShipping(false);
+    }
+  }
+
   const address = order.shipping_address ?? {};
 
   return (
@@ -107,16 +143,21 @@ function OrderDetailSheet({ order, open, onOpenChange }) {
 
         <div className="px-4 pb-6 space-y-5">
           <div className="space-y-1.5">
-            <p className="text-sm font-medium text-muted-foreground">Informasi Pembeli</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Informasi Pembeli
+            </p>
             <div className="text-sm space-y-1">
               <p>
-                <span className="font-medium">Nama:</span> {order.buyer_name ?? "—"}
+                <span className="font-medium">Nama:</span>{" "}
+                {order.buyer_name ?? "—"}
               </p>
               <p>
-                <span className="font-medium">Email:</span> {order.buyer_email ?? "—"}
+                <span className="font-medium">Email:</span>{" "}
+                {order.buyer_email ?? "—"}
               </p>
               <p>
-                <span className="font-medium">Telepon:</span> {order.buyer_phone ?? "—"}
+                <span className="font-medium">Telepon:</span>{" "}
+                {order.buyer_phone ?? "—"}
               </p>
             </div>
           </div>
@@ -124,7 +165,9 @@ function OrderDetailSheet({ order, open, onOpenChange }) {
           <Separator />
 
           <div className="space-y-1.5">
-            <p className="text-sm font-medium text-muted-foreground">Alamat Pengiriman</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Alamat Pengiriman
+            </p>
             <div className="text-sm space-y-0.5">
               {address.street && <p>{address.street}</p>}
               {address.city && (
@@ -134,14 +177,18 @@ function OrderDetailSheet({ order, open, onOpenChange }) {
                   {address.postal_code ? ` ${address.postal_code}` : ""}
                 </p>
               )}
-              {!address.street && !address.city && <p className="text-muted-foreground">—</p>}
+              {!address.street && !address.city && (
+                <p className="text-muted-foreground">—</p>
+              )}
             </div>
           </div>
 
           <Separator />
 
           <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">Item Pesanan</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Item Pesanan
+            </p>
             {loading ? (
               <div className="space-y-2">
                 <Skeleton className="h-8 w-full" />
@@ -152,16 +199,23 @@ function OrderDetailSheet({ order, open, onOpenChange }) {
             ) : (
               <div className="space-y-2">
                 {items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between text-sm">
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between text-sm"
+                  >
                     <div>
                       <p className="font-medium">{item.product_name}</p>
                       {item.variant_name && (
-                        <p className="text-xs text-muted-foreground">{item.variant_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.variant_name}
+                        </p>
                       )}
                     </div>
                     <div className="text-right">
                       <p>{formatRupiah(item.price)}</p>
-                      <p className="text-xs text-muted-foreground">x{item.quantity}</p>
+                      <p className="text-xs text-muted-foreground">
+                        x{item.quantity}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -185,7 +239,9 @@ function OrderDetailSheet({ order, open, onOpenChange }) {
             {order.discount_amount > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Diskon</span>
-                <span className="text-emerald-600">-{formatRupiah(order.discount_amount)}</span>
+                <span className="text-emerald-600">
+                  -{formatRupiah(order.discount_amount)}
+                </span>
               </div>
             )}
             <Separator />
@@ -199,8 +255,92 @@ function OrderDetailSheet({ order, open, onOpenChange }) {
             <>
               <Separator />
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Catatan</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Catatan
+                </p>
                 <p className="text-sm">{order.notes}</p>
+              </div>
+            </>
+          )}
+
+          {/* Informasi resi — tampil jika sudah dikirim */}
+          {order.tracking_number && (
+            <>
+              <Separator />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Informasi Pengiriman
+                </p>
+                <p className="text-sm">
+                  <span className="font-medium">Kurir:</span>{" "}
+                  {order.tracking_carrier ?? "—"}
+                </p>
+                <p className="text-sm">
+                  <span className="font-medium">No. Resi:</span>{" "}
+                  {order.tracking_number}
+                </p>
+                {order.shipped_at && (
+                  <p className="text-xs text-muted-foreground">
+                    Dikirim:{" "}
+                    {new Date(order.shipped_at).toLocaleDateString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Form tandai dikirim — tampil hanya jika status "diproses" */}
+          {order.status === "diproses" && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <p className="text-sm font-semibold">Tandai Dikirim</p>
+                <div>
+                  <Label
+                    htmlFor="carrier"
+                    className="text-xs text-muted-foreground"
+                  >
+                    Kurir
+                  </Label>
+                  <Input
+                    id="carrier"
+                    value={carrier}
+                    onChange={(e) => setCarrier(e.target.value)}
+                    placeholder="Contoh: JNE, SiCepat, J&T"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label
+                    htmlFor="tracking"
+                    className="text-xs text-muted-foreground"
+                  >
+                    Nomor Resi
+                  </Label>
+                  <Input
+                    id="tracking"
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value)}
+                    placeholder="Contoh: JNE123456789"
+                    className="mt-1"
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={isShipping}
+                  onClick={handleMarkShipped}
+                >
+                  {isShipping && (
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                  )}
+                  Tandai Dikirim
+                </Button>
               </div>
             </>
           )}
@@ -283,6 +423,12 @@ export default function OrdersPage() {
   function handleDetail(order) {
     setDetailOrder(order);
     setSheetOpen(true);
+  }
+
+  function handleOrderShipped(orderId) {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: "selesai" } : o)),
+    );
   }
 
   function handleTabChange(key) {
@@ -422,6 +568,7 @@ export default function OrdersPage() {
         order={detailOrder}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+        onShipped={handleOrderShipped}
       />
     </section>
   );
