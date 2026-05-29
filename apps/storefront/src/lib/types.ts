@@ -62,3 +62,20 @@ export type CartItem = {
   imageUrl: string | null;
   stock: number | null;
 };
+
+export type ThemeConfig = {
+  primaryColor?: string;
+  accent?: string;
+  fontHeading?: string;
+  fontBody?: string;
+  borderRadius?: number;
+  cardStyle?: "flat" | "shadow" | "outlined";
+  heroLayout?: "split" | "full-bleed" | "centered";
+};
+
+export type Theme = {
+  id: string;
+  store_id: string;
+  template_slug: string;
+  config_json: ThemeConfig;
+};

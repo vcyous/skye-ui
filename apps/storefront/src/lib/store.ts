@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { supabase } from "./supabase";
-import type { Order, OrderItem, Product, Store } from "./types";
+import type { Order, OrderItem, Product, Store, Theme } from "./types";
 
 // 60s = stale data tolerable for MVP merchant low-traffic. On-demand
 // revalidation via /api/revalidate (tag `store:<slug>`) busts immediately.
@@ -98,6 +98,31 @@ export async function getProductByHandle(
     {
       revalidate: STORE_TTL_SECONDS,
       tags: [`store:${storeSlug}`, `store:${storeSlug}:products`],
+    },
+  );
+
+  return fetcher();
+}
+
+export async function getThemeByStore(
+  storeId: string,
+  storeSlug: string,
+): Promise<Theme | null> {
+  const fetcher = unstable_cache(
+    async () => {
+      const { data, error } = await supabase
+        .from("themes")
+        .select("id, store_id, template_slug, config_json")
+        .eq("store_id", storeId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as Theme | null;
+    },
+    ["theme-by-store", storeId],
+    {
+      revalidate: STORE_TTL_SECONDS,
+      tags: [`store:${storeSlug}`],
     },
   );
 

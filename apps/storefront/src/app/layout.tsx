@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { CartProvider } from "@/lib/cart";
-import { getStoreBySlug } from "@/lib/store";
+import { getStoreBySlug, getThemeByStore } from "@/lib/store";
+import { buildThemeVars } from "@/lib/theme";
 import { StorefrontShell } from "@/components/storefront-shell";
 import "./globals.css";
 
@@ -27,16 +28,23 @@ export default async function RootLayout({
   const h = await headers();
   const slug = h.get("x-store-slug");
   const store = slug ? await getStoreBySlug(slug) : null;
+  const theme = store ? await getThemeByStore(store.id, store.slug) : null;
+  const themeVars = buildThemeVars(theme?.config_json);
 
   return (
     <html
-      lang="en"
+      lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <body
+        style={themeVars}
+        className="min-h-full bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
+      >
         {store ? (
           <CartProvider storeSlug={store.slug}>
-            <StorefrontShell store={store}>{children}</StorefrontShell>
+            <StorefrontShell store={store} theme={theme}>
+              {children}
+            </StorefrontShell>
           </CartProvider>
         ) : (
           <div className="flex min-h-screen flex-col">{children}</div>
