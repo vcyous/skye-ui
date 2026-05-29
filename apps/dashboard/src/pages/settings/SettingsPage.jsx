@@ -1,4 +1,10 @@
-import { CheckCircle2, Copy, ExternalLink, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  Loader2,
+  XCircle,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -13,19 +19,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../services/api";
 
+const STOREFRONT_BASE = "skyeseller.online";
+const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 const TABS = [
-  { id: "profil", label: "Profil Toko" },
-  { id: "subdomain", label: "Subdomain" },
-  { id: "publikasi", label: "Publikasi" },
+  { id: "profil",     label: "Profil Toko" },
+  { id: "publikasi",  label: "Publikasi" },
   { id: "pembayaran", label: "Pembayaran" },
   { id: "notifikasi", label: "Notifikasi" },
 ];
 
 const COMING_SOON_TABS = ["pembayaran", "notifikasi"];
 
-const STOREFRONT_BASE = "skyeseller.online";
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
 
-const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+function storeUrl(slug) {
+  return slug ? `https://${slug}.${STOREFRONT_BASE}` : "";
+}
 
 function ComingSoon() {
   return (
@@ -60,6 +72,10 @@ function SettingsNav({ activeTab, onSelect }) {
     </nav>
   );
 }
+
+// ─────────────────────────────────────────────
+// Tab: Profil Toko
+// ─────────────────────────────────────────────
 
 function ProfilTokoTab({ store, onStoreUpdated }) {
   const [form, setForm] = useState({
@@ -113,10 +129,9 @@ function ProfilTokoTab({ store, onStoreUpdated }) {
         .eq("id", store.id);
 
       if (error) throw error;
-
       initialForm.current = { ...form };
       toast.success("Profil toko diperbarui");
-      if (onStoreUpdated) onStoreUpdated();
+      onStoreUpdated?.();
     } catch (err) {
       toast.error(err.message || "Gagal menyimpan profil toko.");
     } finally {
@@ -169,7 +184,6 @@ function ProfilTokoTab({ store, onStoreUpdated }) {
                 placeholder="toko@email.com"
               />
             </div>
-
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="contact_phone">No HP</Label>
               <Input
@@ -202,41 +216,54 @@ function ProfilTokoTab({ store, onStoreUpdated }) {
   );
 }
 
-function SubdomainTab({ store, onStoreUpdated }) {
-  const currentSlug = store?.slug ?? "";
-  const [slug, setSlug] = useState(currentSlug);
-  const [availability, setAvailability] = useState(null);
-  const [isChecking, setIsChecking] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [validationError, setValidationError] = useState("");
+// ─────────────────────────────────────────────
+// Tab: Publikasi (gabungan subdomain + publish)
+// ─────────────────────────────────────────────
+
+function PublikasiTab({ store, onStoreUpdated }) {
+  const isPublished     = Boolean(store?.isPublished ?? store?.is_published);
+  const savedSlug       = store?.slug ?? "";
+
+  // Subdomain state
+  const [slug, setSlug]               = useState(savedSlug);
+  const [slugError, setSlugError]     = useState("");
+  const [availability, setAvailability] = useState(null); // "available" | "taken" | null
+  const [isChecking, setIsChecking]   = useState(false);
+  const [isSavingSlug, setIsSavingSlug] = useState(false);
   const debounceRef = useRef(null);
 
+  // Publish state
+  const [isSavingPublish, setIsSavingPublish] = useState(false);
+
+  // Keep slug input in sync when store loads
   useEffect(() => {
     setSlug(store?.slug ?? "");
+    setSlugError("");
     setAvailability(null);
-    setValidationError("");
-  }, [store]);
+  }, [store?.slug]);
+
+  // ── Slug ──────────────────────────────────
 
   function validateSlug(value) {
     if (!value) return "Subdomain tidak boleh kosong.";
-    if (value.length < 3) return "Subdomain minimal 3 karakter.";
-    if (value.length > 63) return "Subdomain maksimal 63 karakter.";
+    if (value.length < 3) return "Minimal 3 karakter.";
+    if (value.length > 63) return "Maksimal 63 karakter.";
     if (!SLUG_REGEX.test(value))
-      return "Hanya huruf kecil, angka, dan tanda hubung. Tidak boleh diawali atau diakhiri tanda hubung.";
+      return "Hanya huruf kecil, angka, dan tanda hubung. Tidak boleh diawali/diakhiri tanda hubung.";
     return "";
   }
 
   function handleSlugChange(e) {
-    const value = e.target.value;
+    const value = e.target.value.toLowerCase();
     setSlug(value);
     setAvailability(null);
 
     const err = validateSlug(value);
-    setValidationError(err);
+    setSlugError(err);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (!err && value !== currentSlug && store?.id) {
+    if (!err && value !== savedSlug && store?.id) {
       setIsChecking(true);
       debounceRef.current = setTimeout(async () => {
         try {
@@ -247,7 +274,6 @@ function SubdomainTab({ store, onStoreUpdated }) {
             .neq("id", store.id);
 
           if (error) throw error;
-
           setAvailability(data.length === 0 ? "available" : "taken");
         } catch {
           setAvailability(null);
@@ -260,19 +286,15 @@ function SubdomainTab({ store, onStoreUpdated }) {
     }
   }
 
-  async function handleSave(e) {
+  async function handleSaveSlug(e) {
     e.preventDefault();
     if (!store?.id) return;
 
     const err = validateSlug(slug);
-    if (err) {
-      setValidationError(err);
-      return;
-    }
-
+    if (err) { setSlugError(err); return; }
     if (availability === "taken") return;
 
-    setIsSaving(true);
+    setIsSavingSlug(true);
     try {
       const { error } = await supabase
         .from("stores")
@@ -280,125 +302,23 @@ function SubdomainTab({ store, onStoreUpdated }) {
         .eq("id", store.id);
 
       if (error) throw error;
-
-      toast.success("Subdomain aktif ±5 menit");
-      if (onStoreUpdated) onStoreUpdated();
+      toast.success("Subdomain disimpan. Perubahan aktif dalam ~5 menit.");
+      onStoreUpdated?.();
     } catch (err) {
       toast.error(err.message || "Gagal menyimpan subdomain.");
     } finally {
-      setIsSaving(false);
+      setIsSavingSlug(false);
     }
   }
 
-  const canSave =
-    !validationError &&
-    !isChecking &&
-    slug !== currentSlug &&
-    availability !== "taken" &&
-    slug.length > 0;
+  const slugDirty   = slug !== savedSlug && slug.length > 0;
+  const slugCanSave = slugDirty && !slugError && !isChecking && availability !== "taken";
 
-  const liveUrl = `https://${currentSlug}.skye.shop`;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Subdomain</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5">
-        <div className="flex flex-col gap-1.5">
-          <Label>URL Toko</Label>
-          <div className="flex items-center">
-            <span className="inline-flex h-9 items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground select-none whitespace-nowrap">
-              https://
-            </span>
-            <Input
-              className="rounded-none focus-visible:z-10"
-              value={slug}
-              onChange={handleSlugChange}
-              placeholder="nama-toko"
-              aria-label="Subdomain"
-              spellCheck={false}
-              autoCapitalize="none"
-              autoCorrect="off"
-            />
-            <span className="inline-flex h-9 items-center rounded-r-md border border-l-0 border-input bg-muted px-3 text-sm text-muted-foreground select-none whitespace-nowrap">
-              .skye.shop
-            </span>
-          </div>
-
-          {validationError && (
-            <p className="text-xs text-destructive mt-1">{validationError}</p>
-          )}
-
-          {!validationError && isChecking && (
-            <div className="flex items-center gap-2 mt-1">
-              <Skeleton className="h-4 w-24" />
-            </div>
-          )}
-
-          {!validationError && !isChecking && availability === "available" && (
-            <div className="flex items-center gap-1.5 mt-1">
-              <CheckCircle2 className="size-4 text-green-600" />
-              <Badge
-                variant="outline"
-                className="text-green-700 border-green-400 bg-green-50"
-              >
-                Tersedia
-              </Badge>
-            </div>
-          )}
-
-          {!validationError && !isChecking && availability === "taken" && (
-            <div className="flex items-center gap-1.5 mt-1">
-              <XCircle className="size-4 text-destructive" />
-              <span className="text-xs text-destructive">
-                Sudah dipakai toko lain
-              </span>
-            </div>
-          )}
-        </div>
-
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave || isSaving}
-          className="w-fit"
-        >
-          {isSaving ? "Menyimpan..." : "Simpan Subdomain"}
-        </Button>
-
-        {currentSlug && (
-          <>
-            <Separator />
-            <div className="flex flex-col gap-1">
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                URL Aktif
-              </p>
-              <a
-                href={liveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-primary underline underline-offset-2 break-all"
-              >
-                {liveUrl}
-              </a>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function PublikasiTab({ store, onStoreUpdated }) {
-  const isPublished = Boolean(store?.is_published);
-  const slug = store?.slug ?? "";
-  const [isSaving, setIsSaving] = useState(false);
-  const storefrontUrl = slug ? `https://${slug}.${STOREFRONT_BASE}` : "";
+  // ── Publish ───────────────────────────────
 
   async function togglePublish(nextValue) {
     if (!store?.id) return;
-    setIsSaving(true);
+    setIsSavingPublish(true);
     try {
       const { error } = await supabase
         .from("stores")
@@ -406,71 +326,175 @@ function PublikasiTab({ store, onStoreUpdated }) {
         .eq("id", store.id);
 
       if (error) throw error;
-
       toast.success(
         nextValue
-          ? "Toko dipublikasikan. Perubahan tampil di publik dalam ~60 detik."
-          : "Toko di-unpublish. Pengunjung baru akan melihat halaman 404.",
+          ? "Toko dipublikasikan. Tampil di publik dalam ~60 detik."
+          : "Toko di-unpublish. Pengunjung akan melihat halaman 404.",
       );
-      if (onStoreUpdated) onStoreUpdated();
+      onStoreUpdated?.();
     } catch (err) {
       toast.error(err.message || "Gagal mengubah status publikasi.");
     } finally {
-      setIsSaving(false);
+      setIsSavingPublish(false);
     }
   }
 
   async function copyUrl() {
-    if (!storefrontUrl) return;
+    const url = storeUrl(savedSlug);
+    if (!url) return;
     try {
-      await navigator.clipboard.writeText(storefrontUrl);
+      await navigator.clipboard.writeText(url);
       toast.success("URL tersalin");
     } catch {
       toast.error("Tidak bisa menyalin URL");
     }
   }
 
+  // URL yang ditampilkan: pakai slug yang sedang diketik untuk preview,
+  // tapi URL aktif tetap berdasarkan savedSlug
+  const previewUrl = storeUrl(slug || savedSlug);
+  const liveUrl    = storeUrl(savedSlug);
+
   return (
     <div className="flex flex-col gap-4">
+
+      {/* ── Subdomain ─────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Subdomain Toko</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSaveSlug} className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              Alamat unik toko kamu di platform. Ubah dengan hati-hati — link lama tidak akan bekerja.
+            </p>
+
+            {/* Input subdomain */}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="slug-input">Subdomain</Label>
+              <div className="flex items-center">
+                <span className="inline-flex h-9 items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground select-none whitespace-nowrap">
+                  https://
+                </span>
+                <Input
+                  id="slug-input"
+                  className="rounded-none focus-visible:z-10"
+                  value={slug}
+                  onChange={handleSlugChange}
+                  placeholder="nama-toko"
+                  spellCheck={false}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                />
+                <span className="inline-flex h-9 items-center rounded-r-md border border-l-0 border-input bg-muted px-3 text-sm text-muted-foreground select-none whitespace-nowrap">
+                  .{STOREFRONT_BASE}
+                </span>
+              </div>
+
+              {/* Feedback validation */}
+              {slugError && (
+                <p className="text-xs text-destructive">{slugError}</p>
+              )}
+              {!slugError && isChecking && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="size-3 animate-spin" />
+                  Memeriksa ketersediaan...
+                </div>
+              )}
+              {!slugError && !isChecking && availability === "available" && (
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="size-4 text-green-600" />
+                  <Badge variant="outline" className="text-green-700 border-green-400 bg-green-50">
+                    Tersedia
+                  </Badge>
+                </div>
+              )}
+              {!slugError && !isChecking && availability === "taken" && (
+                <div className="flex items-center gap-1.5">
+                  <XCircle className="size-4 text-destructive" />
+                  <span className="text-xs text-destructive">Sudah dipakai toko lain</span>
+                </div>
+              )}
+            </div>
+
+            {/* Preview URL */}
+            {previewUrl && (
+              <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+                Preview:{" "}
+                <span className={`font-mono ${slugDirty ? "text-amber-600" : "text-foreground"}`}>
+                  {previewUrl}
+                </span>
+                {slugDirty && (
+                  <span className="ml-2 text-amber-600">(belum disimpan)</span>
+                )}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-fit"
+              disabled={!slugCanSave || isSavingSlug}
+            >
+              {isSavingSlug ? (
+                <><Loader2 className="size-4 mr-2 animate-spin" />Menyimpan...</>
+              ) : (
+                "Simpan Subdomain"
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* ── Status Publikasi ──────────────── */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Status Publikasi</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
+
+          {/* Toggle */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <Label htmlFor="publish-switch" className="text-sm font-medium">
                 Publikasikan toko ke publik
               </Label>
               <p className="mt-1 text-sm text-muted-foreground">
-                Saat aktif, siapa pun dapat mengakses toko di subdomain di
-                bawah. Saat nonaktif, pengunjung akan melihat halaman 404.
+                Saat aktif, siapa pun dapat mengakses toko di subdomain kamu.
+                Saat nonaktif, pengunjung akan melihat halaman 404.
               </p>
             </div>
             <Switch
               id="publish-switch"
               checked={isPublished}
               onCheckedChange={togglePublish}
-              disabled={isSaving || !store?.id}
+              disabled={isSavingPublish || !store?.id || !savedSlug}
             />
           </div>
 
-          <Separator className="my-4" />
+          {/* Peringatan jika subdomain belum diset */}
+          {!savedSlug && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              Atur subdomain terlebih dahulu sebelum bisa publish toko.
+            </div>
+          )}
 
+          <Separator />
+
+          {/* URL aktif */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-sm">URL Toko</Label>
             <div className="flex items-center gap-2">
               <Input
-                value={storefrontUrl}
+                value={liveUrl}
                 readOnly
-                className="font-mono text-sm"
+                className="font-mono text-sm bg-muted"
               />
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
                 onClick={copyUrl}
-                disabled={!storefrontUrl}
+                disabled={!liveUrl}
                 aria-label="Salin URL"
               >
                 <Copy className="size-4" />
@@ -479,47 +503,48 @@ function PublikasiTab({ store, onStoreUpdated }) {
                 type="button"
                 variant="outline"
                 size="icon"
+                disabled={!liveUrl}
+                aria-label="Buka toko"
                 asChild
-                disabled={!storefrontUrl}
-                aria-label="Buka toko di tab baru"
               >
-                <a
-                  href={storefrontUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href={liveUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="size-4" />
                 </a>
               </Button>
             </div>
+
+            {/* Status indicator */}
             <p className="text-xs text-muted-foreground">
               {isPublished ? (
-                <span className="inline-flex items-center gap-1">
+                <span className="inline-flex items-center gap-1 text-green-700">
                   <CheckCircle2 className="size-3.5 text-green-600" />
-                  Toko aktif. Perubahan data di-cache ~60 detik.
+                  Toko aktif dan dapat diakses publik.
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1">
                   <XCircle className="size-3.5 text-muted-foreground" />
-                  Toko belum dipublikasikan. URL ini akan menampilkan 404.
+                  Toko belum dipublikasikan.
                 </span>
               )}
             </p>
           </div>
         </CardContent>
       </Card>
+
     </div>
   );
 }
+
+// ─────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────
 
 export default function SettingsPage() {
   const { store, refreshSession } = useAuth();
   const [activeTab, setActiveTab] = useState("profil");
 
   async function handleStoreUpdated() {
-    if (refreshSession) {
-      await refreshSession().catch(() => null);
-    }
+    if (refreshSession) await refreshSession().catch(() => null);
   }
 
   const isLoading = store === undefined;
@@ -529,7 +554,7 @@ export default function SettingsPage() {
       <header>
         <h1 className="text-2xl font-bold">Pengaturan</h1>
         <p className="text-sm text-muted-foreground">
-          Kelola profil toko dan konfigurasi subdomain kamu.
+          Kelola profil toko, subdomain, dan status publikasi.
         </p>
       </header>
 
@@ -560,8 +585,6 @@ export default function SettingsPage() {
             <ComingSoon />
           ) : activeTab === "profil" ? (
             <ProfilTokoTab store={store} onStoreUpdated={handleStoreUpdated} />
-          ) : activeTab === "subdomain" ? (
-            <SubdomainTab store={store} onStoreUpdated={handleStoreUpdated} />
           ) : activeTab === "publikasi" ? (
             <PublikasiTab store={store} onStoreUpdated={handleStoreUpdated} />
           ) : null}
