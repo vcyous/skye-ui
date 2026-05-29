@@ -1,0 +1,8 @@
+{
+  "github": {
+    "silent": true
+  },
+  "buildCommand": "echo 'Deployment is handled by VPS via GitHub Actions. Vercel is not used.'",
+  "outputDirectory": "public",
+  "framework": null
+}
