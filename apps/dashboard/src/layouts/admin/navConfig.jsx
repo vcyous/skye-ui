@@ -1,5 +1,6 @@
 import {
   ClipboardList,
+  FolderOpen,
   LayoutDashboard,
   Package,
   Palette,
@@ -19,6 +20,11 @@ export const navItems = [
     to: "/dashboard/products",
     label: "Produk",
     icon: <Package className={iconClass} />,
+  },
+  {
+    to: "/dashboard/collections",
+    label: "Koleksi",
+    icon: <FolderOpen className={iconClass} />,
   },
   {
     to: "/dashboard/orders",

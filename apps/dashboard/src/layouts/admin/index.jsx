@@ -1,10 +1,15 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useMediaQuery } from "@/lib/use-media-query";
-import PageFallback from "../../shared/ui/PageFallback";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import ComingSoonPage from "../../pages/ComingSoonPage";
+import PageFallback from "../../shared/ui/PageFallback";
 import { navItems } from "./navConfig";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
@@ -19,7 +24,12 @@ const OrdersPage = lazy(() => import("../../pages/sales/OrdersPage.jsx"));
 const WebsiteBuilderPage = lazy(
   () => import("../../components/website-builder/WebsiteBuilderPage.jsx"),
 );
-const SettingsPage = lazy(() => import("../../pages/settings/SettingsPage.jsx"));
+const CollectionsPage = lazy(
+  () => import("../../features/collections/CollectionsPage.jsx"),
+);
+const SettingsPage = lazy(
+  () => import("../../pages/settings/SettingsPage.jsx"),
+);
 
 export default function AppLayout() {
   const navigate = useNavigate();
@@ -39,12 +49,11 @@ export default function AppLayout() {
   }
 
   const currentRouteLabel =
-    navItems.find(
-      (item) =>
-        item.end
-          ? location.pathname === item.to
-          : location.pathname === item.to ||
-            location.pathname.startsWith(`${item.to}/`),
+    navItems.find((item) =>
+      item.end
+        ? location.pathname === item.to
+        : location.pathname === item.to ||
+          location.pathname.startsWith(`${item.to}/`),
     )?.label ?? "Dashboard";
 
   const sidebar = <Sidebar onLogout={onLogout} />;
@@ -79,6 +88,7 @@ export default function AppLayout() {
               <Routes>
                 <Route index element={<DashboardPage />} />
                 <Route path="products/*" element={<ProductsPage />} />
+                <Route path="collections" element={<CollectionsPage />} />
                 <Route path="orders/*" element={<OrdersPage />} />
                 <Route path="theme" element={<WebsiteBuilderPage />} />
                 <Route path="settings" element={<SettingsPage />} />
