@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "../../context/AuthContext";
-import { supabase } from "../../services/api";
+import { supabase, uploadStoreAsset } from "../../services/api";
 
 function TemplateThumbnail({ config }) {
   const primary = config?.primaryColor || "#1a1a1a";
@@ -110,6 +110,9 @@ export default function WebsiteBuilderPage() {
   const [selected, setSelected] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isApplying, setIsApplying] = useState(false);
+  const [customConfig, setCustomConfig] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [mediaUploading, setMediaUploading] = useState({ logo: false, hero: false });
 
   useEffect(() => {
     if (!store?.id) return;
@@ -140,6 +143,8 @@ export default function WebsiteBuilderPage() {
       setActiveTheme(theme);
       const activeTpl = tpls.find((t) => t.slug === theme?.template_slug);
       setSelected(activeTpl || tpls[0] || null);
+      // Inisialisasi customConfig dari theme yang sudah tersimpan, atau dari default template
+      setCustomConfig(theme?.config_json || activeTpl?.default_config || {});
     } catch (err) {
       toast.error(err?.message || "Gagal memuat template");
     } finally {
@@ -154,7 +159,7 @@ export default function WebsiteBuilderPage() {
       const payload = {
         store_id: store.id,
         template_slug: selected.slug,
-        config_json: selected.default_config || {},
+        config_json: customConfig || selected.default_config || {},
         is_published: true,
       };
 
@@ -165,11 +170,79 @@ export default function WebsiteBuilderPage() {
       if (error) throw error;
 
       setActiveTheme({ ...payload });
+      setCustomConfig(customConfig || selected.default_config || {});
       toast.success(`Template "${selected.name}" diterapkan`);
     } catch (err) {
       toast.error(err?.message || "Gagal menerapkan template");
     } finally {
       setIsApplying(false);
+    }
+  }
+
+  // Auto-save customConfig ke DB dengan debounce 800ms
+  useEffect(() => {
+    if (!store?.id || !activeTheme?.template_slug || !customConfig) return;
+
+    const timer = setTimeout(async () => {
+      setIsSaving(true);
+      try {
+        const { error } = await supabase
+          .from("themes")
+          .upsert(
+            {
+              store_id: store.id,
+              template_slug: activeTheme.template_slug,
+              config_json: customConfig,
+              is_published: true,
+            },
+            { onConflict: "store_id" }
+          );
+        if (error) throw error;
+      } catch (err) {
+        toast.error("Gagal menyimpan kustomisasi");
+      } finally {
+        setIsSaving(false);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [customConfig, store?.id, activeTheme?.template_slug]);
+
+  async function handleLogoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file || !store?.id) return;
+    setMediaUploading((p) => ({ ...p, logo: true }));
+    try {
+      const url = await uploadStoreAsset(file, "logo");
+      const currentSettings = store.settings || {};
+      await supabase
+        .from("stores")
+        .update({ settings: { ...currentSettings, logoUrl: url } })
+        .eq("id", store.id);
+      toast.success("Logo berhasil diunggah");
+    } catch (err) {
+      toast.error(err?.message || "Gagal upload logo");
+    } finally {
+      setMediaUploading((p) => ({ ...p, logo: false }));
+    }
+  }
+
+  async function handleHeroUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file || !store?.id) return;
+    setMediaUploading((p) => ({ ...p, hero: true }));
+    try {
+      const url = await uploadStoreAsset(file, "hero");
+      const currentSettings = store.settings || {};
+      await supabase
+        .from("stores")
+        .update({ settings: { ...currentSettings, heroImageUrl: url } })
+        .eq("id", store.id);
+      toast.success("Hero image berhasil diunggah");
+    } catch (err) {
+      toast.error(err?.message || "Gagal upload hero image");
+    } finally {
+      setMediaUploading((p) => ({ ...p, hero: false }));
     }
   }
 
@@ -228,25 +301,234 @@ export default function WebsiteBuilderPage() {
         </div>
       )}
 
-      {selected && (
-        <Card>
-          <CardContent className="p-4">
-            <h4 className="text-sm font-semibold mb-2">Token JSON</h4>
-            <p className="text-xs text-muted-foreground mb-3">
-              Token ini akan disimpan ke database dan diterapkan sebagai CSS variables di storefront.
-            </p>
-            <pre className="text-xs bg-muted p-3 rounded font-mono overflow-x-auto">
-{JSON.stringify(
-  {
-    template: selected.slug,
-    ...selected.default_config,
-  },
-  null,
-  2,
-)}
-            </pre>
-          </CardContent>
-        </Card>
+      {selected && customConfig && (
+        <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+          {/* Panel Kustomisasi Warna & Tipografi */}
+          <Card>
+            <CardContent className="p-4 space-y-5">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Kustomisasi Tampilan</h4>
+                {isSaving && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="size-3 animate-spin" />
+                    Menyimpan...
+                  </span>
+                )}
+              </div>
+
+              {/* Warna */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                    Warna Utama
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={customConfig.primaryColor || "#1a1a1a"}
+                      onChange={(e) =>
+                        setCustomConfig((p) => ({ ...p, primaryColor: e.target.value }))
+                      }
+                      className="h-9 w-14 cursor-pointer rounded border p-0.5"
+                    />
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {customConfig.primaryColor || "#1a1a1a"}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                    Warna Aksen
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={customConfig.accent || "#3d5af1"}
+                      onChange={(e) =>
+                        setCustomConfig((p) => ({ ...p, accent: e.target.value }))
+                      }
+                      className="h-9 w-14 cursor-pointer rounded border p-0.5"
+                    />
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {customConfig.accent || "#3d5af1"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Font */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                    Font Judul
+                  </label>
+                  <select
+                    value={customConfig.fontHeading || "Inter"}
+                    onChange={(e) =>
+                      setCustomConfig((p) => ({ ...p, fontHeading: e.target.value }))
+                    }
+                    className="w-full h-9 rounded-md border bg-background px-2 text-sm"
+                  >
+                    {["Inter", "Sora", "Poppins", "Playfair Display", "Lora"].map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                    Font Teks
+                  </label>
+                  <select
+                    value={customConfig.fontBody || "Inter"}
+                    onChange={(e) =>
+                      setCustomConfig((p) => ({ ...p, fontBody: e.target.value }))
+                    }
+                    className="w-full h-9 rounded-md border bg-background px-2 text-sm"
+                  >
+                    {["Inter", "Lora", "Poppins"].map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Border Radius */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                  Border Radius — {customConfig.borderRadius ?? 8}px
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={24}
+                  step={2}
+                  value={customConfig.borderRadius ?? 8}
+                  onChange={(e) =>
+                    setCustomConfig((p) => ({ ...p, borderRadius: Number(e.target.value) }))
+                  }
+                  className="w-full"
+                />
+              </div>
+
+              {/* Card Style */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-2">
+                  Gaya Kartu Produk
+                </label>
+                <div className="flex gap-2">
+                  {["flat", "shadow", "outlined"].map((style) => (
+                    <button
+                      key={style}
+                      type="button"
+                      onClick={() =>
+                        setCustomConfig((p) => ({ ...p, cardStyle: style }))
+                      }
+                      className={`flex-1 py-1.5 rounded-md border text-xs font-medium capitalize transition-colors ${
+                        customConfig.cardStyle === style
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "hover:border-muted-foreground/50"
+                      }`}
+                    >
+                      {style}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hero Layout */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-2">
+                  Layout Hero
+                </label>
+                <div className="flex gap-2">
+                  {[
+                    { value: "centered", label: "Tengah" },
+                    { value: "split", label: "Split" },
+                    { value: "full-bleed", label: "Full" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() =>
+                        setCustomConfig((p) => ({ ...p, heroLayout: opt.value }))
+                      }
+                      className={`flex-1 py-1.5 rounded-md border text-xs font-medium transition-colors ${
+                        customConfig.heroLayout === opt.value
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "hover:border-muted-foreground/50"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Panel Media */}
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <h4 className="text-sm font-semibold">Media Toko</h4>
+
+              {/* Logo */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                  Logo Toko
+                </label>
+                {store?.settings?.logoUrl && (
+                  <img
+                    src={store.settings.logoUrl}
+                    alt="Logo"
+                    className="h-12 object-contain rounded border mb-2"
+                  />
+                )}
+                <label className="flex items-center justify-center gap-2 h-9 w-full cursor-pointer rounded-md border border-dashed text-xs text-muted-foreground hover:border-muted-foreground/60 transition-colors">
+                  {mediaUploading.logo ? (
+                    <><Loader2 className="size-3 animate-spin" /> Mengupload...</>
+                  ) : (
+                    "Pilih file logo"
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={mediaUploading.logo}
+                    onChange={handleLogoUpload}
+                  />
+                </label>
+              </div>
+
+              {/* Hero Image */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                  Gambar Hero
+                </label>
+                {store?.settings?.heroImageUrl && (
+                  <img
+                    src={store.settings.heroImageUrl}
+                    alt="Hero"
+                    className="w-full aspect-video object-cover rounded border mb-2"
+                  />
+                )}
+                <label className="flex items-center justify-center gap-2 h-9 w-full cursor-pointer rounded-md border border-dashed text-xs text-muted-foreground hover:border-muted-foreground/60 transition-colors">
+                  {mediaUploading.hero ? (
+                    <><Loader2 className="size-3 animate-spin" /> Mengupload...</>
+                  ) : (
+                    "Pilih gambar hero"
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={mediaUploading.hero}
+                    onChange={handleHeroUpload}
+                  />
+                </label>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
