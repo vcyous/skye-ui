@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
+import { StorefrontShell } from "@/components/storefront-shell";
 import { CartProvider } from "@/lib/cart";
 import { getStoreBySlug, getThemeByStore } from "@/lib/store";
 import { buildThemeVars } from "@/lib/theme";
-import { StorefrontShell } from "@/components/storefront-shell";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 
 const geistSans = Geist({

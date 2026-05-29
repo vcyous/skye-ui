@@ -1,11 +1,15 @@
+import { formatPrice } from "@/lib/format";
+import {
+  getProductsByStore,
+  getStoreBySlug,
+  getThemeByStore,
+} from "@/lib/store";
+import { getHeroLayout } from "@/lib/theme";
+import type { Product } from "@/lib/types";
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { formatPrice } from "@/lib/format";
-import { getProductsByStore, getStoreBySlug, getThemeByStore } from "@/lib/store";
-import { getHeroLayout } from "@/lib/theme";
-import type { Product, Theme } from "@/lib/types";
 
 export default async function StoreHomePage() {
   const h = await headers();
@@ -21,10 +25,8 @@ export default async function StoreHomePage() {
   ]);
 
   const heroLayout = getHeroLayout(theme?.config_json);
-  const heroImage =
-    (store.settings as Record<string, unknown> | null)?.heroImageUrl as
-      | string
-      | undefined;
+  const heroImage = (store.settings as Record<string, unknown> | null)
+    ?.heroImageUrl as string | undefined;
 
   return (
     <>
@@ -86,7 +88,10 @@ function HeroSection({
           <div>
             <h1
               className="text-3xl font-semibold leading-tight sm:text-4xl"
-              style={{ color: "var(--theme-primary)", fontFamily: "var(--theme-font-heading)" }}
+              style={{
+                color: "var(--theme-primary)",
+                fontFamily: "var(--theme-font-heading)",
+              }}
             >
               {name}
             </h1>
@@ -176,7 +181,10 @@ function HeroSection({
       <div className="mx-auto max-w-5xl px-4 py-16 text-center">
         <h1
           className="text-3xl font-semibold sm:text-4xl"
-          style={{ color: "var(--theme-primary)", fontFamily: "var(--theme-font-heading)" }}
+          style={{
+            color: "var(--theme-primary)",
+            fontFamily: "var(--theme-font-heading)",
+          }}
         >
           {name}
         </h1>

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { Store, Theme } from "@/lib/types";
+import Link from "next/link";
 import { CartBadge } from "./cart-badge";
 
 export function StorefrontShell({
@@ -48,7 +48,9 @@ export function StorefrontShell({
         <div className="mx-auto max-w-5xl px-4 py-6 text-center text-xs text-zinc-500">
           © {new Date().getFullYear()} {store.name}. Powered by Skye.
           {store.contact_email && (
-            <span className="ml-2 hidden sm:inline">· {store.contact_email}</span>
+            <span className="ml-2 hidden sm:inline">
+              · {store.contact_email}
+            </span>
           )}
         </div>
       </footer>
