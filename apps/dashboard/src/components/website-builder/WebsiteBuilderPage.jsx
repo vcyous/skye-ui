@@ -1,10 +1,10 @@
-import { Check, ExternalLink, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Check, ExternalLink, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useAuth } from "../../context/AuthContext";
 import { supabase, uploadStoreAsset } from "../../services/api";
 
@@ -17,13 +17,12 @@ function TemplateThumbnail({ config }) {
   return (
     <div
       className="h-32 w-full flex flex-col justify-between p-3 overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%)" }}
+      style={{
+        background: "linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%)",
+      }}
     >
       <div className="flex items-center justify-between">
-        <div
-          className="h-2 w-12 rounded-sm"
-          style={{ background: primary }}
-        />
+        <div className="h-2 w-12 rounded-sm" style={{ background: primary }} />
         <div className="flex gap-1">
           <div className="h-1.5 w-3 rounded-sm bg-muted-foreground/40" />
           <div className="h-1.5 w-3 rounded-sm bg-muted-foreground/40" />
@@ -37,10 +36,7 @@ function TemplateThumbnail({ config }) {
         <div className="h-1.5 w-1/2 rounded-sm bg-muted-foreground/30" />
       </div>
       <div className="grid grid-cols-2 gap-1">
-        <div
-          className="h-6 bg-white border"
-          style={{ borderRadius: radius }}
-        />
+        <div className="h-6 bg-white border" style={{ borderRadius: radius }} />
         <div
           className="h-6 border"
           style={{ background: accent, borderRadius: radius }}
@@ -112,7 +108,10 @@ export default function WebsiteBuilderPage() {
   const [isApplying, setIsApplying] = useState(false);
   const [customConfig, setCustomConfig] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [mediaUploading, setMediaUploading] = useState({ logo: false, hero: false });
+  const [mediaUploading, setMediaUploading] = useState({
+    logo: false,
+    hero: false,
+  });
 
   useEffect(() => {
     if (!store?.id) return;
@@ -186,17 +185,15 @@ export default function WebsiteBuilderPage() {
     const timer = setTimeout(async () => {
       setIsSaving(true);
       try {
-        const { error } = await supabase
-          .from("themes")
-          .upsert(
-            {
-              store_id: store.id,
-              template_slug: activeTheme.template_slug,
-              config_json: customConfig,
-              is_published: true,
-            },
-            { onConflict: "store_id" }
-          );
+        const { error } = await supabase.from("themes").upsert(
+          {
+            store_id: store.id,
+            template_slug: activeTheme.template_slug,
+            config_json: customConfig,
+            is_published: true,
+          },
+          { onConflict: "store_id" },
+        );
         if (error) throw error;
       } catch (err) {
         toast.error("Gagal menyimpan kustomisasi");
@@ -254,7 +251,8 @@ export default function WebsiteBuilderPage() {
         <div>
           <h2 className="text-xl font-semibold">Tema Toko</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Pilih template untuk tampilan storefront. Klik kartu untuk memilih, lalu klik "Terapkan Template".
+            Pilih template untuk tampilan storefront. Klik kartu untuk memilih,
+            lalu klik "Terapkan Template".
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
@@ -327,7 +325,10 @@ export default function WebsiteBuilderPage() {
                       type="color"
                       value={customConfig.primaryColor || "#1a1a1a"}
                       onChange={(e) =>
-                        setCustomConfig((p) => ({ ...p, primaryColor: e.target.value }))
+                        setCustomConfig((p) => ({
+                          ...p,
+                          primaryColor: e.target.value,
+                        }))
                       }
                       className="h-9 w-14 cursor-pointer rounded border p-0.5"
                     />
@@ -345,7 +346,10 @@ export default function WebsiteBuilderPage() {
                       type="color"
                       value={customConfig.accent || "#3d5af1"}
                       onChange={(e) =>
-                        setCustomConfig((p) => ({ ...p, accent: e.target.value }))
+                        setCustomConfig((p) => ({
+                          ...p,
+                          accent: e.target.value,
+                        }))
                       }
                       className="h-9 w-14 cursor-pointer rounded border p-0.5"
                     />
@@ -365,12 +369,23 @@ export default function WebsiteBuilderPage() {
                   <select
                     value={customConfig.fontHeading || "Inter"}
                     onChange={(e) =>
-                      setCustomConfig((p) => ({ ...p, fontHeading: e.target.value }))
+                      setCustomConfig((p) => ({
+                        ...p,
+                        fontHeading: e.target.value,
+                      }))
                     }
                     className="w-full h-9 rounded-md border bg-background px-2 text-sm"
                   >
-                    {["Inter", "Sora", "Poppins", "Playfair Display", "Lora"].map((f) => (
-                      <option key={f} value={f}>{f}</option>
+                    {[
+                      "Inter",
+                      "Sora",
+                      "Poppins",
+                      "Playfair Display",
+                      "Lora",
+                    ].map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -381,12 +396,17 @@ export default function WebsiteBuilderPage() {
                   <select
                     value={customConfig.fontBody || "Inter"}
                     onChange={(e) =>
-                      setCustomConfig((p) => ({ ...p, fontBody: e.target.value }))
+                      setCustomConfig((p) => ({
+                        ...p,
+                        fontBody: e.target.value,
+                      }))
                     }
                     className="w-full h-9 rounded-md border bg-background px-2 text-sm"
                   >
                     {["Inter", "Lora", "Poppins"].map((f) => (
-                      <option key={f} value={f}>{f}</option>
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -404,7 +424,10 @@ export default function WebsiteBuilderPage() {
                   step={2}
                   value={customConfig.borderRadius ?? 8}
                   onChange={(e) =>
-                    setCustomConfig((p) => ({ ...p, borderRadius: Number(e.target.value) }))
+                    setCustomConfig((p) => ({
+                      ...p,
+                      borderRadius: Number(e.target.value),
+                    }))
                   }
                   className="w-full"
                 />
@@ -450,7 +473,10 @@ export default function WebsiteBuilderPage() {
                       key={opt.value}
                       type="button"
                       onClick={() =>
-                        setCustomConfig((p) => ({ ...p, heroLayout: opt.value }))
+                        setCustomConfig((p) => ({
+                          ...p,
+                          heroLayout: opt.value,
+                        }))
                       }
                       className={`flex-1 py-1.5 rounded-md border text-xs font-medium transition-colors ${
                         customConfig.heroLayout === opt.value
@@ -485,7 +511,9 @@ export default function WebsiteBuilderPage() {
                 )}
                 <label className="flex items-center justify-center gap-2 h-9 w-full cursor-pointer rounded-md border border-dashed text-xs text-muted-foreground hover:border-muted-foreground/60 transition-colors">
                   {mediaUploading.logo ? (
-                    <><Loader2 className="size-3 animate-spin" /> Mengupload...</>
+                    <>
+                      <Loader2 className="size-3 animate-spin" /> Mengupload...
+                    </>
                   ) : (
                     "Pilih file logo"
                   )}
@@ -513,7 +541,9 @@ export default function WebsiteBuilderPage() {
                 )}
                 <label className="flex items-center justify-center gap-2 h-9 w-full cursor-pointer rounded-md border border-dashed text-xs text-muted-foreground hover:border-muted-foreground/60 transition-colors">
                   {mediaUploading.hero ? (
-                    <><Loader2 className="size-3 animate-spin" /> Mengupload...</>
+                    <>
+                      <Loader2 className="size-3 animate-spin" /> Mengupload...
+                    </>
                   ) : (
                     "Pilih gambar hero"
                   )}
