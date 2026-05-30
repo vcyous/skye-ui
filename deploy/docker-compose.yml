@@ -38,6 +38,16 @@ services:
     networks:
       - web
 
+  skye:
+    image: ghcr.io/vcyous/skye-web:latest
+    container_name: skye-web
+    restart: unless-stopped
+    pull_policy: always
+    expose:
+      - "3000"
+    networks:
+      - web
+
 networks:
   web:
     name: skye_web

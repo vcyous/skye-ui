@@ -1,6 +1,6 @@
 skyeseller.online {
 	encode gzip zstd
-	reverse_proxy dashboard:80
+	reverse_proxy skye:3000
 }
 
 www.skyeseller.online {

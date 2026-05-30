@@ -1,0 +1,114 @@
+:root {
+  --bg:        #f9f9f7;
+  --ink:       #111110;
+  --muted:     #787873;
+  --border:    #e8e8e4;
+  --accent:    #3d5af1;
+  --surface:   #ffffff;
+  --surface-2: #f2f2ef;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.08), 0 12px 40px rgba(0,0,0,.06);
+  --r-card:    16px;
+  --r-pill:    999px;
+  --ease:      cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+/* ── Hero landing animation ── */
+.hero-animate {
+  opacity: 0;
+  transform: translateY(32px);
+  transition:
+    opacity 0.7s var(--ease),
+    transform 0.7s var(--ease);
+}
+
+.hero-animate.landed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero-animate.mockup {
+  transform: translateY(32px) scale(0.96);
+}
+
+.hero-animate.mockup.landed {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ── Scroll reveal ── */
+.reveal-item {
+  opacity: 0;
+  transform: translateY(48px);
+  transition:
+    opacity 0.7s var(--ease),
+    transform 0.7s var(--ease);
+}
+
+.reveal-item.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Marquee ── */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.landing-marquee-track {
+  display: flex;
+  gap: 56px;
+  width: max-content;
+  animation: marquee-scroll 40s linear infinite;
+}
+
+.landing-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* ── Live dot pulse ── */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── merchant logos ── */
+.merchant-logo {
+  height: 28px;
+  color: #111110;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+  cursor: default;
+}
+.merchant-logo:hover {
+  opacity: 1;
+}
+
+/* ── prefers-reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .landing-marquee-track {
+    animation: none !important;
+  }
+}
